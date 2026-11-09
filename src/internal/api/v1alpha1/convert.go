@@ -16,6 +16,8 @@ import (
 )
 
 // PackageFromV1alpha1 converts a v1alpha1 ZarfPackage to the internal generic representation.
+//
+// Deprecated: Only supported by deprecated v1alpha1 packages.
 func PackageFromV1alpha1(pkg v1alpha1.ZarfPackage) api.Package {
 	// Direct conversions need the same legacy action migration as decoded packages.
 	pkg, _ = migrateDeprecated(pkg)
@@ -39,28 +41,31 @@ func PackageFromV1alpha1(pkg v1alpha1.ZarfPackage) api.Package {
 			Vendor:                   pkg.Metadata.Vendor,
 		},
 		Build: api.BuildData{
-			Hostname:                   pkg.Build.Terminal,
-			User:                       pkg.Build.User,
-			Architecture:               pkg.Build.Architecture,
-			Timestamp:                  pkg.Build.Timestamp,
-			Version:                    pkg.Build.Version,
-			Migrations:                 pkg.Build.Migrations,
-			RegistryOverrides:          pkg.Build.RegistryOverrides,
-			Differential:               pkg.Build.Differential,
-			DifferentialPackageVersion: pkg.Build.DifferentialPackageVersion,
-			Flavor:                     pkg.Build.Flavor,
-			Signed:                     pkg.Build.Signed,
-			DifferentialMissing:        pkg.Build.DifferentialMissing,
-			ProvenanceFiles:            pkg.Build.ProvenanceFiles,
-			AggregateChecksum:          pkg.Metadata.AggregateChecksum,
+			Hostname:            pkg.Build.Terminal,
+			User:                pkg.Build.User,
+			Architecture:        pkg.Build.Architecture,
+			Timestamp:           pkg.Build.Timestamp,
+			Version:             pkg.Build.Version,
+			Migrations:          pkg.Build.Migrations,
+			RegistryOverrides:   pkg.Build.RegistryOverrides,
+			Flavor:              pkg.Build.Flavor,
+			Signed:              pkg.Build.Signed,
+			DifferentialMissing: pkg.Build.DifferentialMissing,
+			ProvenanceFiles:     pkg.Build.ProvenanceFiles,
+			AggregateChecksum:   pkg.Metadata.AggregateChecksum,
 		},
 		Values: api.Values{
 			Files:  pkg.Values.Files,
 			Schema: pkg.Values.Schema,
 		},
-		Documentation: pkg.Documentation,
-		Variables:     interactiveVarsToGeneric(pkg.Variables),
-		Constants:     constantsToGeneric(pkg.Constants),
+		Attachments: pkg.Documentation,
+		Variables:   interactiveVarsToGeneric(pkg.Variables),
+		Constants:   constantsToGeneric(pkg.Constants),
+	}
+	if pkg.Build.Differential {
+		g.Build.Differential = &api.Differential{
+			FromVersion: pkg.Build.DifferentialPackageVersion,
+		}
 	}
 
 	for _, vr := range pkg.Build.VersionRequirements {
@@ -156,10 +161,11 @@ func componentToGeneric(c v1alpha1.ZarfComponent) api.Component {
 	}
 
 	for _, ia := range c.ImageArchives {
-		gc.ImageArchives = append(gc.ImageArchives, api.ImageArchive{
-			Path:   ia.Path,
-			Images: ia.Images,
-		})
+		archive := api.ImageArchive{Path: ia.Path}
+		for _, image := range ia.Images {
+			archive.Images = append(archive.Images, api.ArchiveImage{Name: image})
+		}
+		gc.ImageArchives = append(gc.ImageArchives, archive)
 	}
 
 	return gc
@@ -396,6 +402,8 @@ func waitToGeneric(w *v1alpha1.ZarfComponentActionWait) *api.ActionWait {
 }
 
 // PackageToV1alpha1 converts the internal generic representation to a v1alpha1 ZarfPackage.
+//
+// Deprecated: Only supported by deprecated v1alpha1 packages.
 func PackageToV1alpha1(g api.Package) v1alpha1.ZarfPackage {
 	// An absent v1alpha1 apiVersion predates the required field and must remain absent when the
 	// operational package is written back out.
@@ -409,7 +417,7 @@ func PackageToV1alpha1(g api.Package) v1alpha1.ZarfPackage {
 		Metadata:      metadataFromGeneric(g.Metadata, g.Build),
 		Build:         buildFromGeneric(g.Build),
 		Values:        v1alpha1.ZarfValues{Files: g.Values.Files, Schema: g.Values.Schema},
-		Documentation: g.Documentation,
+		Documentation: g.Attachments,
 		Variables:     interactiveVarsFromGeneric(g.Variables),
 		Constants:     constantsFromGeneric(g.Constants),
 	}
@@ -450,19 +458,21 @@ func metadataFromGeneric(m api.PackageMetadata, b api.BuildData) v1alpha1.ZarfMe
 
 func buildFromGeneric(b api.BuildData) v1alpha1.ZarfBuildData {
 	out := v1alpha1.ZarfBuildData{
-		Terminal:                   b.Hostname,
-		User:                       b.User,
-		Architecture:               b.Architecture,
-		Timestamp:                  b.Timestamp,
-		Version:                    b.Version,
-		Migrations:                 b.Migrations,
-		RegistryOverrides:          b.RegistryOverrides,
-		Differential:               b.Differential,
-		DifferentialPackageVersion: b.DifferentialPackageVersion,
-		DifferentialMissing:        b.DifferentialMissing,
-		Flavor:                     b.Flavor,
-		Signed:                     b.Signed,
-		ProvenanceFiles:            b.ProvenanceFiles,
+		Terminal:            b.Hostname,
+		User:                b.User,
+		Architecture:        b.Architecture,
+		Timestamp:           b.Timestamp,
+		Version:             b.Version,
+		Migrations:          b.Migrations,
+		RegistryOverrides:   b.RegistryOverrides,
+		DifferentialMissing: b.DifferentialMissing,
+		Flavor:              b.Flavor,
+		Signed:              b.Signed,
+		ProvenanceFiles:     b.ProvenanceFiles,
+	}
+	if b.Differential != nil {
+		out.Differential = true
+		out.DifferentialPackageVersion = b.Differential.FromVersion
 	}
 
 	for _, vr := range b.VersionRequirements {
@@ -534,10 +544,11 @@ func componentFromGeneric(c api.Component) v1alpha1.ZarfComponent {
 	}
 
 	for _, ia := range c.ImageArchives {
-		ac.ImageArchives = append(ac.ImageArchives, v1alpha1.ImageArchive{
-			Path:   ia.Path,
-			Images: ia.Images,
-		})
+		archive := v1alpha1.ImageArchive{Path: ia.Path}
+		for _, image := range ia.Images {
+			archive.Images = append(archive.Images, image.Name)
+		}
+		ac.ImageArchives = append(ac.ImageArchives, archive)
 	}
 
 	return ac

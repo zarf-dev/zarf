@@ -10,6 +10,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/variables"
 )
@@ -108,18 +109,20 @@ func TestGetZarfTemplatesForIPv6SeedRegistry(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			state := state.State{
 				RegistryInfo: state.RegistryInfo{
-					Address: test.expectedRegistryAddress,
-					Port:    31997,
+					RegistryMode: state.RegistryModeNodePort,
+					Address:      test.expectedRegistryAddress,
+					Port:         31997,
 				},
 				InjectorInfo: state.InjectorInfo{
 					Port: 31997,
 				},
 				IPFamily: test.IPFamily,
 			}
-			templateMap, err := GetZarfTemplates(context.Background(), api.ServiceSeedRegistry, &state)
+			templateMap, err := GetZarfTemplates(context.Background(), v1alpha1.APIVersion, api.ServiceSeedRegistry, &state)
 			require.NoError(t, err)
 			require.Equal(t, test.expectedRegistryAddress, templateMap["###ZARF_SEED_REGISTRY###"].Value)
 			require.Equal(t, test.expectedIPv6Enabled, templateMap["###ZARF_IPV6_ONLY###"].Value)
+			require.Empty(t, templateMap["###ZARF_STORAGE_CLASS###"].Value)
 			require.NotEmpty(t, templateMap["###ZARF_HTPASSWD###"].Value)
 		})
 	}

@@ -1,0 +1,55 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "agent": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "affinity": {
+          "properties": {},
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "tolerations": {
+          "items": {
+            "type": "object"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "nodeSelector": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "properties": {},
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "webhookAnnotations": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "properties": {},
+          "type": "object"
+        },
+        "mutationExclusions": {
+          "items": {
+            "enum": [
+              "argocd",
+              "flux"
+            ],
+            "type": "string"
+          },
+          "type": "array"
+        }
+      }
+    }
+  }
+}

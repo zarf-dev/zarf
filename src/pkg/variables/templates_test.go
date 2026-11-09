@@ -69,10 +69,18 @@ func TestReplaceTextTemplate(t *testing.T) {
 
 	tests := []test{
 		{
-			vc:           VariableConfig{setVariableMap: SetVariableMap{}, applicationTemplates: map[string]*TextTemplate{}},
+			vc: VariableConfig{
+				applicationTemplates: map[string]*TextTemplate{
+					"###PREFIX_APP_REPLACE_ME###": {Value: "APP_REPLACED"},
+				},
+			},
 			path:         "non-existent.test",
 			wantErr:      true,
 			wantContents: start,
+		},
+		{
+			wantContents: start,
+			vc:           VariableConfig{},
 		},
 		{
 			vc: VariableConfig{

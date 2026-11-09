@@ -18,11 +18,17 @@ zarf package inspect sbom [ PACKAGE ] [flags]
 
 ```
 
-# Extract the SBOM from a local package tarball
+# Extract every SBOM from a local package tarball
 $ zarf package inspect sbom zarf-package-my-app-amd64-1.0.0.tar.zst --output ./sbom
 
-# Extract the SBOM from a package in an OCI registry (oci:// prefix optional)
+# Extract every SBOM from a package in an OCI registry (oci:// prefix optional)
 $ zarf package inspect sbom oci://ghcr.io/my-org/my-package:1.0.0 --output ./sbom
+
+# Extract SBOMs matching a component name
+$ zarf package inspect sbom oci://ghcr.io/my-org/my-package:1.0.0 --keys metrics --output ./sbom
+
+# Extract SBOMs matching an exact package image reference
+$ zarf package inspect sbom oci://ghcr.io/my-org/my-package:1.0.0 --keys ghcr.io/my-org/api:v1.4.2 --output ./sbom
 
 ```
 
@@ -36,6 +42,7 @@ $ zarf package inspect sbom oci://ghcr.io/my-org/my-package:1.0.0 --output ./sbo
   -h, --help                                    help for sbom
       --insecure-ignore-tlog                    Skip Rekor transparency log inclusion verification. Default true for air-gap. Auto-disabled when keyless identity flags are set (keyless signatures require Rekor inclusion proof to remain verifiable past certificate expiry). (default true)
   -k, --key string                              Path to public key file for validating signed packages
+      --keys strings                            Comma-separated component names or image references for SBOMs to extract. Key selection is supported only for v1beta1 packages.
       --oci-concurrency int                     Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
       --output string                           Specify an output directory for the SBOMs from the created Zarf package
       --trusted-root string                     Path to a Sigstore TrustedRoot JSON. Falls back to the binary-embedded copy when omitted.
@@ -51,7 +58,7 @@ $ zarf package inspect sbom oci://ghcr.io/my-org/my-package:1.0.0 --output ./sbo
       --features stringToString    Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features "foo=true,bar=false,baz=true" (default [])
       --insecure-skip-tls-verify   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
       --log-format string          Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
-  -l, --log-level string           Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
+  -l, --log-level string           Log level when running Zarf. Valid options are: error, warn, info, debug (default "info")
       --no-color                   Disable terminal color codes in logging and stdout prints.
       --plain-http                 Allow OCI registry connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
       --tmpdir string              Specify the temporary directory to use for intermediate files

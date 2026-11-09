@@ -17,13 +17,12 @@ require (
 	github.com/anchore/syft v1.51.1
 	github.com/avast/retry-go/v4 v4.7.0
 	github.com/derailed/k9s v0.51.0
-	github.com/distribution/distribution/v3 v3.1.1
+	github.com/distribution/distribution/v3 v3.1.2
 	github.com/distribution/reference v0.6.0
-	github.com/fairwindsops/pluto/v5 v5.24.3
 	github.com/fatih/color v1.19.0
 	github.com/fluxcd/gitkit v0.6.0
 	github.com/fluxcd/pkg/apis/meta v1.31.0
-	github.com/fluxcd/source-controller/api v1.9.5
+	github.com/fluxcd/source-controller/api v1.9.6
 	github.com/go-git/go-git/v5 v5.19.2
 	github.com/goccy/go-yaml v1.19.2
 	github.com/golang-cz/devslog v0.0.17
@@ -50,12 +49,12 @@ require (
 	golang.org/x/crypto v0.57.0
 	golang.org/x/sync v0.24.0
 	helm.sh/helm/v4 v4.3.0
-	k8s.io/api v0.37.1
-	k8s.io/apimachinery v0.37.1
-	k8s.io/client-go v0.37.1
+	k8s.io/api v0.37.2
+	k8s.io/apimachinery v0.37.2
+	k8s.io/client-go v0.37.2
 	k8s.io/klog/v2 v2.140.0
-	k8s.io/kubectl v0.37.1
-	k8s.io/streaming v0.37.1
+	k8s.io/kubectl v0.37.2
+	k8s.io/streaming v0.37.2
 	oras.land/oras-go/v2 v2.6.2
 	sigs.k8s.io/cli-utils v0.37.2
 	sigs.k8s.io/kustomize/api v0.21.1
@@ -96,7 +95,6 @@ require (
 	github.com/bodgit/plumbing v1.3.0 // indirect
 	github.com/bodgit/sevenzip v1.6.1 // indirect
 	github.com/bodgit/windows v1.0.1 // indirect
-	github.com/bshuster-repo/logrus-logstash-hook v1.1.0 // indirect
 	github.com/buger/jsonparser v1.1.2 // indirect
 	github.com/buildkite/roko v1.4.0 // indirect
 	github.com/cenkalti/backoff/v5 v5.0.3 // indirect
@@ -128,7 +126,7 @@ require (
 	github.com/fxamacker/cbor/v2 v2.9.2 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.15 // indirect
 	github.com/go-chi/chi/v5 v5.3.0 // indirect
-	github.com/go-jose/go-jose/v4 v4.1.4 // indirect
+	github.com/go-jose/go-jose/v4 v4.1.6 // indirect
 	github.com/go-logr/logr v1.4.4 // indirect
 	github.com/go-openapi/runtime/server-middleware v0.30.0 // indirect
 	github.com/go-openapi/swag/cmdutils v0.28.0 // indirect
@@ -254,7 +252,7 @@ require (
 	gopkg.in/evanphx/json-patch.v4 v4.13.0 // indirect
 	helm.sh/helm/v3 v3.21.3 // indirect
 	howett.net/plist v1.0.1 // indirect
-	k8s.io/component-base v0.37.1 // indirect
+	k8s.io/component-base v0.37.2 // indirect
 	modernc.org/gc/v3 v3.1.4 // indirect
 	modernc.org/strutil v1.2.1 // indirect
 	modernc.org/token v1.1.0 // indirect
@@ -329,7 +327,7 @@ require (
 	github.com/anchore/go-version v1.2.2-0.20210903204242-51efa5b487c4 // indirect
 	github.com/anchore/grype v0.110.0 // indirect
 	github.com/anchore/packageurl-go v0.2.0 // indirect
-	github.com/andybalholm/brotli v1.2.0 // indirect
+	github.com/andybalholm/brotli v1.2.8 // indirect
 	github.com/apparentlymart/go-textseg/v15 v15.0.0 // indirect
 	github.com/aquasecurity/go-pep440-version v0.0.1 // indirect
 	github.com/aquasecurity/go-version v0.0.1 // indirect
@@ -391,11 +389,11 @@ require (
 	github.com/digitorus/pkcs7 v0.0.0-20230818184609-3a137a874352 // indirect
 	github.com/digitorus/timestamp v0.0.0-20231217203849-220c5c2851b7 // indirect
 	github.com/dimchansky/utfbom v1.1.1 // indirect
-	github.com/docker/cli v29.8.2+incompatible
+	github.com/docker/cli v29.9.2+incompatible
 	github.com/docker/docker-credential-helpers v0.9.9 // indirect
 	github.com/docker/go-connections v0.8.1 // indirect
 	github.com/docker/go-events v0.0.0-20250808211157-605354379745 // indirect
-	github.com/docker/go-metrics v0.0.1 // indirect
+	github.com/docker/go-metrics v0.1.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/dsnet/compress v0.0.2-0.20230904184137-39efe44ab707 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
@@ -483,7 +481,7 @@ require (
 	github.com/kastenhq/goversion v0.0.0-20230811215019-93b2f8823953 // indirect
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51 // indirect
 	github.com/kevinburke/ssh_config v1.2.0 // indirect
-	github.com/klauspost/compress v1.19.2 // indirect
+	github.com/klauspost/compress v1.20.3 // indirect
 	github.com/klauspost/pgzip v1.2.6 // indirect
 	github.com/knqyf263/go-apk-version v0.0.0-20200609155635-041fdbb8563f // indirect
 	github.com/knqyf263/go-deb-version v0.0.0-20241115132648-6f4aee6ccd23 // indirect
@@ -628,15 +626,14 @@ require (
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/ini.v1 v1.67.3 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
-	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	gorm.io/gorm v1.31.1 // indirect
 	k8s.io/apiextensions-apiserver v0.37.0 // indirect
 	k8s.io/apiserver v0.37.0 // indirect
-	k8s.io/cli-runtime v0.37.1
-	k8s.io/component-helpers v0.37.1
+	k8s.io/cli-runtime v0.37.2
+	k8s.io/component-helpers v0.37.2
 	k8s.io/kube-openapi v0.0.0-20260721132016-d427ff9ee9ad // indirect
-	k8s.io/metrics v0.37.1 // indirect
+	k8s.io/metrics v0.37.2 // indirect
 	k8s.io/utils v0.0.0-20260626114624-be93311217bd
 	modernc.org/libc v1.74.4 // indirect
 	modernc.org/mathutil v1.7.1 // indirect

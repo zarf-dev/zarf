@@ -99,7 +99,7 @@ func Publish(ctx context.Context, componentPath string, destination registry.Ref
 		return registry.Reference{}, err
 	}
 	component.PublishData.ZarfVersion = config.CLIVersion
-	component, resources, err := normalizeComponentResources(componentPath, component, resolved.ImportedSchemas, resourceSet)
+	component, resources, err := normalizeComponentResources(component, resolved.ImportedSchemas, resourceSet)
 	if err != nil {
 		return registry.Reference{}, err
 	}
@@ -145,7 +145,7 @@ func Publish(ctx context.Context, componentPath string, destination registry.Ref
 	if err := store.Tag(ctx, manifest, manifest.Digest.String()); err != nil {
 		return registry.Reference{}, fmt.Errorf("unable to stage component artifact: %w", err)
 	}
-	remote, err := zoci.NewRemoteWithOptions(ctx, componentRef.String(), ocispec.Platform{Architecture: component.Variant.Architecture}, zoci.RemoteClientOptions{
+	remote, err := zoci.NewRemote(ctx, componentRef.String(), ocispec.Platform{Architecture: component.Variant.Architecture}, zoci.RemoteClientOptions{
 		RemoteOptions: opts.RemoteOptions,
 	})
 	if err != nil {
@@ -335,7 +335,11 @@ func addComponentImageLayout(ctx context.Context, archives []v1beta1.ImageArchiv
 
 	imageDir := filepath.Join(tempDir, layout.ImagesDir)
 	for _, archive := range archives {
-		_, err := images.Unpack(ctx, api.ImageArchive{Path: archive.Path, Images: archive.Images}, imageDir, architecture)
+		imageArchive := api.ImageArchive{Path: archive.Path}
+		for _, image := range archive.Images {
+			imageArchive.Images = append(imageArchive.Images, api.ArchiveImage{Name: image.Name, ID: image.ID})
+		}
+		_, err := images.Unpack(ctx, imageArchive, imageDir, architecture)
 		if err != nil {
 			return nil, fmt.Errorf("unable to unpack image archive %q: %w", archive.Path, err)
 		}

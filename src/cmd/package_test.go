@@ -13,12 +13,15 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
+	goyaml "github.com/goccy/go-yaml"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
@@ -30,6 +33,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
+	"oras.land/oras-go/v2/registry"
 )
 
 func TestPackageList(t *testing.T) {
@@ -365,7 +369,7 @@ func TestPackageInspectManifests(t *testing.T) {
 				setValues:    tc.setValues,
 				components:   tc.components,
 			}
-			packagePath := filepath.Join(tmpdir, fmt.Sprintf("zarf-package-%s-%s.tar.zst", tc.packageName, config.GetArch()))
+			packagePath := filepath.Join(tmpdir, fmt.Sprintf("zarf-package-%s-%s.tar.zst", tc.packageName, runtime.GOARCH))
 			testCmd := &cobra.Command{}
 			testCmd.SetContext(context.Background())
 			err = opts.run(testCmd, []string{packagePath})
@@ -531,7 +535,7 @@ func checkPackageValuesInspectFiles(t *testing.T, tc ValuesFilesTestData) {
 		setValues:    tc.setValues,
 		components:   tc.components,
 	}
-	packagePath := filepath.Join(tmpdir, fmt.Sprintf("zarf-package-%s-%s.tar.zst", tc.packageName, config.GetArch()))
+	packagePath := filepath.Join(tmpdir, fmt.Sprintf("zarf-package-%s-%s.tar.zst", tc.packageName, runtime.GOARCH))
 	testCmd := &cobra.Command{}
 	testCmd.SetContext(context.Background())
 	err = opts.run(testCmd, []string{packagePath})
@@ -704,7 +708,7 @@ func TestPackageInspectDocumentation(t *testing.T) {
 			packageName:   "documentation",
 			definitionDir: filepath.Join("testdata", "inspect-documentation", "simple"),
 			keys:          []string{"nonexistent"},
-			expectedErr:   "not found in package documentation",
+			expectedErr:   "attachment key nonexistent not found in package",
 		},
 	}
 
@@ -730,7 +734,7 @@ func TestPackageInspectDocumentation(t *testing.T) {
 				keys:      tc.keys,
 				outputDir: outputDir,
 			}
-			packagePath := filepath.Join(tmpdir, fmt.Sprintf("zarf-package-%s-%s.tar.zst", tc.packageName, config.GetArch()))
+			packagePath := filepath.Join(tmpdir, fmt.Sprintf("zarf-package-%s-%s.tar.zst", tc.packageName, runtime.GOARCH))
 
 			// Create a cobra command with context for the run method
 			inspectCmd := &cobra.Command{}
@@ -766,7 +770,7 @@ func newTestViper() *viper.Viper {
 func TestSignConfirmNotViperBound(t *testing.T) {
 	t.Parallel()
 	v := newTestViper()
-	cmd := newPackageSignCommand(v)
+	cmd := newPackageSignCommand(v, nil)
 	f := cmd.Flags().Lookup("confirm")
 	require.NotNil(t, f)
 	require.Equal(t, "false", f.DefValue, "--confirm must default to false and must not be bound to viper")
@@ -802,7 +806,7 @@ func TestSignTlogUploadEnvRespected(t *testing.T) {
 	require.True(t, v.IsSet(VPkgSignTlogUpload))
 	require.False(t, v.GetBool(VPkgSignTlogUpload))
 
-	cmd := newPackageSignCommand(v)
+	cmd := newPackageSignCommand(v, nil)
 	f := cmd.Flags().Lookup("tlog-upload")
 	require.Equal(t, "false", f.DefValue, "env var must flow through to flag default")
 }
@@ -913,7 +917,7 @@ func TestVerifyInsecureIgnoreTlogDefaultTrue(t *testing.T) {
 	require.False(t, v.IsSet(VPkgInsecureIgnoreTlog),
 		"VPkgInsecureIgnoreTlog must not have a viper default; the keyless guard relies on IsSet() being false when the user has not configured the key")
 
-	cmd := newPackageVerifyCommand(v)
+	cmd := newPackageVerifyCommand(v, nil)
 	f := cmd.Flags().Lookup("insecure-ignore-tlog")
 	require.Equal(t, "true", f.DefValue, "flag must still default to true for air-gap compat when no config is provided")
 }
@@ -925,7 +929,7 @@ func TestVerifyInsecureIgnoreTlogEnvRespected(t *testing.T) {
 	require.True(t, v.IsSet(VPkgInsecureIgnoreTlog))
 	require.False(t, v.GetBool(VPkgInsecureIgnoreTlog))
 
-	cmd := newPackageVerifyCommand(v)
+	cmd := newPackageVerifyCommand(v, nil)
 	f := cmd.Flags().Lookup("insecure-ignore-tlog")
 	require.Equal(t, "false", f.DefValue, "env var must flow through to flag default")
 }
@@ -994,4 +998,26 @@ func TestBuildVerifyBlobOptions(t *testing.T) {
 			require.Equal(t, tc.wantIgnoreTlog, opts.CommonVerifyOptions.IgnoreTlog)
 		})
 	}
+}
+
+func TestSkeletonImportExample(t *testing.T) {
+	t.Parallel()
+	ref := registry.Reference{Registry: "localhost:5000", Repository: "skeletons/test", Reference: "0.0.1"}
+	pkg := api.Package{Components: []api.Component{{Name: "first"}, {Name: "second", Description: "not copied"}}}
+
+	data, err := goyaml.Marshal(skeletonImportExample(pkg, ref))
+	require.NoError(t, err)
+
+	expected := `- name: import-first
+  required: true
+  import:
+    name: first
+    url: oci://localhost:5000/skeletons/test:0.0.1
+- name: import-second
+  required: true
+  import:
+    name: second
+    url: oci://localhost:5000/skeletons/test:0.0.1
+`
+	require.Equal(t, expected, string(data))
 }

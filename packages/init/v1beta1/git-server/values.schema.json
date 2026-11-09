@@ -1,0 +1,118 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "gitServer": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "persistence": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "claimName": {
+              "type": "string",
+              "description": "Name of the Gitea persistent volume claim (a Kubernetes DNS subdomain).",
+              "minLength": 1,
+              "maxLength": 253,
+              "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$"
+            },
+            "size": {
+              "type": "string"
+            },
+            "storageClass": {
+              "type": "string"
+            },
+            "accessModes": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "create": false
+          }
+        },
+        "resources": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "requests": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "cpu": {
+                  "type": "string"
+                },
+                "memory": {
+                  "type": "string"
+                }
+              }
+            },
+            "limits": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "cpu": {
+                  "type": "string"
+                },
+                "memory": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "replicaCount": {
+          "type": "integer"
+        },
+        "gitea": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "config": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "service": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "DISABLE_REGISTRATION": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "affinity": {
+          "properties": {},
+          "type": "object"
+        },
+        "tolerations": {
+          "type": "array"
+        },
+        "nodeSelector": {
+          "properties": {},
+          "type": "object"
+        },
+        "podSecurityContext": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "runAsUser": {
+              "type": "integer"
+            },
+            "fsGroup": {
+              "type": "integer"
+            },
+            "runAsGroup": {
+              "type": "integer"
+            }
+          }
+        }
+      }
+    }
+  }
+}

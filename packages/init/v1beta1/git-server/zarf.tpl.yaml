@@ -1,0 +1,81 @@
+apiVersion: zarf.dev/v1beta1
+kind: ZarfComponentConfig
+metadata:
+  name: git-server
+  version: "[[ .cli.version ]]"
+  description: Gitea server for GitOps repositories
+values:
+  schema: values.schema.json
+  files:
+    - git-server-values.yaml
+component:
+  service:
+    name: git-server
+  stateAccess:
+    - gitCredentials
+  images:
+    - id: git-server
+      name: "[[ .gitServer.image ]]"
+  manifests:
+    - name: git-connect
+      namespace: zarf
+      files:
+        - ../../v1alpha1/gitea/connect.yaml
+  charts:
+    - name: gitea
+      releaseName: zarf-gitea
+      namespace: zarf
+      oci:
+        url: oci://registry-1.docker.io/giteacharts/gitea
+        ref:
+          tag: 12.7.0
+      valuesFiles:
+        - path: git-server-base-values.yaml
+        - path: git-server-state-values.yaml
+          enableTemplating: true
+      values:
+        - sourcePath: .gitServer.podSecurityContext.fsGroup
+          targetPath: .podSecurityContext.fsGroup
+        - sourcePath: .gitServer.podSecurityContext.runAsGroup
+          targetPath: .podSecurityContext.runAsGroup
+        - sourcePath: .gitServer.podSecurityContext.runAsUser
+          targetPath: .podSecurityContext.runAsUser
+        - sourcePath: .gitServer.resources
+          targetPath: .resources
+        - sourcePath: .gitServer.persistence.claimName
+          targetPath: .persistence.claimName
+        - sourcePath: .gitServer.persistence.size
+          targetPath: .persistence.size
+        - sourcePath: .gitServer.persistence.storageClass
+          targetPath: .persistence.storageClass
+        - sourcePath: .gitServer.persistence.accessModes
+          targetPath: .persistence.accessModes
+        - sourcePath: .gitServer.replicaCount
+          targetPath: .replicaCount
+        - sourcePath: .gitServer.gitea.config.service.DISABLE_REGISTRATION
+          targetPath: .gitea.config.service.DISABLE_REGISTRATION
+        - sourcePath: .gitServer.affinity
+          targetPath: .affinity
+        - sourcePath: .gitServer.tolerations
+          targetPath: .tolerations
+        - sourcePath: .gitServer.nodeSelector
+          targetPath: .nodeSelector
+  actions:
+    onDeploy:
+      before:
+        - cmd: >-
+            ./zarf internal update-gitea-pvc --pvc-name {{ .Values.gitServer.persistence.claimName }}
+          enableTemplating: true
+          setValues:
+            - key: .gitServer.persistence.create
+              type: yaml
+          silent: true
+      onSuccess:
+        - cmd: ./zarf internal create-read-only-gitea-user
+          retries: 3
+          maxTotalSeconds: 60
+          description: Create the read-only Gitea user
+      onFailure:
+        - cmd: >-
+            ./zarf internal update-gitea-pvc --rollback --pvc-name {{ .Values.gitServer.persistence.claimName }}
+          enableTemplating: true

@@ -1,0 +1,9 @@
+persistence:
+  # usually set by the action, default true when not exists for inspect commands
+  create: {{ dig "create" true .Values.gitServer.persistence }}
+gitea:
+  admin:
+    username: {{ .State.Git.PushUsername | quote }}
+    password: {{ .State.Git.PushPassword | quote }}
+image:
+  fullOverride: {{ ((.Pkg.GetComponent "git-server").GetImageByID "git-server").Reference | quote }}

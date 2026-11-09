@@ -4,12 +4,54 @@
 package cmd
 
 import (
+	"bytes"
+	"os"
+	"path/filepath"
 	"testing"
 
+	"github.com/goccy/go-yaml"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 )
+
+func TestDevUpgradeTemporaryFileDestinations(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "zarf.yaml"), []byte(`kind: ZarfPackageConfig
+metadata:
+  name: temporary-files
+components:
+  - name: first
+    files:
+      - source: payload
+        target: "###ZARF_TEMP###/payload"
+      - source: plain
+        target: /opt/plain
+  - name: second
+    files:
+      - source: binary
+        target: "prefix/###ZARF_TEMP###/binary"
+        template: false
+`), 0o600))
+
+	var output bytes.Buffer
+	cmd := newDevUpgradeSchemaCommand()
+	cmd.SetArgs([]string{dir})
+	cmd.SetOut(&output)
+	require.NoError(t, cmd.ExecuteContext(t.Context()))
+
+	var pkg v1beta1.Package
+	require.NoError(t, yaml.Unmarshal(output.Bytes(), &pkg))
+	require.Equal(t, v1beta1.APIVersion, pkg.APIVersion)
+	require.Len(t, pkg.Components, 2)
+	require.Len(t, pkg.Components[0].Files, 2)
+	require.Equal(t, "{{ .Runtime.TempDir }}/payload", pkg.Components[0].Files[0].Destination)
+	require.Equal(t, "/opt/plain", pkg.Components[0].Files[1].Destination)
+	require.Len(t, pkg.Components[1].Files, 1)
+	require.Equal(t, "prefix/{{ .Runtime.TempDir }}/binary", pkg.Components[1].Files[0].Destination)
+	require.False(t, pkg.Components[1].Files[0].EnableTemplating)
+}
 
 func TestCheckRemovedFields(t *testing.T) {
 	t.Parallel()

@@ -62,20 +62,14 @@ func TestGetCreds(t *testing.T) {
 					PullPassword: "pull-password",
 					PullUsername: "pull-user",
 				},
-				ArtifactServer: state.ArtifactServerInfo{
-					Address:      "https://git-server.com",
-					PushUsername: "push-user",
-					PushToken:    "push-password",
-				},
 				RegistryInfo: state.RegistryInfo{
 					PullUsername: "pull-user",
 					PushUsername: "push-user",
 					PullPassword: "pull-password",
 					PushPassword: "push-password",
 					Address:      "127.0.0.1:30001",
-					NodePort:     30001,
+					Port:         30001,
 				},
-				Distro: "test",
 			}
 
 			b, err := json.Marshal(s)
@@ -118,14 +112,12 @@ func TestGetCredsOnlyConfiguredServices(t *testing.T) {
 		registryAddress string
 		registryMode    state.RegistryMode
 		gitAddress      string
-		artifactAddress string
 		wantKeys        []string
 	}{
-		{"none configured", "", state.RegistryModeNodePort, "", "", []string{}},
-		{"internal registry configured", "127.0.0.1:30001", state.RegistryModeNodePort, "", "", []string{registryKey, registryReadKey}},
-		{"external registry configured", "registry.example.com", state.RegistryModeExternal, "", "", []string{registryKey, registryReadKey}},
-		{"git configured", "", state.RegistryModeNodePort, "https://git.example.com", "", []string{gitKey, gitReadKey}},
-		{"artifact configured", "", state.RegistryModeNodePort, "", "https://artifact.example.com", []string{artifactKey}},
+		{"none configured", "", state.RegistryModeNodePort, "", []string{}},
+		{"internal registry configured", "127.0.0.1:30001", state.RegistryModeNodePort, "", []string{registryKey, registryReadKey}},
+		{"external registry configured", "registry.example.com", state.RegistryModeExternal, "", []string{registryKey, registryReadKey}},
+		{"git configured", "", state.RegistryModeNodePort, "https://git.example.com", []string{gitKey, gitReadKey}},
 	}
 
 	for _, tt := range tests {
@@ -133,7 +125,6 @@ func TestGetCredsOnlyConfiguredServices(t *testing.T) {
 			t.Parallel()
 			ctx := context.Background()
 			s := &state.State{
-				Distro: "test",
 				RegistryInfo: state.RegistryInfo{
 					Address:      tt.registryAddress,
 					RegistryMode: tt.registryMode,
@@ -144,10 +135,6 @@ func TestGetCredsOnlyConfiguredServices(t *testing.T) {
 					Address:      tt.gitAddress,
 					PushPassword: "git-push-password",
 					PullPassword: "git-pull-password",
-				},
-				ArtifactServer: state.ArtifactServerInfo{
-					Address:   tt.artifactAddress,
-					PushToken: "artifact-token",
 				},
 			}
 			b, err := json.Marshal(s)
@@ -180,7 +167,6 @@ func TestGetCredsOnlyConfiguredServices(t *testing.T) {
 				{registryReadKey, "registry-pull-password"},
 				{gitKey, "git-push-password"},
 				{gitReadKey, "git-pull-password"},
-				{artifactKey, "artifact-token"},
 				{"unknown", ""},
 			} {
 				buf.Reset()
@@ -335,7 +321,6 @@ func internalRegistryState(pullPassword string) *state.State {
 			RegistryMode: state.RegistryModeNodePort,
 			Address:      "127.0.0.1:31999",
 			Port:         31999,
-			NodePort:     31999,
 			PullUsername: "pull-user",
 			PullPassword: pullPassword,
 			PushUsername: "push-user",
@@ -437,8 +422,6 @@ func TestResolveRegistryUpdate(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, state.RegistryModeNodePort, resolved.RegistryMode)
 		require.Equal(t, 31999, resolved.Port)
-		//nolint:staticcheck // verify backwards compatibility sync
-		require.Equal(t, 31999, resolved.NodePort)
 		require.Equal(t, state.MTLSStrategyNone, resolved.MTLSStrategy)
 		require.Equal(t, given.PullUsername, resolved.PullUsername)
 		require.Equal(t, given.PullPassword, resolved.PullPassword)
@@ -471,8 +454,6 @@ func TestResolveRegistryUpdate(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, state.RegistryModeProxy, resolved.RegistryMode)
 		require.Equal(t, 5000, resolved.Port)
-		//nolint:staticcheck // verify backwards compatibility sync
-		require.Equal(t, 5000, resolved.NodePort)
 		require.Equal(t, state.MTLSStrategyZarfManaged, resolved.MTLSStrategy)
 	})
 
@@ -499,8 +480,6 @@ func TestResolveRegistryUpdate(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, state.RegistryModeExternal, resolved.RegistryMode)
 		require.Zero(t, resolved.Port)
-		//nolint:staticcheck // verify backwards compatibility sync
-		require.Zero(t, resolved.NodePort)
 		require.Equal(t, state.MTLSStrategyNone, resolved.MTLSStrategy)
 		require.Equal(t, given.PushUsername, resolved.PullUsername)
 		require.Equal(t, given.PushPassword, resolved.PullPassword)

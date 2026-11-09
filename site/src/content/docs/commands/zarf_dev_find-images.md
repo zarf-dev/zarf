@@ -28,6 +28,7 @@ zarf dev find-images [ PATH ] [flags]
 ```
       --create-set stringToString             Specify package templates to set on the command line (KEY=value). Note, if using a config file, this will be set by [package.create.set]. (default [])
       --deploy-set-variables stringToString   Specify deployment variables to set on the command line (KEY=value) (default [])
+      --enable-kustomize-plugins              Allow external Kustomize plugins referenced by the package definition to execute arbitrary code
   -f, --flavor string                         The flavor of components to include in the resulting package (i.e. have a matching or empty "only.flavor" key)
   -h, --help                                  help for find-images
       --kube-version string                   Override the default helm template KubeVersion when performing a package chart template
@@ -48,7 +49,7 @@ zarf dev find-images [ PATH ] [flags]
       --features stringToString    Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features "foo=true,bar=false,baz=true" (default [])
       --insecure-skip-tls-verify   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
       --log-format string          Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
-  -l, --log-level string           Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
+  -l, --log-level string           Log level when running Zarf. Valid options are: error, warn, info, debug (default "info")
       --no-color                   Disable terminal color codes in logging and stdout prints.
       --plain-http                 Allow OCI registry connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
       --tmpdir string              Specify the temporary directory to use for intermediate files

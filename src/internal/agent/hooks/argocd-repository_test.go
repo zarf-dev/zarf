@@ -46,7 +46,8 @@ func TestArgoRepoWebhook(t *testing.T) {
 		},
 		RegistryInfo: state.RegistryInfo{
 			Address:      "127.0.0.1:31999",
-			NodePort:     31999,
+			RegistryMode: state.RegistryModeNodePort,
+			Port:         31999,
 			PullUsername: "registry-pull-user",
 			PullPassword: "registry-pull-password",
 		},
@@ -707,7 +708,8 @@ func TestArgoRepoWebhookRegistryOnly(t *testing.T) {
 		// GitServer intentionally not configured (OCI-only scenario).
 		RegistryInfo: state.RegistryInfo{
 			Address:      "127.0.0.1:31999",
-			NodePort:     31999,
+			RegistryMode: state.RegistryModeNodePort,
+			Port:         31999,
 			PullUsername: "registry-pull-user",
 			PullPassword: "registry-pull-password",
 		},

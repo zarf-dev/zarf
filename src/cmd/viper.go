@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -45,9 +44,7 @@ const (
 
 	// Init config keys
 
-	VInitComponents   = "init.components"
-	VInitStorageClass = "init.storage_class"
-
+	VInitComponents = "init.components"
 	// Init Git config keys
 
 	VInitGitURL      = "init.git.url"
@@ -70,10 +67,6 @@ const (
 	VInitRegistryPullPass = "init.registry.pull_password"
 
 	// Init Package config keys
-
-	VInitArtifactURL       = "init.artifact.url"
-	VInitArtifactPushUser  = "init.artifact.push_username"
-	VInitArtifactPushToken = "init.artifact.push_token"
 
 	VInitAgentTLSCA          = "init.agent.tls_ca"
 	VInitAgentTLSCert        = "init.agent.tls_cert"
@@ -100,7 +93,6 @@ const (
 
 	VPkgCreateSet                  = "package.create.set"
 	VPkgCreateOutput               = "package.create.output"
-	VPkgCreateSbom                 = "package.create.sbom"
 	VPkgCreateSbomOutput           = "package.create.sbom_output"
 	VPkgCreateSkipSbom             = "package.create.skip_sbom"
 	VPkgCreateMaxPackageSize       = "package.create.max_package_size"
@@ -133,8 +125,6 @@ const (
 
 	// Package publish config keys
 
-	VPkgPublishSigningKey           = "package.publish.signing_key"
-	VPkgPublishSigningKeyPassword   = "package.publish.signing_key_password"
 	VPkgPublishRetries              = "package.publish.retries"
 	VPkgPublishWithBuildMachineInfo = "package.publish.with_build_machine_info"
 
@@ -186,9 +176,29 @@ var (
 	vConfigError error
 )
 
+type configDecoderRegistry struct {
+	viper.DecoderRegistry
+}
+
+func (r configDecoderRegistry) Decoder(format string) (viper.Decoder, error) {
+	if err := validateConfigFormat(format); err != nil {
+		return nil, err
+	}
+	return r.DecoderRegistry.Decoder(format)
+}
+
+func validateConfigFormat(format string) error {
+	switch strings.ToLower(format) {
+	case "yaml", "yml", "toml":
+		return nil
+	default:
+		return fmt.Errorf("unsupported configuration format %q: only YAML and TOML are supported", format)
+	}
+}
+
 // initializes the viper singleton for the CLI
 func initViper() *viper.Viper {
-	v = viper.New()
+	v = viper.NewWithOptions(viper.WithDecoderRegistry(configDecoderRegistry{viper.NewCodecRegistry()}))
 
 	// Skip viper file setup for vendor-only commands
 	if checkVendorOnlyFromArgs() {
@@ -265,17 +275,6 @@ func PrintViperConfigUsed(ctx context.Context) error {
 	// Zarf skips loading the config file for version and tool commands, this avoids output in those cases
 	if cfgFile := v.ConfigFileUsed(); cfgFile != "" {
 		l.Info("using config file", "location", cfgFile)
-		ext := filepath.Ext(cfgFile)
-		switch ext {
-		case ".yml", ".yaml":
-			return nil
-		case ".toml":
-			return nil
-		default:
-			l.Warn("configuration file types other than yaml and toml are deprecated and will be removed in a future release",
-				"fileType", strings.TrimPrefix(ext, "."))
-			return nil
-		}
 	}
 	return nil
 }

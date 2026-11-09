@@ -1,0 +1,26 @@
+gitServer:
+  persistence:
+    claimName: data-zarf-gitea-0
+    size: 10Gi
+    storageClass: ""
+    accessModes:
+      - ReadWriteOnce
+  replicaCount: 1
+  gitea:
+    config:
+      service:
+        DISABLE_REGISTRATION: true
+  resources:
+    requests:
+      cpu: 200m
+      memory: 512Mi
+    limits:
+      cpu: "3"
+      memory: 2Gi
+  podSecurityContext:
+    fsGroup: 1000
+    runAsGroup: 1000
+    runAsUser: 1000
+  affinity: {}
+  tolerations: []
+  nodeSelector: {}

@@ -79,6 +79,11 @@ linters:
     testifylint:
       enable-all: true
   exclusions:
+    rules:
+      # Legacy v1alpha1 APIs remain necessary; method-chain diagnostics can span lines.
+      - linters:
+          - staticcheck
+        text: '(?s)SA1019: .* is deprecated: Only supported by deprecated v1alpha1 packages\.'
     presets:
       - common-false-positives
       - legacy

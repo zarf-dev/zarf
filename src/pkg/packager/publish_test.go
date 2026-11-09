@@ -162,11 +162,10 @@ func TestPublishFromOCIValidation(t *testing.T) {
 
 func TestPublishSkeleton(t *testing.T) {
 	tt := []struct {
-		name          string
-		path          string
-		opts          PublishSkeletonOptions
-		publicKeyPath string
-		expectedTag   string
+		name        string
+		path        string
+		opts        PublishSkeletonOptions
+		expectedTag string
 	}{
 		{
 			name: "Publish skeleton package",
@@ -207,7 +206,7 @@ func TestPublishSkeleton(t *testing.T) {
 			// This verifies that publish deletes the manifest that is auto created by oras
 			require.NoFileExists(t, expectedPkg.Metadata.Name)
 
-			rmt, err := zoci.NewRemoteWithOptions(ctx, ref.String(), zoci.PlatformForSkeleton(), zoci.RemoteClientOptions{
+			rmt, err := zoci.NewRemote(ctx, ref.String(), zoci.PlatformForSkeleton(), zoci.RemoteClientOptions{
 				RemoteOptions: types.RemoteOptions{PlainHTTP: true},
 			})
 			require.NoError(t, err)
@@ -226,26 +225,16 @@ func TestPublishSkeleton(t *testing.T) {
 			// NOTE(mkcp): In future schema version move ZarfPackage.Metadata.AggregateChecksum
 			// to ZarfPackage.Build.AggregateChecksum. See ADR #26
 			require.Equal(t, expected, pkg)
-			if tc.publicKeyPath != "" {
-				signedLayout := pullFromRemote(ctx, t, ref.String(), v1alpha1.SkeletonArch, tc.publicKeyPath, t.TempDir(), defaultTestRemoteOptions())
-				t.Cleanup(func() { require.NoError(t, signedLayout.Cleanup()) })
-				require.True(t, signedLayout.IsSigned())
-			}
 		})
 	}
 }
 
 func TestPublishPackage(t *testing.T) {
-	signOpts := signing.DefaultSignBlobOptions()
-	signOpts.Key = filepath.Join("testdata", "publish", "cosign.key")
-	signOpts.Password = "password"
-
 	tt := []struct {
-		name          string
-		path          string
-		opts          PublishPackageOptions
-		publicKeyPath string
-		expectedTag   string
+		name        string
+		path        string
+		opts        PublishPackageOptions
+		expectedTag string
 	}{
 		{
 			name: "Publish package",
@@ -254,27 +243,6 @@ func TestPublishPackage(t *testing.T) {
 				RemoteOptions: defaultTestRemoteOptions(),
 			},
 			expectedTag: "0.0.1",
-		},
-		{
-			name: "Sign and publish package",
-			path: filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst"),
-			opts: PublishPackageOptions{
-				RemoteOptions:   defaultTestRemoteOptions(),
-				SignBlobOptions: signOpts,
-			},
-			publicKeyPath: filepath.Join("testdata", "publish", "cosign.pub"),
-			expectedTag:   "0.0.1",
-		},
-		{
-			name: "Sign and publish package with deprecated keypair fields",
-			path: filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst"),
-			opts: PublishPackageOptions{
-				RemoteOptions:      defaultTestRemoteOptions(),
-				SigningKeyPath:     filepath.Join("testdata", "publish", "cosign.key"),
-				SigningKeyPassword: "password",
-			},
-			publicKeyPath: filepath.Join("testdata", "publish", "cosign.pub"),
-			expectedTag:   "0.0.1",
 		},
 		{
 			name: "Publish package with specified tag different from version",
@@ -304,23 +272,19 @@ func TestPublishPackage(t *testing.T) {
 			expectedPkg := layoutExpected.Definition()
 			expectedPkg.Build = api.BuildData{}
 
-			layoutActual := pullFromRemote(ctx, t, packageRef.String(), "amd64", tc.publicKeyPath, t.TempDir(), defaultTestRemoteOptions())
+			layoutActual := pullFromRemote(ctx, t, packageRef.String(), "amd64", "", t.TempDir(), defaultTestRemoteOptions())
 			actualPkg := layoutActual.Definition()
 			actualPkg.Build = api.BuildData{}
 			require.Equal(t, expectedPkg, actualPkg, "Uploaded package is not identical to downloaded package")
-			if tc.publicKeyPath != "" {
-				require.FileExists(t, filepath.Join(layoutActual.DirPath(), layout.Bundle))
-			}
 		})
 	}
 }
 
 func TestPublishPackageDirectoryNameCollision(t *testing.T) {
 	tt := []struct {
-		name          string
-		path          string
-		opts          PublishPackageOptions
-		publicKeyPath string
+		name string
+		path string
+		opts PublishPackageOptions
 	}{
 		{
 			name: "Publish package from directory with subdir matching package name",
@@ -368,7 +332,7 @@ func TestPublishPackageDirectoryNameCollision(t *testing.T) {
 			expectedPkg := layoutExpected.Definition()
 			expectedPkg.Build = api.BuildData{}
 
-			layoutActual := pullFromRemote(ctx, t, packageRef.String(), "amd64", tc.publicKeyPath, t.TempDir(), defaultTestRemoteOptions())
+			layoutActual := pullFromRemote(ctx, t, packageRef.String(), "amd64", "", t.TempDir(), defaultTestRemoteOptions())
 			actualPkg := layoutActual.Definition()
 			actualPkg.Build = api.BuildData{}
 			require.Equal(t, expectedPkg, actualPkg, "Uploaded package is not identical to downloaded package")
@@ -406,7 +370,7 @@ func TestPublishPackageDeterministic(t *testing.T) {
 
 			// Attempt to get the digest
 			platform := oci.PlatformForArch(layoutExpected.Definition().Build.Architecture)
-			remote, err := zoci.NewRemoteWithOptions(ctx, packageRef.String(), platform, zoci.RemoteClientOptions{
+			remote, err := zoci.NewRemote(ctx, packageRef.String(), platform, zoci.RemoteClientOptions{
 				RemoteOptions: tc.opts.RemoteOptions,
 			})
 			require.NoError(t, err)

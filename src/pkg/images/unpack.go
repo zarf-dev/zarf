@@ -108,14 +108,14 @@ func Unpack(ctx context.Context, imageArchive api.ImageArchive, destDir string, 
 		return nil, fmt.Errorf("failed to create source OCI store: %w", err)
 	}
 
-	// Build a set of requested images for filtering
-	requestedImages := make(map[string]bool)
+	// Map each normalized image identity to its parsed image reference.
+	requestedImages := make(map[string]transform.Image, len(imageArchive.Images))
 	for _, img := range imageArchive.Images {
-		ref, err := transform.ParseImageRef(img)
+		ref, err := transform.ParseImageRef(img.Name)
 		if err != nil {
-			return nil, fmt.Errorf("failed to parse image reference %s: %w", img, err)
+			return nil, fmt.Errorf("failed to parse image reference %s: %w", img.Name, err)
 		}
-		requestedImages[ref.Reference] = false
+		requestedImages[ref.Reference] = ref
 	}
 
 	var pulledImages []PulledImage
@@ -131,25 +131,24 @@ func Unpack(ctx context.Context, imageArchive api.ImageArchive, destDir string, 
 		}
 		foundImages = append(foundImages, manifestImg.Reference)
 
-		if _, requested := requestedImages[manifestImg.Reference]; !requested {
+		request, requested := requestedImages[manifestImg.Reference]
+		if !requested {
 			continue
 		}
-		requestedImages[manifestImg.Reference] = true
 
 		logger.From(ctx).Info("pulling image from archive", "image", manifestImg.Reference, "archive", imageArchive.Path)
 		if _, err := copyImageFromOCILayout(ctx, srcStore, dstStore, manifestDesc.Digest.String(), manifestImg, arch, 0); err != nil {
 			return nil, fmt.Errorf("failed to pull image %s from archive %s: %w", manifestImg.Reference, imageArchive.Path, err)
 		}
 
-		pulledImages = append(pulledImages, PulledImage{Image: manifestImg})
+		pulledImages = append(pulledImages, PulledImage{Image: request})
+		delete(requestedImages, manifestImg.Reference)
 	}
 
 	explainErr := fmt.Sprintf("image references are determined by the inclusion of one of the following "+
 		"annotations in the index.json: %s, %s.<registry>, %s", dockerRefAnnotation, containerdDistributionSourcePrefix, ocispec.AnnotationRefName)
-	for img, found := range requestedImages {
-		if !found {
-			return nil, fmt.Errorf("could not find image %s: found images %s: %s", img, foundImages, explainErr)
-		}
+	for imageReference := range requestedImages {
+		return nil, fmt.Errorf("could not find image %s: found images %s: %s", imageReference, foundImages, explainErr)
 	}
 
 	return pulledImages, nil

@@ -56,11 +56,7 @@ type AssembleOptions struct {
 	RegistryOverrides []images.RegistryOverride
 	// A nil value leaves the package unsigned; a non-nil value requests signing.
 	SignBlobOptions *signing.SignBlobOptions
-	// Deprecated: populate SignBlobOptions.Key directly.
-	SigningKeyPath string
-	// Deprecated: populate SignBlobOptions.Password directly.
-	SigningKeyPassword string
-	SkipSBOM           bool
+	SkipSBOM        bool
 	// When DifferentialPackage is set the zarf package created only includes images and repos not in the differential package.
 	DifferentialPackage api.Package
 	OCIConcurrency      int
@@ -113,8 +109,9 @@ func AssemblePackage(ctx context.Context, resolvedPackage *load.ResolvedPackage,
 		}
 		definition = updatedDefinition
 		pkg = definition
-		definition.Build.Differential = true
-		definition.Build.DifferentialPackageVersion = opts.DifferentialPackage.Metadata.Version
+		definition.Build.Differential = &api.Differential{
+			FromVersion: opts.DifferentialPackage.Metadata.Version,
+		}
 	}
 	if err := layout.ValidatePackagePaths(definition); err != nil {
 		return nil, err
@@ -136,6 +133,7 @@ func AssemblePackage(ctx context.Context, resolvedPackage *load.ResolvedPackage,
 		}
 	}
 
+	declaredImageReferences := map[string][]string{}
 	componentImages := []images.ImageRequest{}
 	manifests := []images.PulledImage{}
 	for _, component := range pkg.Components {
@@ -143,6 +141,15 @@ func AssemblePackage(ctx context.Context, resolvedPackage *load.ResolvedPackage,
 			imageArchive.Path, err = resolvedPackage.Resources.Path(imageArchive.Path)
 			if err != nil {
 				return nil, err
+			}
+			if layout.UsesGranularResourceLayout(pkg) && !opts.SkipSBOM {
+				for _, image := range imageArchive.Images {
+					refInfo, err := transform.ParseImageRef(image.Name)
+					if err != nil {
+						return nil, fmt.Errorf("failed to create ref for image %s: %w", image.Name, err)
+					}
+					addDeclaredSBOMImageReference(declaredImageReferences, image.Name, refInfo)
+				}
 			}
 
 			archiveImageManifests, err := images.Unpack(ctx, imageArchive, filepath.Join(buildPath, layout.ImagesDir), pkg.Metadata.Architecture)
@@ -156,10 +163,15 @@ func AssemblePackage(ctx context.Context, resolvedPackage *load.ResolvedPackage,
 			if err != nil {
 				return nil, fmt.Errorf("failed to create ref for image %s: %w", image.Name, err)
 			}
-			componentImages = append(componentImages, images.ImageRequest{Image: refInfo, Source: image.Source.GetSource()})
+			if layout.UsesGranularResourceLayout(pkg) && !opts.SkipSBOM {
+				addDeclaredSBOMImageReference(declaredImageReferences, image.Name, refInfo)
+			}
+			componentImages = append(componentImages, images.ImageRequest{
+				Image:  refInfo,
+				Source: image.Source.GetSource(),
+			})
 		}
 	}
-	sbomImageList := []transform.Image{}
 	if len(componentImages) > 0 {
 		pullOpts := images.PullOptions{
 			OCIConcurrency:        opts.OCIConcurrency,
@@ -176,12 +188,9 @@ func AssemblePackage(ctx context.Context, resolvedPackage *load.ResolvedPackage,
 		manifests = append(manifests, imageManifests...)
 	}
 
-	for _, pulled := range manifests {
-		sbomImageList = append(sbomImageList, pulled.Image)
-
+	if len(manifests) > 0 {
 		// Sort images index to make build reproducible.
-		err = utils.SortImagesIndex(filepath.Join(buildPath, layout.ImagesDir))
-		if err != nil {
+		if err := utils.SortImagesIndex(filepath.Join(buildPath, layout.ImagesDir)); err != nil {
 			return nil, err
 		}
 	}
@@ -190,7 +199,7 @@ func AssemblePackage(ctx context.Context, resolvedPackage *load.ResolvedPackage,
 
 	if !opts.SkipSBOM && pkg.IsSBOMAble() {
 		l.Info("generating SBOM")
-		err := generateSBOM(ctx, pkg, buildPath, sbomImageList, opts.CachePath)
+		err := generateSBOM(ctx, pkg, buildPath, manifests, opts.CachePath, declaredImageReferences)
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate SBOM: %w", err)
 		}
@@ -205,7 +214,7 @@ func AssemblePackage(ctx context.Context, resolvedPackage *load.ResolvedPackage,
 		return nil, err
 	}
 
-	if err = createDocumentationTar(ctx, pkg, resolvedPackage.Resources, buildPath); err != nil {
+	if err = stageAttachments(ctx, pkg, resolvedPackage.Resources, buildPath); err != nil {
 		return nil, err
 	}
 
@@ -232,26 +241,11 @@ func AssemblePackage(ctx context.Context, resolvedPackage *load.ResolvedPackage,
 	if err != nil {
 		return nil, err
 	}
-
-	signOpts := opts.SignBlobOptions
-	if signOpts != nil && ((signOpts.Key == "" && opts.SigningKeyPath != "") || (signOpts.Password == "" && opts.SigningKeyPassword != "")) {
-		copied := *signOpts
-		signOpts = &copied
-	}
-	if signOpts == nil && opts.SigningKeyPath != "" {
-		defaults := signing.DefaultSignBlobOptions()
-		signOpts = &defaults
-	}
-	if signOpts != nil {
-		if signOpts.Key == "" {
-			signOpts.Key = opts.SigningKeyPath
-		}
-		if signOpts.Password == "" {
-			signOpts.Password = opts.SigningKeyPassword
-		}
+	if selectors, applied := definition.ComponentSelectors(); applied {
+		pkgLayout.SetComponentSelectors(selectors)
 	}
 
-	if err := pkgLayout.SignPackage(ctx, signOpts); err != nil {
+	if err := pkgLayout.SignPackage(ctx, opts.SignBlobOptions); err != nil {
 		return nil, err
 	}
 
@@ -260,15 +254,13 @@ func AssemblePackage(ctx context.Context, resolvedPackage *load.ResolvedPackage,
 
 // AssembleSkeletonOptions are the options for creating a skeleton package.
 type AssembleSkeletonOptions struct {
-	// Deprecated: use PackageLayout.SignPackage or the sign command.
-	SigningKeyPath string
-	// Deprecated: use PackageLayout.SignPackage or the sign command.
-	SigningKeyPassword   string
 	Flavor               string
 	WithBuildMachineInfo bool
 }
 
 // AssembleSkeleton creates a skeleton package and returns the path to the created package.
+//
+// Deprecated: Only supported by deprecated v1alpha1 packages.
 func AssembleSkeleton(ctx context.Context, resolvedPackage *load.ResolvedPackage, opts AssembleSkeletonOptions) (*layout.PackageLayout, error) {
 	if err := resolvedPackage.Definition.Validate(); err != nil {
 		return nil, err
@@ -296,7 +288,7 @@ func AssembleSkeleton(ctx context.Context, resolvedPackage *load.ResolvedPackage
 		return nil, err
 	}
 
-	if err = createDocumentationTar(ctx, definition, resolvedPackage.Resources, buildPath); err != nil {
+	if err = stageAttachments(ctx, definition, resolvedPackage.Resources, buildPath); err != nil {
 		return nil, err
 	}
 
@@ -337,19 +329,18 @@ func AssembleSkeleton(ctx context.Context, resolvedPackage *load.ResolvedPackage
 	if err != nil {
 		return nil, fmt.Errorf("unable to load skeleton: %w", err)
 	}
-
-	var signOpts *signing.SignBlobOptions
-	if opts.SigningKeyPath != "" {
-		defaults := signing.DefaultSignBlobOptions()
-		defaults.Key = opts.SigningKeyPath
-		defaults.Password = opts.SigningKeyPassword
-		signOpts = &defaults
-	}
-	if err := pkgLayout.SignPackage(ctx, signOpts); err != nil {
-		return nil, err
+	if selectors, applied := definition.ComponentSelectors(); applied {
+		pkgLayout.SetComponentSelectors(selectors)
 	}
 
 	return pkgLayout, nil
+}
+
+func addDeclaredSBOMImageReference(declaredReferences map[string][]string, declaredReference string, canonicalReference transform.Image) {
+	aliases := declaredReferences[canonicalReference.Reference]
+	if !slices.Contains(aliases, declaredReference) {
+		declaredReferences[canonicalReference.Reference] = append(aliases, declaredReference)
+	}
 }
 
 // validateImageArchivesNoDuplicates ensures no image appears in multiple image archives
@@ -360,9 +351,9 @@ func validateImageArchivesNoDuplicates(components []api.Component) error {
 	for _, comp := range components {
 		for _, archive := range comp.ImageArchives {
 			for _, image := range archive.Images {
-				refInfo, err := transform.ParseImageRef(image)
+				refInfo, err := transform.ParseImageRef(image.Name)
 				if err != nil {
-					return fmt.Errorf("failed to parse image ref %s in archive %s: %w", image, archive.Path, err)
+					return fmt.Errorf("failed to parse image ref %s in archive %s: %w", image.Name, archive.Path, err)
 				}
 
 				if existingArchivePath, exists := imageToArchive[refInfo.Reference]; exists {
@@ -1193,52 +1184,63 @@ func writeValuesSchema(buildPath string, schema value.SchemaDocument) error {
 	return nil
 }
 
-func createDocumentationTar(ctx context.Context, pkg api.Package, resources *load.ResourceSet, buildPath string) (err error) {
-	if len(pkg.Documentation) == 0 {
+func stageAttachments(ctx context.Context, pkg api.Package, resources *load.ResourceSet, buildPath string) (err error) {
+	if len(pkg.Attachments) == 0 {
 		return nil
 	}
-	for key := range pkg.Documentation {
+	for key := range pkg.Attachments {
 		if err := layout.ValidatePathComponent(key); err != nil {
-			return fmt.Errorf("documentation key validation failed: %w", err)
+			return fmt.Errorf("attachment key validation failed: %w", err)
 		}
 	}
 
+	// Get the mapping of keys to their final filenames (with deconfliction logic).
+	fileNames, err := layout.GetAttachmentFileNames(pkg.Attachments, nil)
+	if err != nil {
+		return fmt.Errorf("validating attachment filenames: %w", err)
+	}
 	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
-		return fmt.Errorf("failed to create temp directory for documentation: %w", err)
+		return fmt.Errorf("failed to create temp directory for attachments: %w", err)
 	}
 	defer func() {
 		err = errors.Join(err, os.RemoveAll(tmpDir))
 	}()
-
-	// Get the mapping of keys to their final filenames (with deduplication logic)
-	fileNames := layout.GetDocumentationFileNames(pkg.Documentation)
-
-	for key, file := range pkg.Documentation {
+	for key, file := range pkg.Attachments {
 		src, err := resources.Path(file)
 		if err != nil {
 			return err
 		}
 
-		docFilename := fileNames[key]
-		dst, err := layout.PathWithinDirectory(tmpDir, docFilename)
+		attachmentFileName := fileNames[key]
+		dstDir := tmpDir
+		if layout.UsesGranularResourceLayout(pkg) {
+			dstDir = filepath.Join(buildPath, layout.AttachmentsDir)
+		}
+		if err := os.MkdirAll(dstDir, helpers.ReadWriteExecuteUser); err != nil {
+			return fmt.Errorf("failed to create attachment directory: %w", err)
+		}
+
+		dst, err := layout.PathWithinDirectory(dstDir, attachmentFileName)
 		if err != nil {
-			return fmt.Errorf("documentation output validation failed: %w", err)
+			return fmt.Errorf("attachment output validation failed: %w", err)
 		}
 
 		if err := layout.MaterializeSourceToLayout(ctx, src, dst); err != nil {
-			return fmt.Errorf("failed to copy documentation file %s: %w", src, err)
+			return fmt.Errorf("failed to copy attachment file %s: %w", src, err)
 		}
-
 		if err := os.Chmod(dst, helpers.ReadWriteUser); err != nil {
-			return fmt.Errorf("failed to set permissions on documentation file %s: %w", dst, err)
+			return fmt.Errorf("failed to set permissions on attachment file %s: %w", dst, err)
 		}
+	}
+
+	if layout.UsesGranularResourceLayout(pkg) {
+		return nil
 	}
 
 	tarPath := filepath.Join(buildPath, layout.DocumentationTar)
 	if err := createReproducibleTarballFromDir(tmpDir, "", tarPath, true); err != nil {
 		return fmt.Errorf("failed to create documentation tarball: %w", err)
 	}
-
 	return nil
 }

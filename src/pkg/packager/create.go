@@ -11,6 +11,9 @@ import (
 
 	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
+	"github.com/zarf-dev/zarf/src/config"
+	internalv1alpha1 "github.com/zarf-dev/zarf/src/internal/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/feature"
 	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/images"
@@ -20,6 +23,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
 	"github.com/zarf-dev/zarf/src/pkg/signing"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"github.com/zarf-dev/zarf/src/types"
@@ -27,14 +31,12 @@ import (
 
 // CreateOptions are the optional parameters to create.
 type CreateOptions struct {
+	// Architecture overrides package metadata. Empty falls back to metadata, then the host.
+	Architecture      string
 	Flavor            string
 	RegistryOverrides []images.RegistryOverride
 	// A nil value leaves the package unsigned; a non-nil value requests signing.
-	SignBlobOptions *signing.SignBlobOptions
-	// Deprecated: populate SignBlobOptions.Key directly.
-	SigningKeyPath string
-	// Deprecated: populate SignBlobOptions.Password directly.
-	SigningKeyPassword      string
+	SignBlobOptions         *signing.SignBlobOptions
 	SetVariables            map[string]string
 	MaxPackageSizeMB        int
 	SBOMOut                 string
@@ -64,6 +66,7 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 
 	loadOpts := load.PackageOptions{
 		DefinitionOptions: load.DefinitionOptions{
+			Architecture:     opts.Architecture,
 			Flavor:           opts.Flavor,
 			SetVariables:     opts.SetVariables,
 			CachePath:        opts.CachePath,
@@ -80,6 +83,7 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 		err = errors.Join(err, loaded.Close())
 	}()
 	pkg := loaded.Definition
+	internalv1alpha1.WarnIfDeprecated(ctx, pkg)
 	if pkg.GetAPIVersion() == v1beta1.APIVersion && !feature.IsEnabled(feature.V1Beta1) {
 		return "", fmt.Errorf("creating a %s package requires the %q feature. Run again with --features=%s=true",
 			v1beta1.APIVersion, feature.V1Beta1, feature.V1Beta1)
@@ -90,7 +94,7 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 		pkgLayout, err := LoadPackage(ctx, opts.DifferentialPackagePath, LoadOptions{
 			Architecture:   pkg.Metadata.Architecture,
 			RemoteOptions:  opts.RemoteOptions,
-			LayerTypes:     []zoci.LayerType{zoci.MetadataLayers},
+			LayerSelection: &zoci.LayerSelection{},
 			OCIConcurrency: opts.OCIConcurrency,
 			CachePath:      opts.CachePath,
 		})
@@ -110,8 +114,6 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 		Flavor:               opts.Flavor,
 		RegistryOverrides:    opts.RegistryOverrides,
 		SignBlobOptions:      opts.SignBlobOptions,
-		SigningKeyPath:       opts.SigningKeyPath,
-		SigningKeyPassword:   opts.SigningKeyPassword,
 		CachePath:            opts.CachePath,
 		WithBuildMachineInfo: opts.WithBuildMachineInfo,
 		RemoteOptions:        opts.RemoteOptions,
@@ -123,6 +125,9 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 	defer func() {
 		err = errors.Join(err, pkgLayout.Cleanup())
 	}()
+	if err := validatePackageSecretSize(pkgLayout.Definition(), pkgLayout.Digest(), state.DeployConfig{}); err != nil {
+		return "", err
+	}
 
 	var packageLocation string
 	if helpers.IsOCIURL(output) {
@@ -131,7 +136,7 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 		if err != nil {
 			return "", err
 		}
-		remote, err := zoci.NewRemoteWithOptions(ctx, ref.String(), oci.PlatformForArch(pkg.Build.Architecture), zoci.RemoteClientOptions{
+		remote, err := zoci.NewRemote(ctx, ref.String(), oci.PlatformForArch(pkg.Build.Architecture), zoci.RemoteClientOptions{
 			RemoteOptions: opts.RemoteOptions,
 		})
 		if err != nil {
@@ -156,7 +161,7 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 
 	if opts.SBOMOut != "" {
 		// Sanitize path to avoid writing outside user directory in the case of malicious edited package definition
-		err := pkgLayout.GetSBOM(ctx, filepath.Join(opts.SBOMOut, filepath.Base(pkgLayout.Definition().Metadata.Name)))
+		err := pkgLayout.GetSBOM(ctx, filepath.Join(opts.SBOMOut, filepath.Base(pkgLayout.Definition().Metadata.Name)), nil)
 		// Don't fail package create if the package doesn't have an sbom
 		var noSBOMErr *layout.NoSBOMAvailableError
 		if errors.As(err, &noSBOMErr) {
@@ -168,4 +173,23 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 		}
 	}
 	return packageLocation, nil
+}
+
+// Check the compressed deployment record, including compatibility copies, component
+// status, and saved overrides, before creating or deploying a package.
+func validatePackageSecretSize(pkg api.Package, digest string, deployConfig state.DeployConfig) error {
+	components := make([]state.DeployedComponent, 0, len(pkg.Components))
+	for _, component := range pkg.Components {
+		components = append(components, state.DeployedComponent{
+			Name:               component.Name,
+			Status:             state.ComponentStatusSucceeded, //nolint:staticcheck // Legacy status remains persisted for compatibility.
+			ObservedGeneration: 1,
+		})
+	}
+	deployed, err := state.NewDeployedPackage(pkg, digest, config.CLIVersion, components, 1, state.WithPackageNamespaceOverride(deployConfig.NamespaceOverride))
+	if err != nil {
+		return err
+	}
+	deployed.SetDeployConfig(deployConfig)
+	return cluster.ValidateDeployedPackageSecretSize(*deployed)
 }

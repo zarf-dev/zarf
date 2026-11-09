@@ -56,6 +56,64 @@ func TestTrustedRootCreate(t *testing.T) {
 func TestUseCLI(t *testing.T) {
 	t.Parallel()
 
+	t.Run("zarf tools download-init", func(t *testing.T) {
+		t.Parallel()
+		for _, apiVersion := range []string{"v1beta1", "v1alpha1"} {
+			t.Run(apiVersion, func(t *testing.T) {
+				t.Parallel()
+				outputDir := t.TempDir()
+				const version = "v0.89.0"
+				args := []string{"tools", "download-init", "--version", version, "--output-directory", outputDir}
+				// Verify v1beta1 is the default and v1alpha1 can be selected explicitly.
+				if apiVersion == "v1alpha1" {
+					args = append(args, "--api-version", apiVersion)
+				}
+				stdOut, stdErr, err := e2e.Zarf(t, args...)
+				require.NoError(t, err, stdOut, stdErr)
+
+				packagePath := filepath.Join(outputDir, fmt.Sprintf("zarf-init-%s-%s.tar.zst", e2e.Arch, version))
+				require.FileExists(t, packagePath)
+				ctx := logger.WithContext(t.Context(), test.GetLogger(t))
+				pkgLayout, err := layout.LoadFromTar(ctx, packagePath, layout.PackageLayoutOptions{})
+				require.NoError(t, err)
+				t.Cleanup(func() {
+					require.NoError(t, pkgLayout.Cleanup())
+				})
+				require.Equal(t, "zarf.dev/"+apiVersion, pkgLayout.Definition().GetAPIVersion())
+			})
+		}
+	})
+
+	t.Run("zarf dev upgrade", func(t *testing.T) {
+		t.Parallel()
+		dir := t.TempDir()
+		require.NoError(t, os.WriteFile(filepath.Join(dir, "zarf.yaml"), []byte(`apiVersion: zarf.dev/v1alpha1
+kind: ZarfPackageConfig
+metadata:
+  name: upgrade
+  version: 1.0.0
+components:
+  - name: app
+    images:
+      - ghcr.io/stefanprodan/podinfo:6.4.0
+`), 0o600))
+
+		stdOut, stdErr, err := e2e.Zarf(t, "dev", "upgrade", dir)
+		require.NoError(t, err, stdOut, stdErr)
+		require.YAMLEq(t, `apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: upgrade
+  version: 1.0.0
+components:
+  - name: app
+    optional: true
+    images:
+      - name: ghcr.io/stefanprodan/podinfo:6.4.0
+        source: registry
+`, stdOut)
+	})
+
 	// TODO once cmd is refactored to accept an io.Writer, move this test to DevInspectDefinitionOptions.Run()
 	t.Run("zarf dev inspect definition", func(t *testing.T) {
 		t.Parallel()
@@ -106,6 +164,43 @@ func TestUseCLI(t *testing.T) {
 		require.Contains(t, stdOut, "kind: ZarfComponentConfig")
 		require.Contains(t, stdOut, "name: published-component")
 		require.Contains(t, stdOut, "name: local-chart")
+	})
+
+	t.Run("zarf dev inspect v1beta1 init package", func(t *testing.T) {
+		t.Parallel()
+		dir := t.TempDir()
+		require.NoError(t, copy.Copy("packages", filepath.Join(dir, "packages")))
+		require.NoError(t, copy.Copy(".vex", filepath.Join(dir, ".vex")))
+		initPath := filepath.Join(dir, "packages", "init", "v1beta1")
+		templates, err := filepath.Glob(filepath.Join(initPath, "*", "*.tpl.yaml"))
+		require.NoError(t, err)
+		templates = append(templates, filepath.Join(initPath, "zarf.tpl.yaml"))
+		for _, source := range templates {
+			stdOut, stdErr, err := e2e.Zarf(t, "dev", "template", source, "--set-file", filepath.Join(initPath, "template-values.yaml"))
+			require.NoError(t, err, stdOut, stdErr)
+		}
+
+		for _, tc := range []struct {
+			command string
+			want    []string
+		}{
+			{
+				command: "manifests",
+				want:    []string{"name: agent-hook", "name: zarf-docker-registry", "name: zarf-gitea"},
+			},
+			{
+				command: "values-files",
+				want:    []string{"# associated chart: zarf-agent", "# associated chart: docker-registry", "# associated chart: gitea", "claimName: data-zarf-gitea-0"},
+			},
+		} {
+			t.Run(tc.command, func(t *testing.T) {
+				stdOut, stdErr, err := e2e.Zarf(t, "dev", "inspect", tc.command, initPath)
+				require.NoError(t, err, stdOut, stdErr)
+				for _, want := range tc.want {
+					require.Contains(t, stdOut, want)
+				}
+			})
+		}
 	})
 
 	t.Run("zarf dev inspect values-files with components", func(t *testing.T) {
@@ -282,6 +377,45 @@ components:
 		require.NotContains(t, stdErr, "DESELECT-ME COMPONENT")
 	})
 
+	t.Run("zarf deploy respects component selector order", func(t *testing.T) {
+		t.Parallel()
+		dir := t.TempDir()
+		one := filepath.Join(dir, "one")
+		two := filepath.Join(dir, "two")
+		definition := fmt.Sprintf(`kind: ZarfPackageConfig
+metadata:
+  name: component-selector
+components:
+  - name: one
+    default: true
+    actions:
+      onDeploy:
+        after:
+          - cmd: %q
+  - name: two
+    default: true
+    actions:
+      onDeploy:
+        after:
+          - cmd: %q
+`, fmt.Sprintf("touch %q", one), fmt.Sprintf("touch %q", two))
+		require.NoError(t, os.WriteFile(filepath.Join(dir, "zarf.yaml"), []byte(definition), 0o600))
+		stdOut, stdErr, err := e2e.Zarf(t, "package", "create", dir, "-o", dir, "--confirm")
+		require.NoError(t, err, stdOut, stdErr)
+		pkg := filepath.Join(dir, fmt.Sprintf("zarf-package-component-selector-%s.tar.zst", e2e.Arch))
+
+		stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", pkg, "--components=-*,two", "--confirm")
+		require.NoError(t, err, stdOut, stdErr)
+		require.NoFileExists(t, one)
+		require.FileExists(t, two)
+
+		require.NoError(t, os.Remove(two))
+		stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", pkg, "--components=two,-*", "--confirm")
+		require.NoError(t, err, stdOut, stdErr)
+		require.NoFileExists(t, one)
+		require.NoFileExists(t, two)
+	})
+
 	t.Run("changing log level", func(t *testing.T) {
 		t.Parallel()
 		// Test that changing the log level actually applies the requested level
@@ -310,7 +444,7 @@ components:
 		t.Parallel()
 		tmpdir := t.TempDir()
 		cacheDir := filepath.Join(t.TempDir(), ".cache-location")
-		stdOut, stdErr, err := e2e.Zarf(t, "package", "create", "examples/dos-games", "--zarf-cache", cacheDir, "--tmpdir", tmpdir, "--log-level=debug", "-o", tmpdir, "--confirm")
+		stdOut, stdErr, err := e2e.Zarf(t, "package", "create", "examples/dos-games", "--cache", cacheDir, "--tmpdir", tmpdir, "--log-level=debug", "-o", tmpdir, "--confirm")
 		require.NoError(t, err, stdOut, stdErr)
 
 		files, err := os.ReadDir(filepath.Join(cacheDir, "images"))
@@ -335,7 +469,7 @@ components:
 		tmpdir := t.TempDir()
 		// Test removal of cache
 		cachePath := filepath.Join(tmpdir, ".cache-location")
-		stdOut, stdErr, err := e2e.Zarf(t, "tools", "clear-cache", "--zarf-cache", cachePath)
+		stdOut, stdErr, err := e2e.Zarf(t, "tools", "clear-cache", "--cache", cachePath)
 		require.NoError(t, err, stdOut, stdErr)
 		// Check that ReadDir returns no such file or directory for the cachePath
 		_, err = os.ReadDir(cachePath)

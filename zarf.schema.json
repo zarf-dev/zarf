@@ -29,6 +29,13 @@
           ],
           "type": "string"
         },
+        "attachments": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Attachments are files included in the package.",
+          "type": "object"
+        },
         "build": {
           "additionalProperties": false,
           "description": "Zarf-generated package build data.",
@@ -45,12 +52,21 @@
               "type": "string"
             },
             "differential": {
-              "description": "Whether this package was created with differential components.",
-              "type": "boolean"
-            },
-            "differentialPackageVersion": {
-              "description": "Version of a previously built package used as the basis for creating this differential package.",
-              "type": "string"
+              "additionalProperties": false,
+              "description": "Base package used to create this differential package. Omitted for full packages.",
+              "patternProperties": {
+                "^x-": {}
+              },
+              "properties": {
+                "fromVersion": {
+                  "description": "Version of a previously built package used as the basis for creating this differential package.",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "fromVersion"
+              ],
+              "type": "object"
             },
             "flavor": {
               "description": "The flavor of Zarf used to build this package.",
@@ -2231,32 +2247,6 @@
                 "items": {
                   "additionalProperties": false,
                   "description": "Chart defines a helm chart to be deployed.",
-                  "oneOf": [
-                    {
-                      "required": [
-                        "helmRepository"
-                      ],
-                      "title": "helmRepository"
-                    },
-                    {
-                      "required": [
-                        "git"
-                      ],
-                      "title": "git"
-                    },
-                    {
-                      "required": [
-                        "local"
-                      ],
-                      "title": "local"
-                    },
-                    {
-                      "required": [
-                        "oci"
-                      ],
-                      "title": "oci"
-                    }
-                  ],
                   "patternProperties": {
                     "^x-": {}
                   },
@@ -2320,10 +2310,6 @@
                           "type": "string"
                         }
                       },
-                      "required": [
-                        "url",
-                        "ref"
-                      ],
                       "type": "object"
                     },
                     "helmRepository": {
@@ -2346,10 +2332,6 @@
                           "type": "string"
                         }
                       },
-                      "required": [
-                        "url",
-                        "version"
-                      ],
                       "type": "object"
                     },
                     "local": {
@@ -2422,10 +2404,6 @@
                           "type": "string"
                         }
                       },
-                      "required": [
-                        "url",
-                        "ref"
-                      ],
                       "type": "object"
                     },
                     "releaseName": {
@@ -2585,7 +2563,25 @@
                     "images": {
                       "description": "The list of images contained in the archive.",
                       "items": {
-                        "type": "string"
+                        "additionalProperties": false,
+                        "description": "ArchiveImage identifies an image selected from an archive.",
+                        "patternProperties": {
+                          "^x-": {}
+                        },
+                        "properties": {
+                          "id": {
+                            "description": "Optional ID, unique across regular and archive images in the component. Does not enable import overrides.",
+                            "type": "string"
+                          },
+                          "name": {
+                            "description": "The image reference contained in the archive.",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "name"
+                        ],
+                        "type": "object"
                       },
                       "type": "array"
                     },
@@ -2611,6 +2607,10 @@
                     "^x-": {}
                   },
                   "properties": {
+                    "id": {
+                      "description": "Optional ID, unique within the component; matching IDs let importing components replace regular images.",
+                      "type": "string"
+                    },
                     "name": {
                       "description": "The image reference.",
                       "type": "string"
@@ -2730,7 +2730,7 @@
                           "type": "boolean"
                         },
                         "enablePlugins": {
-                          "description": "Enable kustomize plugins when building manifests.",
+                          "description": "Allow external Kustomize plugins when building manifests.",
                           "type": "boolean"
                         },
                         "files": {
@@ -2934,13 +2934,6 @@
           },
           "minItems": 1,
           "type": "array"
-        },
-        "documentation": {
-          "additionalProperties": {
-            "type": "string"
-          },
-          "description": "Documentation files included in the package.",
-          "type": "object"
         },
         "kind": {
           "default": "ZarfPackageConfig",

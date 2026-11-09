@@ -23,6 +23,8 @@ var v1Beta1ComponentSchema []byte
 var schema []byte
 
 // GetV1Alpha1Schema returns the embedded JSON schema for the v1alpha1 Zarf package config
+//
+// Deprecated: Only supported by deprecated v1alpha1 packages.
 func GetV1Alpha1Schema() []byte {
 	return v1Alpha1Schema
 }

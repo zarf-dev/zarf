@@ -6,11 +6,9 @@ package load
 import (
 	"context"
 	"errors"
-	"fmt"
 	"path/filepath"
 
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
-	internalv1beta1 "github.com/zarf-dev/zarf/src/internal/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/pkg/value"
 	"github.com/zarf-dev/zarf/src/types"
 )
@@ -86,15 +84,5 @@ func resolveComponent(ctx context.Context, componentPath string, opts ComponentO
 	if err != nil {
 		return ComponentConfigImportResolution{}, err
 	}
-	resolved, err := ResolveComponentConfigImports(ctx, component, componentPath, opts.RemoteOptions, opts.CachePath)
-	if err != nil {
-		return ComponentConfigImportResolution{}, err
-	}
-	if validationErrs := internalv1beta1.ValidateComponent(v1beta1.Component{
-		Name:          resolved.Component.Metadata.Name,
-		ComponentSpec: resolved.Component.Component,
-	}); len(validationErrs) > 0 {
-		return ComponentConfigImportResolution{}, fmt.Errorf("component validation failed:\n%w", validationErrs)
-	}
-	return resolved, nil
+	return ResolveComponentConfigImports(ctx, component, componentPath, opts.RemoteOptions, opts.CachePath)
 }

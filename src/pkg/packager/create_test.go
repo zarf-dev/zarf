@@ -4,46 +4,150 @@
 package packager
 
 import (
+	"encoding/base64"
 	"fmt"
+	"math/rand/v2"
 	"os"
 	"path/filepath"
+	"runtime"
+	"strings"
 	"testing"
 
+	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/stretchr/testify/require"
-	"github.com/zarf-dev/zarf/src/pkg/feature"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/signing"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
 
-func TestPackageCreateRejectsV1Beta1WithoutFeature(t *testing.T) {
-	ctx := testutil.TestContext(t)
-	require.False(t, feature.IsEnabled(feature.V1Beta1))
-	packageDir := t.TempDir()
-	outputDir := t.TempDir()
-	definition := `apiVersion: zarf.dev/v1beta1
-kind: ZarfPackageConfig
+// Use deterministic high-entropy text to exercise compressed Secret limits.
+func deploymentStateText(size int) string {
+	rng := rand.New(rand.NewPCG(1, 2))
+	data := make([]byte, size)
+	for i := range data {
+		data[i] = byte(rng.Uint32())
+	}
+	return base64.StdEncoding.EncodeToString(data)
+}
+
+func TestPackageCreateSecretSize(t *testing.T) {
+	t.Parallel()
+	large := deploymentStateText(1_100_000)
+	medium := deploymentStateText(600_000)
+	for _, tt := range []struct {
+		name        string
+		apiVersion  string
+		description string
+		values      string
+		wantError   bool
+	}{
+		{name: "implicit-alpha-compressed-over-limit", description: large, wantError: true},
+		{name: "alpha-compressed-below-limit", apiVersion: v1alpha1.APIVersion, description: medium},
+		{name: "alpha-large-compressible-definition", apiVersion: v1alpha1.APIVersion, description: strings.Repeat("a", 2_000_000)},
+		{name: "alpha-compressed-over-limit", apiVersion: v1alpha1.APIVersion, description: large, wantError: true},
+		{name: "alpha-compressible-json-escaping", apiVersion: v1alpha1.APIVersion, description: strings.Repeat("&", 180_000)},
+		{name: "beta-large-compressible-definition", apiVersion: v1beta1.APIVersion, description: strings.Repeat("a", 2_000_000)},
+		// The beta definition fits alone, but its alpha compatibility copy pushes the compressed Secret over the limit.
+		{name: "beta-compatibility-copy-exceeds-limit", apiVersion: v1beta1.APIVersion, description: medium, wantError: true},
+		{name: "package-default-values-are-not-saved", apiVersion: v1beta1.APIVersion, values: large},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			ctx := testutil.TestContext(t)
+			packageDir := t.TempDir()
+			outputDir := t.TempDir()
+			definition := fmt.Sprintf(`kind: ZarfPackageConfig
 metadata:
-  name: beta-feature
+  name: secret-size
+  description: %q
 components:
   - name: empty
-    actions:
-      onCreate:
-        before:
-          - cmd: echo created > created.txt
-`
-	require.NoError(t, os.WriteFile(filepath.Join(packageDir, layout.ZarfYAML), []byte(definition), 0o600))
+`, tt.description)
+			if tt.apiVersion != "" {
+				definition = "apiVersion: " + tt.apiVersion + "\n" + definition
+			}
+			if tt.values != "" {
+				definition += "values:\n  files:\n    - values.yaml\n"
+				require.NoError(t, os.WriteFile(filepath.Join(packageDir, "values.yaml"), []byte("input: "+tt.values+"\n"), 0o600))
+			}
+			require.NoError(t, os.WriteFile(filepath.Join(packageDir, layout.ZarfYAML), []byte(definition), 0o600))
+			packagePath, err := Create(ctx, packageDir, outputDir, CreateOptions{
+				CachePath: t.TempDir(),
+				SkipSBOM:  true,
+			})
+			if tt.wantError {
+				require.ErrorContains(t, err, "1048576-byte Secret data limit")
+				require.Empty(t, packagePath)
+				entries, err := os.ReadDir(outputDir)
+				require.NoError(t, err)
+				require.Empty(t, entries)
+				return
+			}
+			require.NoError(t, err)
+			pkgLayout, err := layout.LoadFromTar(ctx, packagePath, layout.PackageLayoutOptions{VerificationStrategy: layout.VerifyNever})
+			require.NoError(t, err)
+			t.Cleanup(func() { require.NoError(t, pkgLayout.Cleanup()) })
+			require.Equal(t, tt.description, pkgLayout.Definition().Metadata.Description)
+		})
+	}
+}
 
-	packagePath, err := Create(ctx, packageDir, outputDir, CreateOptions{
-		CachePath: t.TempDir(),
-		SkipSBOM:  true,
+func TestCreateDifferentialUsesRequestedArchitecture(t *testing.T) {
+	target := "arm64"
+	if runtime.GOARCH == target {
+		target = "amd64"
+	}
+	ctx := testutil.TestContext(t)
+	reg := createRegistry(ctx, t)
+	image := reg.Registry + "/images:1"
+	testutil.PushMultiArchIndex(ctx, t, reg.Registry+"/images", "1", []ocispec.Platform{
+		{OS: "linux", Architecture: "amd64"}, {OS: "linux", Architecture: "arm64"},
 	})
-	require.ErrorContains(t, err, "--features=v1beta1=true")
-	require.Empty(t, packagePath)
-	require.NoFileExists(t, filepath.Join(packageDir, "created.txt"))
-	entries, err := os.ReadDir(outputDir)
+	source := t.TempDir()
+	baseline := fmt.Sprintf(`kind: ZarfPackageConfig
+metadata:
+  name: baseline
+  version: 0.0.1
+components:
+  - name: empty
+  - name: images
+    only:
+      cluster:
+        architecture: %s
+    images:
+      - %s
+`, target, image)
+	require.NoError(t, os.WriteFile(filepath.Join(source, layout.ZarfYAML), []byte(baseline), 0o600))
+	var ref string
+	for _, arch := range []string{"amd64", "arm64"} {
+		var err error
+		ref, err = Create(ctx, source, "oci://"+reg.String(), CreateOptions{Architecture: arch, CachePath: t.TempDir(), SkipSBOM: true, RemoteOptions: defaultTestRemoteOptions()})
+		require.NoError(t, err)
+	}
+	updated := fmt.Sprintf(`kind: ZarfPackageConfig
+metadata:
+  name: baseline
+  version: 0.0.2
+components:
+  - name: images
+    images:
+      - %s
+`, image)
+	require.NoError(t, os.WriteFile(filepath.Join(source, layout.ZarfYAML), []byte(updated), 0o600))
+	path, err := Create(ctx, source, t.TempDir(), CreateOptions{Architecture: target, DifferentialPackagePath: "oci://" + ref, CachePath: t.TempDir(), SkipSBOM: true, RemoteOptions: defaultTestRemoteOptions()})
 	require.NoError(t, err)
-	require.Empty(t, entries)
+	pkgLayout, err := layout.LoadFromTar(ctx, path, layout.PackageLayoutOptions{})
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, pkgLayout.Cleanup()) })
+	pkg := pkgLayout.Definition()
+	require.Equal(t, target, pkg.Metadata.Architecture)
+	require.Equal(t, target, pkg.Build.Architecture)
+	require.NotNil(t, pkg.Build.Differential)
+	require.Equal(t, "0.0.1", pkg.Build.Differential.FromVersion)
+	require.Len(t, pkg.Components, 1)
+	require.Empty(t, pkg.Components[0].Images, "the target baseline already contains this image; the other baseline does not")
 }
 
 func TestPackageCreatePreservesV1alpha1MetadataAnnotationCollisions(t *testing.T) {
@@ -152,25 +256,6 @@ func TestPackageCreateSignsArchiveAndOCIOutputs(t *testing.T) {
 		require.FileExists(t, filepath.Join(pkgLayout.DirPath(), layout.Bundle))
 	})
 
-	t.Run("deprecated key fields archive", func(t *testing.T) {
-		packagePath, err := Create(ctx, source, t.TempDir(), CreateOptions{
-			CachePath:          t.TempDir(),
-			SigningKeyPath:     signOpts.Key,
-			SigningKeyPassword: signOpts.Password,
-		})
-		require.NoError(t, err)
-
-		verifyOpts := signing.DefaultVerifyBlobOptions()
-		verifyOpts.Key = publicKeyPath
-		pkgLayout, err := layout.LoadFromTar(ctx, packagePath, layout.PackageLayoutOptions{
-			VerificationStrategy: layout.VerifyAlways,
-			VerifyBlobOptions:    &verifyOpts,
-		})
-		require.NoError(t, err)
-		t.Cleanup(func() { require.NoError(t, pkgLayout.Cleanup()) })
-		require.True(t, pkgLayout.IsSigned())
-	})
-
 	t.Run("OCI", func(t *testing.T) {
 		registryRef := createRegistry(ctx, t)
 		packageRef, err := Create(ctx, source, fmt.Sprintf("oci://%s", registryRef.String()), CreateOptions{
@@ -184,41 +269,6 @@ func TestPackageCreateSignsArchiveAndOCIOutputs(t *testing.T) {
 		t.Cleanup(func() { require.NoError(t, pkgLayout.Cleanup()) })
 		require.True(t, pkgLayout.IsSigned())
 		require.FileExists(t, filepath.Join(pkgLayout.DirPath(), layout.Bundle))
-	})
-
-	t.Run("deprecated key fields OCI", func(t *testing.T) {
-		registryRef := createRegistry(ctx, t)
-		packageRef, err := Create(ctx, source, fmt.Sprintf("oci://%s", registryRef.String()), CreateOptions{
-			CachePath:          t.TempDir(),
-			RemoteOptions:      defaultTestRemoteOptions(),
-			SigningKeyPath:     signOpts.Key,
-			SigningKeyPassword: signOpts.Password,
-		})
-		require.NoError(t, err)
-
-		pkgLayout := pullFromRemote(ctx, t, packageRef, "amd64", publicKeyPath, t.TempDir(), defaultTestRemoteOptions())
-		t.Cleanup(func() { require.NoError(t, pkgLayout.Cleanup()) })
-		require.True(t, pkgLayout.IsSigned())
-	})
-
-	t.Run("explicit signing options override deprecated key fields", func(t *testing.T) {
-		packagePath, err := Create(ctx, source, t.TempDir(), CreateOptions{
-			CachePath:          t.TempDir(),
-			SignBlobOptions:    &signOpts,
-			SigningKeyPath:     filepath.Join(t.TempDir(), "missing.key"),
-			SigningKeyPassword: "wrong-password",
-		})
-		require.NoError(t, err)
-
-		verifyOpts := signing.DefaultVerifyBlobOptions()
-		verifyOpts.Key = publicKeyPath
-		pkgLayout, err := layout.LoadFromTar(ctx, packagePath, layout.PackageLayoutOptions{
-			VerificationStrategy: layout.VerifyAlways,
-			VerifyBlobOptions:    &verifyOpts,
-		})
-		require.NoError(t, err)
-		t.Cleanup(func() { require.NoError(t, pkgLayout.Cleanup()) })
-		require.True(t, pkgLayout.IsSigned())
 	})
 }
 

@@ -3,6 +3,11 @@ kind: ZarfComponentConfig
 metadata:
   name: app
 component:
+  images:
+    - name: nginx:1.27
+      id: web
+    - name: docker.io/library/nginx:1.27
+      id: worker
   manifests:
     - name: app
       files:

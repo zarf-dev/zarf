@@ -33,23 +33,13 @@ func newConnectCommand() *cobra.Command {
 		Aliases: []string{"c"},
 		Short:   lang.CmdConnectShort,
 		Long:    lang.CmdConnectLong,
+		Args:    cobra.ExactArgs(1),
 		RunE:    o.run,
 	}
 
 	cmd.Flags().StringSliceVar(&o.zt.ListenAddresses, "address", []string{helpers.IPV4Localhost}, lang.CmdConnectFlagAddress)
-	cmd.Flags().StringVar(&o.zt.ResourceName, "name", "", lang.CmdConnectFlagName)
-	cmd.Flags().StringVar(&o.zt.Namespace, "namespace", state.ZarfNamespaceName, lang.CmdConnectFlagNamespace)
-	cmd.Flags().StringVar(&o.zt.ResourceType, "type", cluster.SvcResource, lang.CmdConnectFlagType)
 	cmd.Flags().IntVar(&o.zt.LocalPort, "local-port", 0, lang.CmdConnectFlagLocalPort)
-	cmd.Flags().IntVar(&o.zt.RemotePort, "remote-port", 0, lang.CmdConnectFlagRemotePort)
 	cmd.Flags().BoolVar(&o.open, "open", false, lang.CmdConnectFlagOpen)
-
-	// Deprecate flags that conflict with positional target argument.
-	// These flags are ignored when a connect-name target is supplied.
-	_ = cmd.Flags().MarkDeprecated("name", "Use 'zarf connect resource' instead. This flag will be removed in a future version of Zarf.")
-	_ = cmd.Flags().MarkDeprecated("namespace", "Use 'zarf connect resource' instead. This flag will be removed in a future version of Zarf.")
-	_ = cmd.Flags().MarkDeprecated("remote-port", "Use 'zarf connect resource' instead. This flag will be removed in a future version of Zarf.")
-	_ = cmd.Flags().MarkDeprecated("type", "Use 'zarf connect resource' instead. This flag will be removed in a future version of Zarf.")
 
 	// TODO(soltysh): consider splitting sub-commands into separate files
 	cmd.AddCommand(newConnectListCommand())
@@ -60,33 +50,22 @@ func newConnectCommand() *cobra.Command {
 
 func (o *connectOptions) run(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
-	target := ""
-	// TODO: this leaves room for ignoring potential misuse
-	if len(args) > 0 {
-		target = args[0]
-	}
+	target := args[0]
 
 	c, err := cluster.New(ctx)
 	if err != nil {
 		return err
 	}
 
-	var tunnel *cluster.Tunnel
-	if target == "" {
-		tunnel, err = c.ConnectTunnelInfo(ctx, o.zt)
-	} else {
-		var ti cluster.TunnelInfo
-		ti, err = c.NewTargetTunnelInfo(ctx, target)
-		if err != nil {
-			return fmt.Errorf("unable to create tunnel: %w", err)
-		}
-		if o.zt.LocalPort != 0 {
-			ti.LocalPort = o.zt.LocalPort
-		}
-		ti.ListenAddresses = o.zt.ListenAddresses
-
-		tunnel, err = c.ConnectTunnelInfo(ctx, ti)
+	ti, err := c.NewTargetTunnelInfo(ctx, target)
+	if err != nil {
+		return fmt.Errorf("unable to create tunnel: %w", err)
 	}
+	if o.zt.LocalPort != 0 {
+		ti.LocalPort = o.zt.LocalPort
+	}
+	ti.ListenAddresses = o.zt.ListenAddresses
+	tunnel, err := c.ConnectTunnelInfo(ctx, ti)
 
 	if err != nil {
 		return fmt.Errorf("unable to connect to the service: %w", err)
@@ -205,6 +184,6 @@ func printConnectStringTable(connectStrings state.ConnectStrings) {
 
 		// Create the table output with the data
 		header := []string{"Connect Command", "Description"}
-		message.TableWithWriter(OutputWriter, header, connectData)
+		message.Table(OutputWriter, header, connectData)
 	}
 }

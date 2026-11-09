@@ -73,9 +73,11 @@ func TemplateChart(ctx context.Context, zarfChart api.Chart, chart *chartv2.Char
 	// Namespace must be specified.
 	client.Namespace = zarfChart.Namespace
 
-	client.PostRenderer, err = newTemplateRenderer(actionCfg, variableConfig)
-	if err != nil {
-		return "", fmt.Errorf("unable to create helm renderer: %w", err)
+	if len(variableConfig.GetAllTemplates()) > 0 {
+		client.PostRenderer, err = newTemplateRenderer(actionCfg, variableConfig)
+		if err != nil {
+			return "", fmt.Errorf("unable to create helm renderer: %w", err)
+		}
 	}
 
 	// Perform the loadedChart installation.
@@ -117,7 +119,6 @@ func newTemplateRenderer(actionConfig *action.Configuration, vc *variables.Varia
 
 // Run satisfies the Helm post-renderer interface and templates the Zarf vars in the rendered manifests.
 func (tr *templateRenderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
-	// This is very low cost and consistent for how we replace elsewhere, also good for debugging
 	hooks, resources, err := getTemplatedManifests(renderedManifests, tr.variableConfig, tr.actionConfig)
 	if err != nil {
 		return nil, err
@@ -137,32 +138,40 @@ func (tr *templateRenderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer,
 }
 
 func getTemplatedManifests(renderedManifests *bytes.Buffer, variableConfig *variables.VariableConfig, actionConfig *action.Configuration) (_ []*releasev1.Hook, _ []releaseutil.Manifest, err error) {
-	tmpdir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
-	if err != nil {
-		return nil, nil, fmt.Errorf("unable to create tmpdir:  %w", err)
-	}
-	defer func() {
-		err = errors.Join(err, os.RemoveAll(tmpdir))
-	}()
-	path := filepath.Join(tmpdir, "chart.yaml")
+	path := "chart.yaml"
+	content := renderedManifests.String()
+	if len(variableConfig.GetAllTemplates()) > 0 {
+		var tmpdir string
+		tmpdir, err = utils.MakeTempDir(config.CommonOptions.TempDirectory)
+		if err != nil {
+			return nil, nil, fmt.Errorf("unable to create tmpdir:  %w", err)
+		}
+		defer func() {
+			err = errors.Join(err, os.RemoveAll(tmpdir))
+		}()
+		path = filepath.Join(tmpdir, "chart.yaml")
 
-	if err := os.WriteFile(path, renderedManifests.Bytes(), helpers.ReadWriteUser); err != nil {
-		return nil, nil, fmt.Errorf("unable to write the post-render file for the helm chart")
-	}
+		if err := os.WriteFile(path, renderedManifests.Bytes(), helpers.ReadWriteUser); err != nil {
+			return nil, nil, fmt.Errorf("unable to write the post-render file for the helm chart")
+		}
 
-	// Run the template engine against the chart output
-	if err := variableConfig.ReplaceTextTemplate(path); err != nil {
-		return nil, nil, fmt.Errorf("error templating the helm chart: %w", err)
-	}
+		// Run the template engine against the chart output
+		if err := variableConfig.ReplaceTextTemplate(path); err != nil {
+			return nil, nil, fmt.Errorf("error templating the helm chart: %w", err)
+		}
 
-	// Read back the templated file contents
-	buff, err := os.ReadFile(path)
-	if err != nil {
-		return nil, nil, fmt.Errorf("error reading temporary post-rendered helm chart: %w", err)
+		// Read back the templated file contents
+		var buff []byte
+		buff, err = os.ReadFile(path)
+		if err != nil {
+			return nil, nil, fmt.Errorf("error reading temporary post-rendered helm chart: %w", err)
+		}
+
+		content = string(buff)
 	}
 
 	// Use helm to re-split the manifest byte (same call used by helm to pass this data to postRender)
-	hooks, resources, err := releaseutil.SortManifests(map[string]string{path: string(buff)},
+	hooks, resources, err := releaseutil.SortManifests(map[string]string{path: content},
 		actionConfig.Capabilities.APIVersions,
 		releaseutil.InstallOrder,
 	)

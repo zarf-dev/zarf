@@ -63,6 +63,8 @@ func (o Objects) WithValues(values value.Values) Objects {
 
 // WithConstants takes a slice of api.Constants and unwraps it into the templating Objects map so constants can be
 // accessed in templates by their key name.
+//
+// Deprecated: Only supported by deprecated v1alpha1 packages.
 func (o Objects) WithConstants(constants []api.Constant) Objects {
 	m := make(map[string]string)
 	for _, v := range constants {
@@ -74,6 +76,8 @@ func (o Objects) WithConstants(constants []api.Constant) Objects {
 
 // WithVariables takes a variables.SetVariableMap and unwraps it into the templating Objects map so variables can be
 // accessed by their key name.
+//
+// Deprecated: Only supported by deprecated v1alpha1 packages.
 func (o Objects) WithVariables(vars variables.SetVariableMap) Objects {
 	m := make(map[string]string)
 	for k, v := range vars {
@@ -114,7 +118,6 @@ func (o Objects) WithState(access StateAccess) (Objects, error) {
 	if s == nil {
 		return o, nil
 	}
-	s.Reconcile()
 
 	registry := map[string]any{
 		"Address":      s.RegistryInfo.Address,
@@ -137,6 +140,9 @@ func (o Objects) WithState(access StateAccess) (Objects, error) {
 		"PayloadConfigMaps": s.InjectorInfo.PayLoadConfigMapAmount,
 		"PayloadShaSum":     s.InjectorInfo.PayLoadShaSum,
 	}
+	agent := map[string]any{
+		"MutationPolicy": string(s.AgentInfo.MutationPolicy),
+	}
 
 	if slices.Contains(access.AccessKeys, api.StateAccessRegistryCredentials) {
 		registry["PushPassword"] = s.RegistryInfo.PushPassword
@@ -154,20 +160,19 @@ func (o Objects) WithState(access StateAccess) (Objects, error) {
 	}
 
 	stateMap := map[string]any{
-		"Distro":       s.Distro,
-		"StorageClass": s.StorageClass,
+		// Older packages access this removed state field. An empty value leaves PVC storageClassName unset.
+		"StorageClass": "",
 		"IPFamily":     string(s.IPFamily),
 		"Registry":     registry,
 		"Git":          git,
 		"Injector":     injector,
+		"Agent":        agent,
 	}
 
 	if slices.Contains(access.AccessKeys, api.StateAccessAgentCerts) {
-		stateMap["Agent"] = map[string]any{
-			"CA":   base64.StdEncoding.EncodeToString(s.AgentInfo.TLS.CA),
-			"Cert": base64.StdEncoding.EncodeToString(s.AgentInfo.TLS.Cert),
-			"Key":  base64.StdEncoding.EncodeToString(s.AgentInfo.TLS.Key),
-		}
+		agent["CA"] = base64.StdEncoding.EncodeToString(s.AgentInfo.TLS.CA)
+		agent["Cert"] = base64.StdEncoding.EncodeToString(s.AgentInfo.TLS.Cert)
+		agent["Key"] = base64.StdEncoding.EncodeToString(s.AgentInfo.TLS.Key)
 	}
 
 	o[objectKeyState] = stateMap

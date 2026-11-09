@@ -30,22 +30,26 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/pki"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
-	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 
 	"github.com/spf13/cobra"
 )
 
+const (
+	initAPIVersionV1Alpha1 = "v1alpha1"
+	initAPIVersionV1Beta1  = "v1beta1"
+	initPackageRepository  = "ghcr.io/zarf-dev/packages"
+)
+
 type initOptions struct {
+	*architectureOptions
 	setVariables               map[string]string
 	valuesFiles                []string
 	setValues                  map[string]string
 	optionalComponents         string
 	skipValuesSchemaValidation bool
-	storageClass               string
 	gitServer                  state.GitServerInfo
 	registryInfo               state.RegistryInfo
-	artifactServer             state.ArtifactServerInfo
 	injectorPort               int
 	injectorImage              string
 	takeOwnership              bool
@@ -61,8 +65,8 @@ type initOptions struct {
 	packageVerifyFlags
 }
 
-func newInitCommand() *cobra.Command {
-	o := &initOptions{}
+func newInitCommand(architecture *architectureOptions) *cobra.Command {
+	o := &initOptions{architectureOptions: architecture}
 
 	cmd := &cobra.Command{
 		Use:     "init [ PACKAGE_SOURCE ]",
@@ -78,8 +82,6 @@ func newInitCommand() *cobra.Command {
 	v := getViper()
 
 	// Init package set variable flags
-	cmd.Flags().StringToStringVar(&o.setVariables, "set", v.GetStringMapString(VPkgDeploySet), "Alias for --set-variables")
-	_ = cmd.Flags().MarkDeprecated("set", "Use --set-variables instead")
 	cmd.Flags().StringToStringVar(&o.setVariables, "set-variables", v.GetStringMapString(VPkgDeploySet), lang.CmdInitFlagSetVariables)
 	cmd.Flags().StringSliceVarP(&o.valuesFiles, "values", "v", GetStringSlice(v, VPkgDeployValues), lang.CmdPackageDeployFlagValuesFiles)
 	cmd.Flags().StringToStringVar(&o.setValues, "set-values", v.GetStringMapString(VPkgDeploySetValues), lang.CmdPackageDeployFlagSetValues)
@@ -87,7 +89,6 @@ func newInitCommand() *cobra.Command {
 	// Continue to require --confirm flag for init command to avoid accidental deployments
 	cmd.Flags().BoolVarP(&o.confirm, "confirm", "c", false, lang.CmdInitFlagConfirm)
 	cmd.Flags().StringVar(&o.optionalComponents, "components", v.GetString(VInitComponents), lang.CmdInitFlagComponents)
-	cmd.Flags().StringVar(&o.storageClass, "storage-class", v.GetString(VInitStorageClass), lang.CmdInitFlagStorageClass)
 
 	cmd.Flags().StringVar((*string)(&o.registryInfo.RegistryMode), "registry-mode", "",
 		fmt.Sprintf("How to access the registry (valid values: %s, %s, %s). Proxy mode is an alpha feature", state.RegistryModeNodePort, state.RegistryModeProxy, state.RegistryModeExternal))
@@ -105,22 +106,16 @@ func newInitCommand() *cobra.Command {
 
 	// Flags for using an external registry
 	cmd.Flags().StringVar(&o.registryInfo.Address, "registry-url", v.GetString(VInitRegistryURL), lang.CmdInitFlagRegURL)
-	cmd.Flags().IntVar(&o.registryInfo.Port, "registry-port", v.GetInt(VInitRegistryPort), lang.CmdInitFlagRegPort)
-	cmd.Flags().IntVar(&o.registryInfo.Port, "nodeport", v.GetInt(VInitRegistryNodeport), lang.CmdInitFlagRegNodePort)
-	_ = cmd.Flags().MarkDeprecated("nodeport", "Use --registry-port instead")
+	registryPort := v.GetInt(VInitRegistryPort)
+	if v.IsSet(VInitRegistryNodeport) {
+		registryPort = v.GetInt(VInitRegistryNodeport)
+	}
+	cmd.Flags().IntVar(&o.registryInfo.Port, "registry-port", registryPort, lang.CmdInitFlagRegPort)
 	cmd.Flags().StringVar(&o.registryInfo.PushUsername, "registry-push-username", v.GetString(VInitRegistryPushUser), lang.CmdInitFlagRegPushUser)
 	cmd.Flags().StringVar(&o.registryInfo.PushPassword, "registry-push-password", v.GetString(VInitRegistryPushPass), lang.CmdInitFlagRegPushPass)
 	cmd.Flags().StringVar(&o.registryInfo.PullUsername, "registry-pull-username", v.GetString(VInitRegistryPullUser), lang.CmdInitFlagRegPullUser)
 	cmd.Flags().StringVar(&o.registryInfo.PullPassword, "registry-pull-password", v.GetString(VInitRegistryPullPass), lang.CmdInitFlagRegPullPass)
 	cmd.Flags().StringVar(&o.registryInfo.Secret, "registry-secret", v.GetString(VInitRegistrySecret), lang.CmdInitFlagRegSecret)
-
-	// Flags for using an external artifact server
-	cmd.Flags().StringVar(&o.artifactServer.Address, "artifact-url", v.GetString(VInitArtifactURL), lang.CmdInitFlagArtifactURL)
-	cmd.Flags().StringVar(&o.artifactServer.PushUsername, "artifact-push-username", v.GetString(VInitArtifactPushUser), lang.CmdInitFlagArtifactPushUser)
-	cmd.Flags().StringVar(&o.artifactServer.PushToken, "artifact-push-token", v.GetString(VInitArtifactPushToken), lang.CmdInitFlagArtifactPushToken)
-	_ = cmd.Flags().MarkDeprecated("artifact-url", lang.ArtifactServerDeprecated)
-	_ = cmd.Flags().MarkDeprecated("artifact-push-username", lang.ArtifactServerDeprecated)
-	_ = cmd.Flags().MarkDeprecated("artifact-push-token", lang.ArtifactServerDeprecated)
 
 	// Flags for providing user-managed agent TLS certificates
 	cmd.Flags().StringVar(&o.agentTLSCAPath, "agent-tls-ca", v.GetString(VInitAgentTLSCA), "Path to a PEM-encoded CA certificate for the Zarf agent")
@@ -131,8 +126,6 @@ func newInitCommand() *cobra.Command {
 	// Flags that control how a deployment proceeds
 	// Always require take-ownership flag (no viper)
 	cmd.Flags().BoolVar(&o.takeOwnership, "take-ownership", false, lang.CmdPackageDeployFlagTakeOwnership)
-	cmd.Flags().BoolVar(&o.takeOwnership, "adopt-existing-resources", false, lang.CmdPackageDeployFlagAdoptExistingResources)
-	_ = cmd.Flags().MarkDeprecated("adopt-existing-resources", "use --take-ownership instead")
 	cmd.Flags().BoolVar(&o.forceConflicts, "force-conflicts", false, lang.CmdPackageDeployFlagForceConflicts)
 	cmd.Flags().DurationVar(&o.timeout, "timeout", v.GetDuration(VPkgDeployTimeout), lang.CmdPackageDeployFlagTimeout)
 	cmd.Flags().BoolVar(&o.skipValuesSchemaValidation, "skip-values-schema-validation", false, lang.CmdPackageDeployFlagSkipValuesSchema)
@@ -148,9 +141,7 @@ func newInitCommand() *cobra.Command {
 	cmd.MarkFlagsMutuallyExclusive("registry-url", "injector-port")
 	cmd.MarkFlagsMutuallyExclusive("registry-url", "injector-image")
 	cmd.MarkFlagsMutuallyExclusive("registry-url", "registry-port")
-	cmd.MarkFlagsMutuallyExclusive("registry-url", "nodeport")
 	cmd.MarkFlagsMutuallyExclusive("registry-url", "registry-secret")
-	cmd.MarkFlagsMutuallyExclusive("registry-port", "nodeport")
 
 	cmd.Flags().SortFlags = true
 
@@ -178,7 +169,7 @@ func (o *initOptions) run(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	if err := validateExistingState(existingState, o.registryInfo, o.gitServer, o.artifactServer, agentTLS); err != nil {
+	if err := validateExistingState(existingState, o.registryInfo, o.gitServer, agentTLS); err != nil {
 		return err
 	}
 	registryMode := o.registryInfo.RegistryMode
@@ -203,10 +194,8 @@ func (o *initOptions) run(cmd *cobra.Command, args []string) error {
 	if len(args) > 0 {
 		packageSource = args[0]
 	} else {
-		initPackageName := config.GetInitPackageName()
-
 		// Try to use an init-package in the executable directory if none exist in current working directory
-		packageSource, err = o.findInitPackage(cmd.Context(), initPackageName)
+		packageSource, err = o.findInitPackage(cmd.Context())
 		if err != nil {
 			return err
 		}
@@ -225,12 +214,15 @@ func (o *initOptions) run(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-
+	optionalComponents, err := filters.NormalizeComponentSelectors(o.optionalComponents)
+	if err != nil {
+		return err
+	}
 	filter := filters.Empty()
 	if o.confirm {
 		filter = filters.Combine(
 			filters.ByLocalOS(runtime.GOOS),
-			filters.ForDeploy(o.optionalComponents, false),
+			filters.ForDeploy(optionalComponents),
 		)
 	}
 
@@ -238,7 +230,7 @@ func (o *initOptions) run(cmd *cobra.Command, args []string) error {
 		VerifyBlobOptions:    o.buildVerifyBlobOptions(cmd, v),
 		VerificationStrategy: o.verify.toStrategy(),
 		Filter:               filter,
-		Architecture:         config.GetArch(),
+		Architecture:         o.selectedArchitecture(),
 		CachePath:            cachePath,
 		RemoteOptions:        defaultRemoteOptions(),
 	}
@@ -254,17 +246,16 @@ func (o *initOptions) run(cmd *cobra.Command, args []string) error {
 	}()
 
 	opts := packager.DeployOptions{
+		SetVariables:               o.setVariables,
+		Values:                     values,
+		Source:                     packageSource,
 		GitServer:                  o.gitServer,
 		RegistryInfo:               o.registryInfo,
-		ArtifactServer:             o.artifactServer,
 		TakeOwnership:              o.takeOwnership,
 		ForceConflicts:             o.forceConflicts,
 		Timeout:                    o.timeout,
 		Retries:                    o.retries,
 		OCIConcurrency:             o.ociConcurrency,
-		SetVariables:               o.setVariables,
-		Values:                     values,
-		StorageClass:               o.storageClass,
 		InjectorPort:               o.injectorPort,
 		InjectorImage:              o.injectorImage,
 		RemoteOptions:              defaultRemoteOptions(),
@@ -273,7 +264,7 @@ func (o *initOptions) run(cmd *cobra.Command, args []string) error {
 		AgentMutationPolicy:        state.MutationPolicy(o.agentMutationPolicy),
 		SkipValuesSchemaValidation: o.skipValuesSchemaValidation,
 	}
-	_, err = deploy(ctx, pkgLayout, opts, o.setVariables, o.optionalComponents)
+	_, err = deploy(ctx, pkgLayout, opts, optionalComponents)
 	if err != nil {
 		return err
 	}
@@ -282,7 +273,8 @@ func (o *initOptions) run(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func (o *initOptions) findInitPackage(ctx context.Context, initPackageName string) (string, error) {
+func (o *initOptions) findInitPackage(ctx context.Context) (string, error) {
+	initPackageName := config.GetInitPackageName(o.selectedArchitecture())
 	// First, look for the init package in the current working directory
 	if !helpers.InvalidPath(initPackageName) {
 		return initPackageName, nil
@@ -330,9 +322,23 @@ func (o *initOptions) findInitPackage(ctx context.Context, initPackageName strin
 	return filepath.Join(absCachePath, initPackageName), nil
 }
 
+func getInitPackageURL(version, apiVersion string) (string, error) {
+	switch apiVersion {
+	case initAPIVersionV1Alpha1:
+		return fmt.Sprintf("%s/init:%s", initPackageRepository, version), nil
+	case initAPIVersionV1Beta1:
+		return fmt.Sprintf("%s/%s/init:%s", initPackageRepository, apiVersion, version), nil
+	default:
+		return "", fmt.Errorf("unsupported init package API version %q: must be %s or %s", apiVersion, initAPIVersionV1Alpha1, initAPIVersionV1Beta1)
+	}
+}
+
 func (o *initOptions) downloadInitPackage(ctx context.Context, cacheDirectory string) error {
 	l := logger.From(ctx)
-	url := zoci.GetInitPackageURL(config.CLIVersion)
+	url, err := getInitPackageURL(config.CLIVersion, initAPIVersionV1Beta1)
+	if err != nil {
+		return err
+	}
 
 	// Give the user the choice to download the init-package and note that this does require an internet connection
 	l.Info("the init package was not found locally, but can be pulled in connected environments", "url", fmt.Sprintf("oci://%s", url))
@@ -356,7 +362,7 @@ func (o *initOptions) downloadInitPackage(ctx context.Context, cacheDirectory st
 		}
 
 		pullOptions := packager.PullOptions{
-			Architecture:   config.GetArch(),
+			Architecture:   o.selectedArchitecture(),
 			OCIConcurrency: o.ociConcurrency,
 			CachePath:      cachePath,
 		}
@@ -388,7 +394,7 @@ func loadExistingState(ctx context.Context) (*state.State, error) {
 }
 
 // validateExistingState prevents changing service information after initialization.
-func validateExistingState(s *state.State, registryInfo state.RegistryInfo, gitServer state.GitServerInfo, artifactServer state.ArtifactServerInfo, agentTLS *pki.GeneratedPKI) error {
+func validateExistingState(s *state.State, registryInfo state.RegistryInfo, gitServer state.GitServerInfo, agentTLS *pki.GeneratedPKI) error {
 	if s == nil {
 		return nil
 	}
@@ -398,9 +404,6 @@ func validateExistingState(s *state.State, registryInfo state.RegistryInfo, gitS
 	}
 	if state.CheckIfRegistryAddressOrCredsChanged(s.RegistryInfo, registryInfo) {
 		return fmt.Errorf("cannot change registry information after initial init, to update run `zarf tools update-creds registry`")
-	}
-	if helpers.IsNotZeroAndNotEqual(artifactServer, s.ArtifactServer) {
-		return fmt.Errorf("cannot change artifact server information after initial init, to update run `zarf tools update-creds artifact`")
 	}
 	if agentTLS != nil {
 		if !bytes.Equal(agentTLS.CA, s.AgentInfo.TLS.CA) ||
@@ -458,13 +461,6 @@ func (o *initOptions) validateInitFlags() error {
 	if o.registryInfo.Address != "" {
 		if o.registryInfo.PushUsername == "" || o.registryInfo.PushPassword == "" {
 			return fmt.Errorf(lang.CmdInitErrValidateRegistry)
-		}
-	}
-
-	// If 'artifact-url' is provided, make sure they provided values for the username and password of the push user
-	if o.artifactServer.Address != "" {
-		if o.artifactServer.PushUsername == "" || o.artifactServer.PushToken == "" {
-			return fmt.Errorf(lang.CmdInitErrValidateArtifact)
 		}
 	}
 

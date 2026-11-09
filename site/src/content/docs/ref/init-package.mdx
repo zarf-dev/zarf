@@ -28,9 +28,34 @@ View all init options w/ [`zarf init --help`](/commands/zarf_init/).
 
 :::
 
+`zarf tools download-init` defaults to the `v1beta1` init package. When no init package is found locally, `zarf init` offers to download the `v1beta1` package for the current CLI version. To download the deprecated, legacy package, use `zarf tools download-init --api-version=v1alpha1`.
+
+## Configuring the Init Package
+
+The v1beta1 init package accepts values through `--values` files or `--set-values`. Values are grouped under `registry`, `agent`, `gitServer`, and `k3s`. For example:
+
+```yaml
+# init-values.yaml
+registry:
+  persistence:
+    size: 40Gi
+agent:
+  nodeSelector:
+    role: infra
+gitServer:
+  persistence:
+    size: 20Gi
+```
+
+```bash
+zarf init --values init-values.yaml --components git-server
+```
+
+The legacy v1alpha1 package continues to use variables. For the full variable-to-value mapping, inspect the migration guide attached to the package with `zarf package inspect documentation oci://ghcr.io/zarf-dev/packages/v1beta1/init:<version> --keys=migration`
+
 ## Core Components
 
-An 'init' package requires a series of specially named, and configured components to ensure the cluster is correctly initialized. These components are:
+An 'init' package requires components that declare their roles with `service.name` to ensure the cluster is correctly initialized. These components are:
 
 - [`zarf-injector`](#zarf-injector)
 - [`zarf-seed-registry`](#zarf-seed-registry)
@@ -57,13 +82,13 @@ The `zarf-injector` binary is statically compiled and injected into the cluster 
 
 :::note
 
-The `registry:3` image and the Zarf Agent image can be configured with a custom init package using the `registry_image_*` and `agent_image_*` templates defined in the Zarf repo's [zarf-config.toml](https://github.com/zarf-dev/zarf/blob/main/zarf-config.toml). This allows you to swap them for enterprise provided / hardened versions if desired such as those provided by [Iron Bank](https://repo1.dso.mil/dsop/opensource/defenseunicorns/zarf/zarf-agent).
+The `registry:3` image and the Zarf Agent image can be configured in a custom init package by importing the published components and overriding their `images` entries by `id`. Use `id: registry` in both the seed registry and registry components, or `id: agent` in the agent component, with the replacement image under `name`. This allows you to swap them for enterprise provided / hardened versions if desired such as those provided by [Iron Bank](https://repo1.dso.mil/dsop/opensource/defenseunicorns/zarf/zarf-agent).
 
 :::
 
 #### Zarf Injector
 
-The `zarf-injector` component simply copies the injector Rust binary to `###ZARF_TEMP###/zarf-injector`.
+The `zarf-injector` component simply copies the injector Rust binary to `{{ .Runtime.TempDir }}/zarf-injector`.
 
 #### Zarf Seed Registry
 
@@ -77,7 +102,7 @@ When `zarf init` deploys the `zarf-seed-registry` component in NodePort mode, th
 2. Zarf connects to the cluster and grabs a pod that is running an image that is already present in the cluster.
 3. Zarf spins up a pod using the existing image, mounts the `configmaps` that contain the `zarf-injector` binary and the `registry:3` image chunks and runs the `zarf-injector` binary.
 4. The `zarf-injector` binary reassembles the `registry:3` image and hosts a temporary registry that the cluster can pull from.
-5. The `docker-registry` chart in the `zarf-seed-registry` component is then deployed, with its `image.repository` set to the temporary registry that the `zarf-injector` binary is hosting (consumed as the `###ZARF_SEED_REGISTRY###` built-in variable set at runtime).
+5. The `docker-registry` chart in the `zarf-seed-registry` component is then deployed, with its `image.repository` set to the temporary registry that the `zarf-injector` binary is hosting (read from `.State.Registry.SeedAddress` in the chart values template at runtime).
 6. Once the `docker-registry` chart is deployed, the `zarf-seed-registry` component is marked as complete and the `zarf-injector` pod is removed from the cluster.
 
 :::note
@@ -127,9 +152,9 @@ It leverages the same `docker-registry` chart used in `zarf-seed-registry` but w
 
 :::tip
 
-You can further customize how the registry behaves by setting variables such as `REGISTRY_PVC_SIZE` with a [config file](/ref/config-files/) or `--set` on `zarf init`.
+You can further customize how the registry behaves by setting values such as `registry.persistence.size` with a values file or `--set-values` on `zarf init`.
 
-To see a full list of `variables` you can view the [`zarf.yaml` that defines the registry](https://github.com/zarf-dev/zarf/blob/main/packages/zarf-registry/zarf.yaml).
+To see the default values you can view the [values file that configures the registry](https://github.com/zarf-dev/zarf/blob/main/packages/init/v1beta1/registry/registry-values.yaml).
 
 :::
 
@@ -153,31 +178,32 @@ This setup is usually enough for smaller and simpler deployments. However, for l
 
 This approach requires certain prerequisites, such as a storage class that supports `ReadWriteMany`, or being in an environment that allows you to configure the registry to use an S3-compatible backend.
 
-Additionally, you must provide custom configuration to the registry to ensure it is distributed across all nodes and has the appropriate number of replicas. Below is an example [configuration file](/ref/config-files/) using a ReadWriteMany storage class:
+Additionally, you must provide custom configuration to the registry to ensure it is distributed across all nodes and has the appropriate number of replicas. Below is an example values file, passed to `zarf init --values init-values.yaml`, using a ReadWriteMany storage class:
 
 ```yaml
-# zarf-config.yaml
-package:
-  deploy:
-    set:
-      REGISTRY_PVC_ENABLED: "true"
-      REGISTRY_PVC_ACCESS_MODE: "ReadWriteMany"
-      REGISTRY_HPA_AUTO_SIZE: "true"
-      REGISTRY_AFFINITY_CUSTOM: |
-        podAntiAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-            - weight: 100
-              podAffinityTerm:
-                labelSelector:
-                  matchExpressions:
-                    - key: app
-                      operator: In
-                      values:
-                        - docker-registry
-                topologyKey: kubernetes.io/hostname
+# init-values.yaml
+registry:
+  persistence:
+    enabled: true
+    accessMode: ReadWriteMany
+  autoscaling:
+    mapReplicasToNodes: true
+  affinity:
+    custom:
+      podAntiAffinity:
+        preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                  - key: app
+                    operator: In
+                    values:
+                      - docker-registry
+              topologyKey: kubernetes.io/hostname
 ```
 
-Notably, the `REGISTRY_AFFINITY_CUSTOM` variable overrides the default pod anti-affinity, and `REGISTRY_HPA_AUTO_SIZE` automatically adjusts the minimum and maximum replicas for the registry based on the number of nodes in the cluster. If you prefer to manually set the minimum and maximum replicas, you can use `REGISTRY_HPA_MIN` and `REGISTRY_HPA_MAX` to specify the desired values.
+Notably, the `registry.affinity.custom` value overrides the default pod anti-affinity, and `registry.autoscaling.mapReplicasToNodes` automatically adjusts the minimum and maximum replicas for the registry based on the number of nodes in the cluster. If you prefer to manually set the minimum and maximum replicas, leave `registry.autoscaling.mapReplicasToNodes` disabled and use `registry.autoscaling.minReplicas` and `registry.autoscaling.maxReplicas` to specify the desired values.
 
 ### `zarf-agent`
 
@@ -216,7 +242,7 @@ The agent's mutation behavior is controlled by the `--agent-mutation-policy` fla
 
 In both policies, a label on the resource always takes priority over a label on its namespace. A resource labeled `zarf.dev/agent: mutate` in a namespace labeled `zarf.dev/agent: ignore` will be mutated, and vice versa.
 
-Argo CD or Flux resources can be excluded from mutation as a group with the `AGENT_MUTATION_EXCLUSIONS` Zarf package variable. The variable accepts a YAML list containing:
+Argo CD or Flux resources can be excluded from mutation as a group with the `agent.mutationExclusions` value. The value accepts a YAML list containing:
 
 - `flux` — excludes GitRepository, OCIRepository, and HelmRepository resources.
 - `argocd` — excludes Application, ApplicationSet, repository and repo-creds Secrets, and AppProject resources.
@@ -246,19 +272,19 @@ There are two ways to deploy these optional components. First, you can provide a
 
 :::tip
 
-The `k3s` component included differs from the default `k3s` install in that it disables the installation of `traefik` out of the box.  This was done so that people could more intentionally choose if they wanted `traefik` or another ingress provider (or no ingress at all) depending on their needs.  If you would like to return `k3s` to its defaults, you can set the `K3S_ARGS` Zarf variable to an empty string:
+The `k3s` component included differs from the default `k3s` install in that it disables the installation of `traefik` out of the box.  This was done so that people could more intentionally choose if they wanted `traefik` or another ingress provider (or no ingress at all) depending on their needs.  If you would like to return `k3s` to its defaults, you can set the `k3s.args` value to an empty string:
 
 ```text
-root@machine ~ # zarf init --components k3s --set K3S_ARGS="" --confirm
+root@machine ~ # zarf init --components k3s --set-values 'k3s.args=' --confirm
 ```
 
 :::
 
 :::tip
 
-You can further customize how the git-server behaves by setting variables such as `GIT_SERVER_PVC_SIZE` with a [config file](/ref/config-files/) or `--set` on `zarf init`.
+You can further customize how the git-server behaves by setting values such as `gitServer.persistence.size` with a values file or `--set-values` on `zarf init`.
 
-To see a full list of `variables` you can view the [zarf.yaml that defines the git-server](https://github.com/zarf-dev/zarf/blob/main/packages/gitea/zarf.yaml).
+To see the default values you can view the [values file that configures the git-server](https://github.com/zarf-dev/zarf/blob/main/packages/init/v1beta1/git-server/git-server-values.yaml).
 
 :::
 
@@ -268,9 +294,10 @@ The package definition 'init' is similar to writing any other Zarf Package, but 
 
 Starting with `kind` and `metadata`:
 
-```yaml {3, 6, 9}
+```yaml {3, 4, 7, 10}
 # zarf.yaml
 # kind must be ZarfInitConfig
+apiVersion: zarf.dev/v1beta1
 kind: ZarfInitConfig
 metadata:
   # name *can* be anything, but it is generally recommended to end with 'init'
@@ -281,30 +308,31 @@ metadata:
 ...
 ```
 
-In order for Zarf to operate correctly, the following `components`:
+In order for Zarf to operate correctly, the following `components` must be defined and ordered as shown below, with `service.name` identifying each component's role.
 
-- must be defined, ordered, and named **exactly** as shown below
-- must have the `required` field set to `true`
-
-```yaml {3, 7, 11, 15}
+```yaml
 # zarf.yaml
 components:
   # components (like k3s) that spin up a cluster...
 
   - name: zarf-injector
-    required: true
+    service:
+      name: injector
     ...
 
   - name: zarf-seed-registry
-    required: true
+    service:
+      name: seed-registry
     ...
 
   - name: zarf-registry
-    required: true
+    service:
+      name: registry
     ...
 
   - name: zarf-agent
-    required: true
+    service:
+      name: agent
     ...
 
   # optional components that need a cluster ...
@@ -312,46 +340,45 @@ components:
 
 :::note
 
-In order to reproduce / build the following example, you will need to have the Zarf repository cloned locally.
-
-```bash
-git clone https://github.com/zarf-dev/zarf.git
-cd zarf
-mv zarf.yaml zarf.yaml.bak
-```
+The following example imports published init components. Replace `<version>` with the Zarf release you want to use and the custom agent image with your image reference. Imported components supply their `service.name` declarations and default values.
 
 You can learn more about creating a custom init package in the [Creating a Custom 'init' Package Tutorial](/tutorials/7-custom-init-packages).
 
 :::
 
-A minimal `zarf.yaml` for the 'init' package looks something like:
+A `zarf.yaml` for the 'init' package using published components and a custom agent image looks something like:
 
 ```yaml
 # zarf.yaml
+apiVersion: zarf.dev/v1beta1
 kind: ZarfInitConfig
 metadata:
   name: init
 
 components:
   - name: zarf-injector
-    required: true
     import:
-      path: packages/zarf-registry
+      remote:
+        - url: oci://ghcr.io/zarf-dev/components/init/zarf-injector:<version>
 
   - name: zarf-seed-registry
-    required: true
     import:
-      path: packages/zarf-registry
+      remote:
+        - url: oci://ghcr.io/zarf-dev/components/init/zarf-seed-registry:<version>
 
   - name: zarf-registry
-    required: true
     import:
-      path: packages/zarf-registry
+      remote:
+        - url: oci://ghcr.io/zarf-dev/components/init/zarf-registry:<version>
 
   - name: zarf-agent
-    required: true
     import:
-      path: packages/zarf-agent
+      remote:
+        - url: oci://ghcr.io/zarf-dev/components/init/zarf-agent:<version>
+    images:
+      - id: agent
+        name: ghcr.io/example/custom-zarf-agent:1.0.0
+        source: registry
 ```
 
 {/* technically the most minimal you can go is just `zarf-agent` and using an external registry / git server but idk if it's worth documenting that */}

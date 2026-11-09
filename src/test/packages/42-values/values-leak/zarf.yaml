@@ -1,0 +1,35 @@
+kind: ZarfPackageConfig
+metadata:
+  name: test-values-leak
+  description: |
+    Both components map .shared onto the same chart, and only
+    the first adds a second mapping. The first component's mapping must not rewrite the
+    shared package values tree, or the second component renders the first one's values.
+
+values:
+  files:
+    - values/values.yaml
+
+components:
+  - name: comp-a
+    required: true
+    charts:
+      - name: values-leak-chart
+        version: 0.1.0
+        namespace: comp-a
+        localPath: chart
+        values:
+          - sourcePath: .shared
+            targetPath: .
+          - sourcePath: .extra
+            targetPath: .
+  - name: comp-b
+    required: true
+    charts:
+      - name: values-leak-chart
+        version: 0.1.0
+        namespace: comp-b
+        localPath: chart
+        values:
+          - sourcePath: .shared
+            targetPath: .

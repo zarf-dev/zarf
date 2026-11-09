@@ -15,12 +15,20 @@ type Manifest struct{ v1.Manifest }
 
 // Locate returns the layer whose title annotation or digest matches pathOrDigest.
 func (manifest *Manifest) Locate(pathOrDigest string) v1.Descriptor {
+	pathOrDigest = filepath.ToSlash(pathOrDigest)
+	var titleMatch v1.Descriptor
+	foundTitle := false
 	for _, layer := range manifest.Layers {
-		if layer.Annotations[v1.AnnotationTitle] == filepath.ToSlash(pathOrDigest) || layer.Digest.Encoded() == pathOrDigest {
+		if layer.Digest.Encoded() == pathOrDigest {
 			return layer
 		}
+		//TODO: evaluate function scope - no production caller looks up a layer by descriptor digest.
+		if !foundTitle && layer.Annotations[v1.AnnotationTitle] == pathOrDigest {
+			titleMatch = layer
+			foundTitle = true
+		}
 	}
-	return v1.Descriptor{}
+	return titleMatch
 }
 
 // MarshalJSON implements json.Marshaler.

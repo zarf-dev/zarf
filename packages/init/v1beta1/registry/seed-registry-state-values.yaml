@@ -1,0 +1,15 @@
+{{- $component := .Pkg.GetComponent "zarf-seed-registry" }}
+{{- $registry := $component.GetImageByID "registry" }}
+{{- $proxy := $component.GetImageByID "proxy" }}
+image:
+  repository: {{ printf "%s/%s" .State.Registry.SeedAddress $registry.Repository | quote }}
+  tag: {{ $registry.Tag | default "latest" | quote }}
+  digest: {{ $registry.Digest | quote }}
+proxy:
+  image:
+    repository: {{ printf "%s/%s" .State.Registry.SeedAddress $proxy.Repository | quote }}
+    tag: {{ $proxy.Tag | default "latest" | quote }}
+    digest: {{ $proxy.Digest | quote }}
+  registry:
+    image:
+      repository: {{ printf "%s/%s" .State.Registry.SeedAddress $registry.Repository | quote }}

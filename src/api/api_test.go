@@ -125,8 +125,8 @@ func TestComponentGetImages(t *testing.T) {
 	component := api.Component{
 		Images: []api.Image{{Name: "registry.example/direct:1.0.0"}},
 		ImageArchives: []api.ImageArchive{
-			{Path: "first.tar", Images: []string{"registry.example/first:1.0.0"}},
-			{Path: "second.tar", Images: []string{"registry.example/second:1.0.0", "registry.example/third:1.0.0"}},
+			{Path: "first.tar", Images: []api.ArchiveImage{{Name: "registry.example/first:1.0.0"}}},
+			{Path: "second.tar", Images: []api.ArchiveImage{{Name: "registry.example/second:1.0.0"}, {Name: "registry.example/third:1.0.0"}}},
 		},
 	}
 
@@ -208,4 +208,33 @@ func TestManifestGetServerSideApply(t *testing.T) {
 			require.Equal(t, tt.want, api.Manifest{ServerSideApply: tt.value}.GetServerSideApply())
 		})
 	}
+}
+
+func TestPackageComponentSelectionIsIsolated(t *testing.T) {
+	t.Parallel()
+
+	var pkg api.Package
+	_, applied := pkg.ComponentSelectors()
+	require.False(t, applied)
+	require.False(t, pkg.HasComponentSelection())
+
+	selectors := []string{"one", "-two", "one"}
+	pkg.SetComponentSelectors(selectors)
+	selectors[0] = "changed-input"
+	snapshot, applied := pkg.ComponentSelectors()
+	require.True(t, applied)
+	require.True(t, pkg.HasComponentSelection())
+	require.Equal(t, []string{"one", "-two", "one"}, snapshot)
+	snapshot[1] = "changed-output"
+	actual, _ := pkg.ComponentSelectors()
+	require.Equal(t, []string{"one", "-two", "one"}, actual)
+
+	pkgCopy := pkg
+	pkgCopy.SetComponentSelectors(nil)
+	empty, applied := pkgCopy.ComponentSelectors()
+	require.True(t, applied)
+	require.True(t, pkgCopy.HasComponentSelection())
+	require.Empty(t, empty)
+	actual, _ = pkg.ComponentSelectors()
+	require.Equal(t, []string{"one", "-two", "one"}, actual)
 }

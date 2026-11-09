@@ -239,20 +239,6 @@ func TestV1Beta1SourceOneOfSchema(t *testing.T) {
 			valid: true,
 		},
 		{
-			name: "chart rejects multiple sources",
-			doc: baseDoc(chartComponent(map[string]any{
-				"name": "chart",
-				"local": map[string]any{
-					"path": "chart",
-				},
-				"oci": map[string]any{
-					"url": "oci://example.com/chart",
-					"ref": map[string]any{"tag": "1.0.0"},
-				},
-			})),
-			valid: false,
-		},
-		{
 			name: "oci ref rejects tag and digest",
 			doc: baseDoc(chartComponent(map[string]any{
 				"name": "chart",

@@ -13,6 +13,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/state"
 
 	"github.com/zarf-dev/zarf/src/api"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/interactive"
@@ -25,6 +26,8 @@ const (
 )
 
 // GetZarfVariableConfig gets a variable configuration specific to Zarf
+//
+// Deprecated: Only supported by deprecated v1alpha1 packages.
 func GetZarfVariableConfig(ctx context.Context, isInteractive bool) *variables.VariableConfig {
 	prompt := func(variable api.InteractiveVariable) (value string, err error) {
 		if isInteractive {
@@ -36,17 +39,22 @@ func GetZarfVariableConfig(ctx context.Context, isInteractive bool) *variables.V
 	return variables.New("zarf", prompt, logger.From(ctx))
 }
 
-// GetZarfTemplates returns the template keys and values to be used for templating.
-func GetZarfTemplates(ctx context.Context, service api.ServiceName, s *state.State) (templateMap map[string]*variables.TextTemplate, err error) {
+// GetZarfTemplates returns legacy template keys and values for v1alpha1 packages.
+//
+// Deprecated: Only supported by deprecated v1alpha1 packages.
+func GetZarfTemplates(ctx context.Context, apiVersion string, service api.ServiceName, s *state.State) (templateMap map[string]*variables.TextTemplate, err error) {
 	templateMap = make(map[string]*variables.TextTemplate)
+	if apiVersion != v1alpha1.APIVersion {
+		return templateMap, nil
+	}
 
 	if s != nil {
-		s.Reconcile()
 		regInfo := s.RegistryInfo
 		gitInfo := s.GitServer
 
 		builtinMap := map[string]string{
-			"STORAGE_CLASS":               s.StorageClass,
+			// Older init packages contain this legacy placeholder. An empty value leaves PVC storageClassName unset.
+			"STORAGE_CLASS":               "",
 			"IPV6_ONLY":                   fmt.Sprintf("%t", s.IPFamily == state.IPFamilyIPv6),
 			"REGISTRY_MTLS_ENABLED":       fmt.Sprintf("%t", s.RegistryInfo.ShouldUseMTLS()),
 			"REGISTRY_PROXY":              fmt.Sprintf("%t", s.RegistryInfo.RegistryMode == state.RegistryModeProxy),
@@ -54,7 +62,6 @@ func GetZarfTemplates(ctx context.Context, service api.ServiceName, s *state.Sta
 			"INJECTOR_HOSTPORT":           fmt.Sprintf("%d", s.InjectorInfo.Port),
 			"INJECTOR_PAYLOAD_CONFIGMAPS": fmt.Sprintf("%d", s.InjectorInfo.PayLoadConfigMapAmount),
 			"INJECTOR_SHASUM":             s.InjectorInfo.PayLoadShaSum,
-
 			// Registry info
 			"REGISTRY":           regInfo.Address,
 			"NODEPORT":           fmt.Sprintf("%d", regInfo.Port),

@@ -6,6 +6,7 @@ package helm
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"strings"
 	"time"
@@ -18,6 +19,7 @@ import (
 	"sigs.k8s.io/cli-utils/pkg/object"
 
 	"github.com/zarf-dev/zarf/src/api"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/internal/healthchecks"
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -32,14 +34,14 @@ func UpdateZarfRegistryValues(ctx context.Context, opts InstallUpgradeOptions) e
 	if err != nil {
 		return fmt.Errorf("error getting init package: %w", err)
 	}
-	initPkgName, err := findPackageWithService(pkgs, api.ServiceRegistry)
+	initPkg, err := findPackageWithService(pkgs, api.ServiceRegistry)
 	if err != nil {
 		return fmt.Errorf("error finding init package with registry service: %w", err)
 	}
-	if initPkgName == "" {
+	if initPkg == nil {
 		return fmt.Errorf("error finding init package with registry service")
 	}
-	opts.PkgName = initPkgName
+	opts.PkgName = initPkg.Metadata.Name
 	if opts.State.RegistryInfo.RegistryMode == state.RegistryModeProxy {
 		err := opts.Cluster.InitRegistryCerts(ctx)
 		if err != nil {
@@ -96,14 +98,14 @@ func UpdateZarfAgentValues(ctx context.Context, opts InstallUpgradeOptions) erro
 	if err != nil {
 		return fmt.Errorf("error getting init package: %w", err)
 	}
-	initPkgName, err := findPackageWithService(pkgs, api.ServiceAgent)
+	initPkg, err := findPackageWithService(pkgs, api.ServiceAgent)
 	if err != nil {
 		return fmt.Errorf("error finding init package with agent service: %w", err)
 	}
-	if initPkgName == "" {
+	if initPkg == nil {
 		return fmt.Errorf("error finding init package with agent service")
 	}
-	opts.PkgName = initPkgName
+	opts.PkgName = initPkg.Metadata.Name
 	deployment, err := opts.Cluster.Clientset.AppsV1().Deployments(state.ZarfNamespaceName).Get(ctx, "agent-hook", metav1.GetOptions{})
 	if err != nil {
 		return err
@@ -155,23 +157,38 @@ func UpdateZarfAgentValues(ctx context.Context, opts InstallUpgradeOptions) erro
 				Namespace:   "zarf",
 				ReleaseName: rel.Name(),
 			}
-			opts.VariableConfig.SetConstants([]api.Constant{
-				{
-					Name:  "AGENT_IMAGE",
-					Value: agentImage.Path,
-				},
-				{
-					Name:  "AGENT_IMAGE_TAG",
-					Value: agentImage.Tag,
-				},
-			})
-			applicationTemplates, err := template.GetZarfTemplates(ctx, api.ServiceAgent, opts.State)
+			agentValues := map[string]interface{}{}
+			if initPkg.GetAPIVersion() == v1alpha1.APIVersion {
+				// Older CLIs rotate credentials through post-rendered placeholders.
+				// Preserve those placeholders in Helm's reusable values.
+				opts.VariableConfig.SetConstants([]api.Constant{
+					{
+						Name:  "AGENT_IMAGE",
+						Value: agentImage.Path,
+					},
+					{
+						Name:  "AGENT_IMAGE_TAG",
+						Value: agentImage.Tag,
+					},
+				})
+			} else {
+				agentTLS := opts.State.AgentInfo.TLS
+				agentValues = map[string]interface{}{
+					"caBundle":       base64.StdEncoding.EncodeToString(agentTLS.CA),
+					"mutationPolicy": string(opts.State.AgentInfo.MutationPolicy),
+					"secret": map[string]interface{}{
+						"tlsCrt": base64.StdEncoding.EncodeToString(agentTLS.Cert),
+						"tlsKey": base64.StdEncoding.EncodeToString(agentTLS.Key),
+					},
+				}
+			}
+			applicationTemplates, err := template.GetZarfTemplates(ctx, initPkg.GetAPIVersion(), api.ServiceAgent, opts.State)
 			if err != nil {
 				return fmt.Errorf("error setting up the templates: %w", err)
 			}
 			opts.VariableConfig.SetApplicationTemplates(applicationTemplates)
 
-			err = UpdateReleaseValues(ctx, chart, map[string]interface{}{}, opts)
+			err = UpdateReleaseValues(ctx, chart, agentValues, opts)
 			if err != nil {
 				return fmt.Errorf("error updating the release values: %w", err)
 			}
@@ -220,17 +237,17 @@ func UpdateZarfAgentValues(ctx context.Context, opts InstallUpgradeOptions) erro
 	return nil
 }
 
-func findPackageWithService(pkgs []state.DeployedPackage, service api.ServiceName) (string, error) {
+func findPackageWithService(pkgs []state.DeployedPackage, service api.ServiceName) (*api.Package, error) {
 	for _, deployedPackage := range pkgs {
 		definition, err := deployedPackage.Definition()
 		if err != nil {
-			return "", err
+			return nil, err
 		}
 		for _, component := range definition.Components {
 			if component.Service.Name == service {
-				return deployedPackage.Name, nil
+				return &definition, nil
 			}
 		}
 	}
-	return "", nil
+	return nil, nil
 }

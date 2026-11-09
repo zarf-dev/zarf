@@ -1,0 +1,15 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "k3s": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "args": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

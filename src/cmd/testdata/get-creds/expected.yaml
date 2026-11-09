@@ -18,8 +18,3 @@
   password: pull-password
   connect: zarf connect git
   getCredsKey: git-readonly
-- application: Artifact Token
-  username: "push-user"
-  password: "push-password"
-  connect: zarf connect git
-  getCredsKey: artifact

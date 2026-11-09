@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -14,6 +15,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
+	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
+	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 )
 
 func TestFindImages(t *testing.T) {
@@ -42,6 +45,10 @@ func TestFindImages(t *testing.T) {
   - name: app
     images:
       - name: nginx:1.27
+        id: "web"
+        source: daemon
+      - name: docker.io/library/nginx:1.27
+        id: "worker"
         source: daemon`,
 			},
 			{
@@ -49,7 +56,10 @@ func TestFindImages(t *testing.T) {
 				path: filepath.Join(packagePath, "component.yaml"),
 				want: `component:
   images:
-    - name: docker.io/library/nginx:1.27`,
+    - name: nginx:1.27
+      id: "web"
+    - name: docker.io/library/nginx:1.27
+      id: "worker"`,
 			},
 		} {
 			t.Run(tc.name, func(t *testing.T) {
@@ -80,25 +90,31 @@ func TestFindImages(t *testing.T) {
 			var updated v1beta1.Package
 			require.NoError(t, yaml.Unmarshal(b, &updated))
 			require.Len(t, updated.Components, 1)
-			require.Equal(t, []v1beta1.Image{{Name: "nginx:1.27", Source: "daemon"}}, updated.Components[0].Images)
+			require.Equal(t, []v1beta1.Image{
+				{Name: "nginx:1.27", ID: "web", Source: "daemon"},
+				{Name: image, ID: "worker", Source: "daemon"},
+			}, updated.Components[0].Images)
 		})
 
 		t.Run("v1beta1 component", func(t *testing.T) {
 			b := updateFindImagesFixture(t, "component.yaml")
 			var updated v1beta1.ComponentConfig
 			require.NoError(t, yaml.Unmarshal(b, &updated))
-			require.Equal(t, []v1beta1.Image{{Name: image}}, updated.Component.Images)
+			require.Equal(t, []v1beta1.Image{
+				{Name: "nginx:1.27", ID: "web"},
+				{Name: image, ID: "worker"},
+			}, updated.Component.Images)
 		})
 	})
 
 	t.Run("zarf prepare find-images", func(t *testing.T) {
 		t.Parallel()
 		// Test `zarf prepare find-images` for a remote asset
-		stdOut, stdErr, err := e2e.Zarf(t, "prepare", "find-images", "examples/helm-charts")
+		stdOut, stdErr, err := e2e.Zarf(t, "prepare", "find-images", "examples/helm-charts", "--skip-cosign")
 		require.NoError(t, err, stdOut, stdErr)
 		require.Contains(t, stdOut, "ghcr.io/stefanprodan/podinfo:6.4.0", "The chart image should be found by Zarf")
 		// Test `zarf prepare find-images` with a chart that uses helm annotations
-		stdOut, stdErr, err = e2e.Zarf(t, "prepare", "find-images", "src/test/packages/00-helm-annotations")
+		stdOut, stdErr, err = e2e.Zarf(t, "prepare", "find-images", "src/test/packages/00-helm-annotations", "--skip-cosign")
 		require.NoError(t, err, stdOut, stdErr)
 		require.Contains(t, stdOut, "registry1.dso.mil/ironbank/opensource/istio/pilot:1.17.2", "The pilot image should be found by Zarf")
 	})
@@ -116,7 +132,7 @@ func TestFindImages(t *testing.T) {
 		require.Contains(t, stdOut, controlImageWithSignature, "The image signature should be found by Zarf")
 
 		// Test `zarf prepare find-images` with `--kube-version` specified and less than than the declared minimum (v1.21.0)
-		stdOut, stdErr, err = e2e.Zarf(t, "prepare", "find-images", "--kube-version=v1.20.0", "src/test/packages/00-kube-version-override")
+		stdOut, stdErr, err = e2e.Zarf(t, "prepare", "find-images", "--kube-version=v1.20.0", "src/test/packages/00-kube-version-override", "--skip-cosign")
 		require.Error(t, err, stdOut, stdErr)
 		require.Contains(t, stdErr, "could not render the Helm template for chart cert-manager", "The kubeVersion declaration should prevent this from templating")
 	})
@@ -125,18 +141,19 @@ func TestFindImages(t *testing.T) {
 		t.Parallel()
 		registry := "zarf.dev"
 		agentTag := "test"
+		initPath := filepath.Join("packages", "init", "v1alpha1")
 
-		stdOut, _, err := e2e.Zarf(t, "dev", "find-images", ".", "--registry-url", registry, "--create-set", fmt.Sprintf("agent_image_tag=%s", agentTag), "--skip-cosign")
+		stdOut, stdErr, err := e2e.Zarf(t, "dev", "find-images", initPath, "--registry-url", registry, "--create-set", fmt.Sprintf("agent_image_tag=%s", agentTag), "--skip-cosign")
 
-		require.NoError(t, err)
+		require.NoError(t, err, stdOut, stdErr)
 		internalRegistryImage := fmt.Sprintf("%s/%s:%s", registry, "zarf-dev/zarf/agent", agentTag)
 		require.Contains(t, stdOut, internalRegistryImage)
 		// busybox image is in git init package
 		require.Contains(t, stdOut, "busybox:latest")
 
 		path := filepath.Join("src", "test", "packages", "13-find-images-with-vars")
-		stdOut, _, err = e2e.Zarf(t, "dev", "find-images", path, "--deploy-set", "PODINFO_IMAGE=zarf.dev/podinfo:latest", "--skip-cosign")
-		require.NoError(t, err)
+		stdOut, stdErr, err = e2e.Zarf(t, "dev", "find-images", path, "--deploy-set-variables", "PODINFO_IMAGE=zarf.dev/podinfo:latest", "--skip-cosign")
+		require.NoError(t, err, stdOut, stdErr)
 		require.Contains(t, stdOut, "ghcr.io/zarf-dev/zarf/agent:v0.36.1")
 		require.Contains(t, stdOut, "zarf.dev/podinfo:latest")
 	})
@@ -146,7 +163,7 @@ func TestFindImages(t *testing.T) {
 		testPackagePath := filepath.Join("examples", "wordpress")
 		sets := []string{"WORDPRESS_USERNAME=zarf", "WORDPRESS_PASSWORD=fake", "WORDPRESS_EMAIL=hello@defenseunicorns.com", "WORDPRESS_FIRST_NAME=zarf", "WORDPRESS_LAST_NAME=zarf", "WORDPRESS_BLOG_NAME=blog"}
 		deploysSet := strings.Join(sets, ",")
-		stdOut, _, err := e2e.Zarf(t, "dev", "find-images", testPackagePath, "--why", "docker.io/bitnamilegacy/apache-exporter:1.0.10-debian-12-r55", "--deploy-set", deploysSet)
+		stdOut, _, err := e2e.Zarf(t, "dev", "find-images", testPackagePath, "--why", "docker.io/bitnamilegacy/apache-exporter:1.0.10-debian-12-r55", "--deploy-set-variables", deploysSet, "--skip-cosign")
 		require.NoError(t, err)
 		require.Contains(t, stdOut, "component: wordpress")
 		require.Contains(t, stdOut, "chart: wordpress")
@@ -157,12 +174,57 @@ func TestFindImages(t *testing.T) {
 		t.Parallel()
 		testPackagePath := filepath.Join("examples", "manifests")
 
-		stdOut, _, err := e2e.Zarf(t, "dev", "find-images", testPackagePath, "--why", "httpd:alpine3.18")
+		stdOut, _, err := e2e.Zarf(t, "dev", "find-images", testPackagePath, "--why", "httpd:alpine3.18", "--skip-cosign")
 		require.NoError(t, err)
 		require.Contains(t, stdOut, "component: httpd-local")
 		require.Contains(t, stdOut, "manifest: simple-httpd-deployment")
 		require.Contains(t, stdOut, "image: httpd:alpine3.18")
 	})
+}
+
+func TestDevKustomizePlugins(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("test plugin requires a POSIX shell")
+	}
+
+	fixture, err := filepath.Abs(filepath.Join("src", "pkg", "packager", "testdata", "kustomize-plugins"))
+	require.NoError(t, err)
+	t.Setenv("KUSTOMIZE_PLUGIN_HOME", filepath.Join(fixture, "plugins"))
+
+	for _, tc := range []struct {
+		name       string
+		args       []string
+		wantOutput string
+		wantError  string
+	}{
+		{name: "find-images", args: []string{"find-images", "--skip-cosign"}, wantOutput: "docker.io/library/scratch:latest"},
+		{name: "find-images why", args: []string{"find-images", "--skip-cosign", "--why", "scratch:latest"}, wantOutput: "name: plugin-pod"},
+		{name: "inspect manifests", args: []string{"inspect", "manifests"}, wantOutput: "name: plugin-pod"},
+		// This fixture has no charts, but values-files must still require permission before running its manifest plugins.
+		{name: "inspect values-files", args: []string{"inspect", "values-files"}, wantError: "0 values files found"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			marker := filepath.Join(t.TempDir(), "executed")
+			t.Setenv("ZARF_TEST_KUSTOMIZE_PLUGIN_MARKER", marker)
+			args := append([]string{"dev"}, tc.args...)
+			args = append(args, fixture)
+			stdout, stderr, err := e2e.Zarf(t, args...)
+			require.Error(t, err, stdout, stderr)
+			require.Contains(t, stderr, "requires explicit opt-in")
+			require.NoFileExists(t, marker)
+
+			args = append(args, "--enable-kustomize-plugins")
+			stdout, stderr, err = e2e.Zarf(t, args...)
+			if tc.wantError != "" {
+				require.Error(t, err, stdout, stderr)
+				require.Contains(t, stderr, tc.wantError)
+			} else {
+				require.NoError(t, err, stdout, stderr)
+				require.Contains(t, stdout, tc.wantOutput)
+			}
+			require.FileExists(t, marker)
+		})
+	}
 }
 
 func updateFindImagesFixture(t *testing.T, filename string) []byte {
@@ -176,4 +238,68 @@ func updateFindImagesFixture(t *testing.T, filename string) []byte {
 	b, err := os.ReadFile(path)
 	require.NoError(t, err)
 	return b
+}
+
+func TestFindImagesArchivesV1Beta1(t *testing.T) {
+	t.Parallel()
+
+	fixture := filepath.Join("src", "pkg", "packager", "testdata", "find-images", "image-archives")
+	source := t.TempDir()
+	require.NoError(t, os.CopyFS(source, os.DirFS(fixture)))
+	definition := `apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: archive-ids
+components:
+  - name: app
+    manifests:
+      - name: scratch
+        namespace: default
+        files:
+          - deployment.yaml
+    imageArchives:
+      - path: scratch.tar
+        images:
+          - name: scratch:latest
+            id: app
+          - name: docker.io/library/scratch:latest
+            id: worker
+          - name: scratch:stale
+`
+	definitionPath := filepath.Join(source, "zarf.yaml")
+	require.NoError(t, os.WriteFile(definitionPath, []byte(definition), 0o600))
+	stdout, stderr, err := e2e.Zarf(t, "dev", "find-images", source, "--skip-cosign", "--update")
+	require.NoError(t, err, "%s\n%s", stdout, stderr)
+	var found v1beta1.Package
+	require.NoError(t, yaml.Unmarshal([]byte(stdout), &found))
+	want := []v1beta1.ArchiveImage{
+		{Name: "docker.io/library/scratch:latest", ID: "app"},
+		{Name: "docker.io/library/scratch:latest", ID: "worker"},
+	}
+	require.Equal(t, want, found.Components[0].ImageArchives[0].Images)
+	updated, err := os.ReadFile(definitionPath)
+	require.NoError(t, err)
+	var authored v1beta1.Package
+	require.NoError(t, yaml.Unmarshal(updated, &authored))
+	require.Equal(t, want, authored.Components[0].ImageArchives[0].Images)
+
+	output := t.TempDir()
+	stdout, stderr, err = e2e.Zarf(t, "package", "create", source, "-o", output, "--skip-sbom", "--confirm")
+	require.NoError(t, err, "%s\n%s", stdout, stderr)
+	packagePath := filepath.Join(output, fmt.Sprintf("zarf-package-archive-ids-%s.tar.zst", e2e.Arch))
+	pkg, err := layout.LoadFromTar(t.Context(), packagePath, layout.PackageLayoutOptions{})
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, pkg.Cleanup()) })
+	b, err := os.ReadFile(filepath.Join(pkg.DirPath(), layout.ZarfYAML))
+	require.NoError(t, err)
+	beta, err := pkgcfg.ParseAs(t.Context(), b, pkgcfg.V1Beta1)
+	require.NoError(t, err)
+	for _, id := range []string{"app", "worker"} {
+		image, err := beta.Components[0].GetImageByID(id)
+		require.NoError(t, err)
+		require.Equal(t, "docker.io/library/scratch:latest", image.Reference)
+	}
+	alpha, err := pkgcfg.ParseAs(t.Context(), b, pkgcfg.V1Alpha1)
+	require.NoError(t, err)
+	require.Equal(t, []string{"docker.io/library/scratch:latest", "docker.io/library/scratch:latest"}, alpha.Components[0].ImageArchives[0].Images)
 }

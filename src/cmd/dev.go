@@ -28,6 +28,7 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
+	internalv1alpha1 "github.com/zarf-dev/zarf/src/internal/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/internal/checksum"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/helpers"
@@ -63,7 +64,7 @@ func parseValues(ctx context.Context, valuesFiles []string, setValues map[string
 	return values, nil
 }
 
-func newDevCommand() *cobra.Command {
+func newDevCommand(architecture *architectureOptions) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "dev",
 		Aliases: []string{"prepare", "prep"},
@@ -72,15 +73,15 @@ func newDevCommand() *cobra.Command {
 
 	v := getViper()
 
-	cmd.AddCommand(newDevDeployCommand(v))
+	cmd.AddCommand(newDevDeployCommand(v, architecture))
 	cmd.AddCommand(newDevGenerateCommand())
 	cmd.AddCommand(newDevPatchGitCommand())
 	cmd.AddCommand(newDevSha256SumCommand())
-	cmd.AddCommand(newDevInspectCommand(v))
-	cmd.AddCommand(newDevFindImagesCommand(v))
+	cmd.AddCommand(newDevInspectCommand(v, architecture))
+	cmd.AddCommand(newDevFindImagesCommand(v, architecture))
 	cmd.AddCommand(newDevGenerateConfigCommand())
-	cmd.AddCommand(newDevGenerateSchemaCommand(v))
-	cmd.AddCommand(newDevLintCommand(v))
+	cmd.AddCommand(newDevGenerateSchemaCommand(v, architecture))
+	cmd.AddCommand(newDevLintCommand(v, architecture))
 	cmd.AddCommand(newDevUpgradeSchemaCommand())
 	cmd.AddCommand(newDevTemplateCommand(v))
 
@@ -88,14 +89,15 @@ func newDevCommand() *cobra.Command {
 }
 
 type devGenerateSchemaOptions struct {
+	*architectureOptions
 	flavor         string
 	setPkgTmpl     map[string]string
 	update         bool
 	deleteNotFound bool
 }
 
-func newDevGenerateSchemaCommand(v *viper.Viper) *cobra.Command {
-	o := &devGenerateSchemaOptions{}
+func newDevGenerateSchemaCommand(v *viper.Viper, architecture *architectureOptions) *cobra.Command {
+	o := &devGenerateSchemaOptions{architectureOptions: architecture}
 
 	cmd := &cobra.Command{
 		Use:   "generate-schema [ PATH ]",
@@ -125,6 +127,7 @@ func (o *devGenerateSchemaOptions) run(ctx context.Context, args []string) error
 	}
 	schema, err := packager.GenerateValuesSchema(ctx, basePath, packager.GenerateValuesSchemaOptions{
 		DefinitionOptions: load.DefinitionOptions{
+			Architecture:     o.selectedArchitecture(),
 			Flavor:           o.flavor,
 			SetVariables:     o.setPkgTmpl,
 			IsInteractive:    true,
@@ -146,25 +149,26 @@ func (o *devGenerateSchemaOptions) run(ctx context.Context, args []string) error
 	return nil
 }
 
-func newDevInspectCommand(v *viper.Viper) *cobra.Command {
+func newDevInspectCommand(v *viper.Viper, architecture *architectureOptions) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "inspect",
 		Short: "Commands to gather information about a Zarf package from its definition",
 	}
 
-	cmd.AddCommand(newDevInspectDefinitionCommand(v))
-	cmd.AddCommand(newDevInspectManifestsCommand(v))
-	cmd.AddCommand(newDevInspectValuesFilesCommand(v))
+	cmd.AddCommand(newDevInspectDefinitionCommand(v, architecture))
+	cmd.AddCommand(newDevInspectManifestsCommand(v, architecture))
+	cmd.AddCommand(newDevInspectValuesFilesCommand(v, architecture))
 	return cmd
 }
 
 type devInspectDefinitionOptions struct {
+	*architectureOptions
 	flavor     string
 	setPkgTmpl map[string]string
 }
 
-func newDevInspectDefinitionCommand(v *viper.Viper) *cobra.Command {
-	o := &devInspectDefinitionOptions{}
+func newDevInspectDefinitionCommand(v *viper.Viper, architecture *architectureOptions) *cobra.Command {
+	o := &devInspectDefinitionOptions{architectureOptions: architecture}
 
 	cmd := &cobra.Command{
 		Use:   "definition [ PATH ]",
@@ -190,6 +194,7 @@ func (o *devInspectDefinitionOptions) run(cmd *cobra.Command, args []string) err
 		return err
 	}
 	loadOpts := load.DefinitionOptions{
+		Architecture:     o.selectedArchitecture(),
 		Flavor:           o.flavor,
 		SetVariables:     o.setPkgTmpl,
 		CachePath:        cachePath,
@@ -237,6 +242,8 @@ func (o *devInspectDefinitionOptions) run(cmd *cobra.Command, args []string) err
 		return err
 	}
 
+	internalv1alpha1.WarnIfDeprecated(ctx, definition)
+
 	// The definition is printed in the apiVersion it was authored in.
 	if definition.APIVersion == v1beta1.APIVersion {
 		pkg := convert.PackageToV1beta1(definition)
@@ -249,13 +256,15 @@ func (o *devInspectDefinitionOptions) run(cmd *cobra.Command, args []string) err
 }
 
 type devInspectManifestsOptions struct {
-	flavor             string
-	createSetPkgTmpl   map[string]string
-	deploySetVariables map[string]string
-	valuesFiles        []string
-	setValues          map[string]string
-	kubeVersion        string
-	outputWriter       io.Writer
+	*architectureOptions
+	enableKustomizePlugins bool
+	flavor                 string
+	createSetPkgTmpl       map[string]string
+	deploySetVariables     map[string]string
+	valuesFiles            []string
+	setValues              map[string]string
+	kubeVersion            string
+	outputWriter           io.Writer
 }
 
 func newDevInspectManifestsOptions() devInspectManifestsOptions {
@@ -264,8 +273,9 @@ func newDevInspectManifestsOptions() devInspectManifestsOptions {
 	}
 }
 
-func newDevInspectManifestsCommand(v *viper.Viper) *cobra.Command {
+func newDevInspectManifestsCommand(v *viper.Viper, architecture *architectureOptions) *cobra.Command {
 	o := newDevInspectManifestsOptions()
+	o.architectureOptions = architecture
 
 	cmd := &cobra.Command{
 		Use:   "manifests [ PATH ]",
@@ -278,12 +288,12 @@ func newDevInspectManifestsCommand(v *viper.Viper) *cobra.Command {
 
 	cmd.Flags().StringVarP(&o.flavor, "flavor", "f", "", lang.CmdPackageCreateFlagFlavor)
 	cmd.Flags().StringToStringVar(&o.createSetPkgTmpl, "create-set", v.GetStringMapString(VPkgCreateSet), lang.CmdPackageCreateFlagSetPkgTmpl)
-	cmd.Flags().StringToStringVar(&o.deploySetVariables, "deploy-set", v.GetStringMapString(VPkgDeploySet), "Alias for --deploy-set-variables")
-	_ = cmd.Flags().MarkDeprecated("deploy-set", "Use --deploy-set-variables instead")
 	cmd.Flags().StringToStringVar(&o.deploySetVariables, "deploy-set-variables", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSetVariables)
 	cmd.Flags().StringSliceVar(&o.valuesFiles, "values", []string{}, lang.CmdPackageDeployFlagValuesFiles)
 	cmd.Flags().StringToStringVar(&o.setValues, "set-values", v.GetStringMapString(VPkgDeploySetValues), lang.CmdPackageDeployFlagSetValues)
 	cmd.Flags().StringVar(&o.kubeVersion, "kube-version", "", lang.CmdDevFlagKubeVersion)
+
+	cmd.Flags().BoolVar(&o.enableKustomizePlugins, "enable-kustomize-plugins", false, lang.CmdDevFlagEnableKustomizePlugins)
 
 	return cmd
 }
@@ -306,14 +316,16 @@ func (o *devInspectManifestsOptions) run(ctx context.Context, args []string) err
 	}
 
 	opts := packager.InspectDefinitionResourcesOptions{
-		CreateSetVariables: o.createSetPkgTmpl,
-		DeploySetVariables: o.deploySetVariables,
-		Values:             values,
-		Flavor:             o.flavor,
-		KubeVersion:        o.kubeVersion,
-		CachePath:          cachePath,
-		IsInteractive:      true,
-		RemoteOptions:      defaultRemoteOptions(),
+		Architecture:           o.selectedArchitecture(),
+		EnableKustomizePlugins: o.enableKustomizePlugins,
+		CreateSetVariables:     o.createSetPkgTmpl,
+		DeploySetVariables:     o.deploySetVariables,
+		Values:                 values,
+		Flavor:                 o.flavor,
+		KubeVersion:            o.kubeVersion,
+		CachePath:              cachePath,
+		IsInteractive:          true,
+		RemoteOptions:          defaultRemoteOptions(),
 	}
 	basePath, err := setBaseDirectory(args)
 	if err != nil {
@@ -345,14 +357,16 @@ func (o *devInspectManifestsOptions) run(ctx context.Context, args []string) err
 }
 
 type devInspectValuesFilesOptions struct {
-	flavor             string
-	components         string
-	createSetPkgTmpl   map[string]string
-	deploySetVariables map[string]string
-	valuesFiles        []string
-	setValues          map[string]string
-	kubeVersion        string
-	outputWriter       io.Writer
+	*architectureOptions
+	enableKustomizePlugins bool
+	flavor                 string
+	components             string
+	createSetPkgTmpl       map[string]string
+	deploySetVariables     map[string]string
+	valuesFiles            []string
+	setValues              map[string]string
+	kubeVersion            string
+	outputWriter           io.Writer
 }
 
 func newDevInspectValuesFilesOptions() devInspectValuesFilesOptions {
@@ -361,8 +375,9 @@ func newDevInspectValuesFilesOptions() devInspectValuesFilesOptions {
 	}
 }
 
-func newDevInspectValuesFilesCommand(v *viper.Viper) *cobra.Command {
+func newDevInspectValuesFilesCommand(v *viper.Viper, architecture *architectureOptions) *cobra.Command {
 	o := newDevInspectValuesFilesOptions()
+	o.architectureOptions = architecture
 
 	cmd := &cobra.Command{
 		Use:   "values-files [ PATH ]",
@@ -377,12 +392,12 @@ func newDevInspectValuesFilesCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().StringVarP(&o.flavor, "flavor", "f", "", lang.CmdPackageCreateFlagFlavor)
 	cmd.Flags().StringVar(&o.components, "components", "", "comma separated list of components to show values files for")
 	cmd.Flags().StringToStringVar(&o.createSetPkgTmpl, "create-set", v.GetStringMapString(VPkgCreateSet), lang.CmdPackageCreateFlagSetPkgTmpl)
-	cmd.Flags().StringToStringVar(&o.deploySetVariables, "deploy-set", v.GetStringMapString(VPkgDeploySet), "Alias for --deploy-set-variables")
-	_ = cmd.Flags().MarkDeprecated("deploy-set", "Use --deploy-set-variables instead")
 	cmd.Flags().StringToStringVar(&o.deploySetVariables, "deploy-set-variables", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSetVariables)
 	cmd.Flags().StringSliceVar(&o.valuesFiles, "values", []string{}, lang.CmdPackageDeployFlagValuesFiles)
 	cmd.Flags().StringToStringVar(&o.setValues, "set-values", v.GetStringMapString(VPkgDeploySetValues), lang.CmdPackageDeployFlagSetValues)
 	cmd.Flags().StringVar(&o.kubeVersion, "kube-version", "", lang.CmdDevFlagKubeVersion)
+
+	cmd.Flags().BoolVar(&o.enableKustomizePlugins, "enable-kustomize-plugins", false, lang.CmdDevFlagEnableKustomizePlugins)
 
 	return cmd
 }
@@ -405,15 +420,17 @@ func (o *devInspectValuesFilesOptions) run(ctx context.Context, args []string) e
 	}
 
 	opts := packager.InspectDefinitionResourcesOptions{
-		CreateSetVariables: o.createSetPkgTmpl,
-		DeploySetVariables: o.deploySetVariables,
-		Values:             values,
-		Flavor:             o.flavor,
-		Components:         o.components,
-		KubeVersion:        o.kubeVersion,
-		CachePath:          cachePath,
-		IsInteractive:      true,
-		RemoteOptions:      defaultRemoteOptions(),
+		Architecture:           o.selectedArchitecture(),
+		EnableKustomizePlugins: o.enableKustomizePlugins,
+		CreateSetVariables:     o.createSetPkgTmpl,
+		DeploySetVariables:     o.deploySetVariables,
+		Values:                 values,
+		Flavor:                 o.flavor,
+		Components:             o.components,
+		KubeVersion:            o.kubeVersion,
+		CachePath:              cachePath,
+		IsInteractive:          true,
+		RemoteOptions:          defaultRemoteOptions(),
 	}
 	basePath, err := setBaseDirectory(args)
 	if err != nil {
@@ -441,6 +458,7 @@ func (o *devInspectValuesFilesOptions) run(ctx context.Context, args []string) e
 }
 
 type devDeployOptions struct {
+	*architectureOptions
 	createSetPkgTmpl      map[string]string
 	deploySetVariables    map[string]string
 	valuesFiles           []string
@@ -452,15 +470,14 @@ type devDeployOptions struct {
 	timeout               time.Duration
 	retries               int
 	optionalComponents    string
-	noYOLO                bool
 	connected             bool
 	ociConcurrency        int
 	skipVersionCheck      bool
 	skipArchitectureCheck bool
 }
 
-func newDevDeployCommand(v *viper.Viper) *cobra.Command {
-	o := &devDeployOptions{}
+func newDevDeployCommand(v *viper.Viper, architecture *architectureOptions) *cobra.Command {
+	o := &devDeployOptions{architectureOptions: architecture}
 
 	cmd := &cobra.Command{
 		Use:   "deploy",
@@ -480,16 +497,12 @@ func newDevDeployCommand(v *viper.Viper) *cobra.Command {
 		logger.Default().Debug("unable to mark dev-deploy flag as hidden", "error", err)
 	}
 
-	cmd.Flags().StringToStringVar(&o.deploySetVariables, "deploy-set", v.GetStringMapString(VPkgDeploySet), "Alias for --deploy-set-variables")
-	_ = cmd.Flags().MarkDeprecated("deploy-set", "Use --deploy-set-variables instead")
 	cmd.Flags().StringToStringVar(&o.deploySetVariables, "deploy-set-variables", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSetVariables)
 	cmd.Flags().StringSliceVarP(&o.valuesFiles, "values", "v", GetStringSlice(v, VPkgDeployValues), lang.CmdPackageDeployFlagValuesFiles)
 	cmd.Flags().StringToStringVar(&o.setValues, "set-values", v.GetStringMapString(VPkgDeploySetValues), lang.CmdPackageDeployFlagSetValues)
 
 	// Always require take-ownership flag (no viper)
 	cmd.Flags().BoolVar(&o.takeOwnership, "take-ownership", false, lang.CmdPackageDeployFlagTakeOwnership)
-	cmd.Flags().BoolVar(&o.takeOwnership, "adopt-existing-resources", false, lang.CmdPackageDeployFlagAdoptExistingResources)
-	_ = cmd.Flags().MarkDeprecated("adopt-existing-resources", "use --take-ownership instead")
 	cmd.Flags().DurationVar(&o.timeout, "timeout", v.GetDuration(VPkgDeployTimeout), lang.CmdPackageDeployFlagTimeout)
 
 	cmd.Flags().IntVar(&o.retries, "retries", v.GetInt(VPkgRetries), lang.CmdPackageFlagRetries)
@@ -497,8 +510,6 @@ func newDevDeployCommand(v *viper.Viper) *cobra.Command {
 
 	cmd.Flags().BoolVar(&o.connected, "connected", v.GetBool(VDevDeployConnected), lang.CmdDevDeployFlagConnected)
 	cmd.Flags().BoolVar(&o.skipArchitectureCheck, "skip-architecture-check", false, lang.CmdPackageDeployFlagSkipArchitectureCheck+" Only applies when --connected=false.")
-	cmd.Flags().BoolVar(&o.noYOLO, "no-yolo", v.GetBool(VDevDeployNoYolo), lang.CmdDevDeployFlagNoYolo)
-	_ = cmd.Flags().MarkDeprecated("no-yolo", "Use --connected=false instead")
 
 	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
 	cmd.Flags().BoolVar(&o.skipVersionCheck, "skip-version-check", false, "Ignore version requirements when deploying the package")
@@ -536,7 +547,8 @@ func (o *devDeployOptions) run(cmd *cobra.Command, args []string) error {
 	}
 
 	err = packager.DevDeploy(ctx, basePath, packager.DevDeployOptions{
-		AirgapMode:            o.noYOLO || !o.connected,
+		Architecture:          o.selectedArchitecture(),
+		AirgapMode:            v.GetBool(VDevDeployNoYolo) || !o.connected,
 		Flavor:                o.flavor,
 		RegistryURL:           o.registryURL,
 		RegistryOverrides:     overrides,
@@ -643,6 +655,7 @@ func (o *devGenerateOptions) run(cmd *cobra.Command, args []string) (err error) 
 
 type devPatchGitOptions struct {
 	gitPushUsername string
+	confirm         bool
 }
 
 func newDevPatchGitCommand() *cobra.Command {
@@ -657,6 +670,8 @@ func newDevPatchGitCommand() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&o.gitPushUsername, "git-account", state.ZarfGitPushUser, lang.CmdDevFlagGitAccount)
+	// Always require the confirm flag to be passed explicitly (no viper)
+	cmd.Flags().BoolVar(&o.confirm, "confirm", false, "Confirm the overwrite of FILE without prompting")
 
 	return cmd
 }
@@ -681,13 +696,15 @@ func (o *devPatchGitOptions) run(cmd *cobra.Command, args []string) error {
 	diffs = dmp.DiffCleanupSemantic(diffs)
 	pterm.Println(dmp.DiffPrettyText(diffs))
 
-	// Ask the user before this destructive action
-	confirm := false
-	prompt := &survey.Confirm{
-		Message: fmt.Sprintf(lang.CmdDevPatchGitOverwritePrompt, fileName),
-	}
-	if err := survey.AskOne(prompt, &confirm); err != nil {
-		return fmt.Errorf("confirm overwrite canceled: %w", err)
+	// Ask the user before this destructive action, unless --confirm was passed
+	confirm := o.confirm
+	if !confirm {
+		prompt := &survey.Confirm{
+			Message: fmt.Sprintf(lang.CmdDevPatchGitOverwritePrompt, fileName),
+		}
+		if err := survey.AskOne(prompt, &confirm); err != nil {
+			return fmt.Errorf("confirm overwrite canceled: %w", err)
+		}
 	}
 
 	if confirm {
@@ -721,21 +738,32 @@ func newDevSha256SumCommand() *cobra.Command {
 	return cmd
 }
 
-func (o *devSha256SumOptions) run(cmd *cobra.Command, args []string) (err error) {
-	hashErr := errors.New("unable to compute the SHA256SUM hash")
-	ctx := cmd.Context()
+func (o *devSha256SumOptions) run(cmd *cobra.Command, args []string) error {
+	out, err := o.compute(cmd.Context(), args[0])
+	// compute returns "" on every failure path, so a non-empty hash is still
+	// worth printing even when tmp dir cleanup joined an error onto err.
+	if out != "" {
+		fmt.Println(out)
+	}
+	return err
+}
 
-	fileName := args[0]
+// compute assumes source is non-empty; the command's cobra.ExactArgs(1)
+// guarantees that at the CLI boundary.
+func (o *devSha256SumOptions) compute(ctx context.Context, source string) (output string, err error) {
+	hashErr := errors.New("unable to compute the SHA256SUM hash")
+
+	fileName := source
 
 	var tmp string
 	var data io.ReadCloser
 
 	if helpers.IsURL(fileName) {
-		logger.From(cmd.Context()).Warn("this is a remote source. If a published checksum is available you should use that rather than calculating it directly from the remote link")
+		logger.From(ctx).Warn("this is a remote source. If a published checksum is available you should use that rather than calculating it directly from the remote link")
 
 		fileBase, err := helpers.ExtractBasePathFromURL(fileName)
 		if err != nil {
-			return errors.Join(hashErr, err)
+			return "", errors.Join(hashErr, err)
 		}
 
 		if fileBase == "" {
@@ -744,43 +772,41 @@ func (o *devSha256SumOptions) run(cmd *cobra.Command, args []string) (err error)
 
 		tmp, err = utils.MakeTempDir(config.CommonOptions.TempDirectory)
 		if err != nil {
-			return errors.Join(hashErr, err)
+			return "", errors.Join(hashErr, err)
 		}
-
-		downloadPath := filepath.Join(tmp, fileBase)
-		err = utils.DownloadToFile(ctx, fileName, downloadPath)
-		if err != nil {
-			return errors.Join(hashErr, err)
-		}
-
-		fileName = downloadPath
-
 		defer func(path string) {
 			errRemove := os.RemoveAll(path)
 			err = errors.Join(err, errRemove)
 		}(tmp)
+
+		downloadPath := filepath.Join(tmp, fileBase)
+		err = utils.DownloadToFile(ctx, fileName, downloadPath)
+		if err != nil {
+			return "", errors.Join(hashErr, err)
+		}
+
+		fileName = downloadPath
 	}
 
 	if o.extractPath != "" {
-		if tmp == "" {
-			tmp, err = utils.MakeTempDir(config.CommonOptions.TempDirectory)
-			if err != nil {
-				return errors.Join(hashErr, err)
-			}
-			defer func(path string) {
-				errRemove := os.RemoveAll(path)
-				err = errors.Join(err, errRemove)
-			}(tmp)
+		tmp, err = utils.MakeTempDir(config.CommonOptions.TempDirectory)
+		if err != nil {
+			return "", errors.Join(hashErr, err)
 		}
+		defer func(path string) {
+			errRemove := os.RemoveAll(path)
+			err = errors.Join(err, errRemove)
+		}(tmp)
 
 		extractedFile := filepath.Join(tmp, o.extractPath)
 
 		decompressOpts := archive.DecompressOpts{
-			Files: []string{extractedFile},
+			// We want to extract the file relative to the tar ball
+			Files: []string{o.extractPath},
 		}
 		err = archive.Decompress(ctx, fileName, tmp, decompressOpts)
 		if err != nil {
-			return errors.Join(hashErr, err)
+			return "", errors.Join(hashErr, err)
 		}
 
 		fileName = extractedFile
@@ -788,7 +814,7 @@ func (o *devSha256SumOptions) run(cmd *cobra.Command, args []string) (err error)
 
 	data, err = os.Open(fileName)
 	if err != nil {
-		return errors.Join(hashErr, err)
+		return "", errors.Join(hashErr, err)
 	}
 	defer func(data io.ReadCloser) {
 		errClose := data.Close()
@@ -797,28 +823,29 @@ func (o *devSha256SumOptions) run(cmd *cobra.Command, args []string) (err error)
 
 	hash, err := checksum.GetSHA256Hash(data)
 	if err != nil {
-		return errors.Join(hashErr, err)
+		return "", errors.Join(hashErr, err)
 	}
-	fmt.Println(hash)
-	return nil
+	return hash, nil
 }
 
 type devFindImagesOptions struct {
-	repoHelmChartPath   string
-	createSetPkgTmpl    map[string]string
-	flavor              string
-	deploySetVariables  map[string]string
-	valuesFiles         []string
-	setValues           map[string]string
-	kubeVersionOverride string
-	why                 string
-	skipCosign          bool
-	registryURL         string
-	update              bool
+	*architectureOptions
+	enableKustomizePlugins bool
+	repoHelmChartPath      string
+	createSetPkgTmpl       map[string]string
+	flavor                 string
+	deploySetVariables     map[string]string
+	valuesFiles            []string
+	setValues              map[string]string
+	kubeVersionOverride    string
+	why                    string
+	skipCosign             bool
+	registryURL            string
+	update                 bool
 }
 
-func newDevFindImagesCommand(v *viper.Viper) *cobra.Command {
-	o := &devFindImagesOptions{}
+func newDevFindImagesCommand(v *viper.Viper, architecture *architectureOptions) *cobra.Command {
+	o := &devFindImagesOptions{architectureOptions: architecture}
 
 	cmd := &cobra.Command{
 		Use:     "find-images [ PATH ]",
@@ -830,21 +857,8 @@ func newDevFindImagesCommand(v *viper.Viper) *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&o.repoHelmChartPath, "repo-chart-path", "p", "", lang.CmdDevFlagRepoChartPath)
-	// use the package create config for this and reset it here to avoid overwriting the config.CreateOptions.SetVariables
-	cmd.Flags().StringToStringVar(&o.createSetPkgTmpl, "set", v.GetStringMapString(VPkgCreateSet), lang.CmdDevFlagSetPkgTmpl)
-
-	err := cmd.Flags().MarkDeprecated("set", "this field is replaced by create-set")
-	if err != nil {
-		logger.Default().Debug("unable to mark dev-find-images flag as set", "error", err)
-	}
-	err = cmd.Flags().MarkHidden("set")
-	if err != nil {
-		logger.Default().Debug("unable to mark dev-find-images flag as hidden", "error", err)
-	}
 	cmd.Flags().StringVarP(&o.flavor, "flavor", "f", v.GetString(VPkgCreateFlavor), lang.CmdPackageCreateFlagFlavor)
 	cmd.Flags().StringToStringVar(&o.createSetPkgTmpl, "create-set", v.GetStringMapString(VPkgCreateSet), lang.CmdDevFlagSetPkgTmpl)
-	cmd.Flags().StringToStringVar(&o.deploySetVariables, "deploy-set", v.GetStringMapString(VPkgDeploySet), "Alias for --deploy-set-variables")
-	_ = cmd.Flags().MarkDeprecated("deploy-set", "Use --deploy-set-variables instead")
 	cmd.Flags().StringToStringVar(&o.deploySetVariables, "deploy-set-variables", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSetVariables)
 	cmd.Flags().StringSliceVar(&o.valuesFiles, "values", []string{}, lang.CmdPackageDeployFlagValuesFiles)
 	cmd.Flags().StringToStringVar(&o.setValues, "set-values", v.GetStringMapString(VPkgDeploySetValues), lang.CmdPackageDeployFlagSetValues)
@@ -858,6 +872,8 @@ func newDevFindImagesCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().BoolVarP(&o.update, "update", "u", false, lang.CmdDevFlagFindImagesUpdate)
 
 	cmd.Flags().StringVar(&o.registryURL, "registry-url", defaultRegistry, lang.CmdDevFlagRegistry)
+
+	cmd.Flags().BoolVar(&o.enableKustomizePlugins, "enable-kustomize-plugins", false, lang.CmdDevFlagEnableKustomizePlugins)
 
 	return cmd
 }
@@ -888,18 +904,20 @@ func (o *devFindImagesOptions) run(cmd *cobra.Command, args []string) error {
 	}
 
 	findImagesOptions := packager.FindImagesOptions{
-		RepoHelmChartPath:   o.repoHelmChartPath,
-		RegistryURL:         o.registryURL,
-		KubeVersionOverride: o.kubeVersionOverride,
-		CreateSetVariables:  o.createSetPkgTmpl,
-		DeploySetVariables:  o.deploySetVariables,
-		Values:              values,
-		Flavor:              o.flavor,
-		Why:                 o.why,
-		SkipCosign:          o.skipCosign,
-		CachePath:           cachePath,
-		IsInteractive:       true,
-		RemoteOptions:       defaultRemoteOptions(),
+		Architecture:           o.selectedArchitecture(),
+		EnableKustomizePlugins: o.enableKustomizePlugins,
+		RepoHelmChartPath:      o.repoHelmChartPath,
+		RegistryURL:            o.registryURL,
+		KubeVersionOverride:    o.kubeVersionOverride,
+		CreateSetVariables:     o.createSetPkgTmpl,
+		DeploySetVariables:     o.deploySetVariables,
+		Values:                 values,
+		Flavor:                 o.flavor,
+		Why:                    o.why,
+		SkipCosign:             o.skipCosign,
+		CachePath:              cachePath,
+		IsInteractive:          true,
+		RemoteOptions:          defaultRemoteOptions(),
 	}
 
 	if o.why != "" {
@@ -993,7 +1011,7 @@ func (o *devFindImagesOptions) run(cmd *cobra.Command, args []string) error {
 			if len(archive.Images) > 0 {
 				componentDefinition += imageIndent + "  images:\n"
 				for _, image := range archive.Images {
-					componentDefinition += imageIndent + fmt.Sprintf("    - %s\n", image)
+					componentDefinition += formatFoundImage(imageIndent+"    ", api.Image{Name: image.Name, ID: image.ID}, isBeta)
 				}
 				continue
 			}
@@ -1018,6 +1036,9 @@ func formatFoundImage(indent string, image api.Image, beta bool) string {
 	}
 
 	formatted := fmt.Sprintf("%s- name: %s\n", indent, image.Name)
+	if image.ID != "" {
+		formatted += fmt.Sprintf("%s  id: %q\n", indent, image.ID)
+	}
 	if image.Source != "" {
 		formatted += fmt.Sprintf("%s  source: %s\n", indent, image.Source)
 	}
@@ -1048,9 +1069,10 @@ func (o *devGenerateConfigOptions) run(_ *cobra.Command, args []string) error {
 		fileName = args[0]
 	}
 
+	if err := validateConfigFormat(strings.TrimPrefix(filepath.Ext(fileName), ".")); err != nil {
+		return err
+	}
 	v := getViper()
-	// TODO once other formats are fully deprecated move this to the global viper config
-	viper.SupportedExts = []string{"toml", "yaml", "yml"}
 	if err := v.SafeWriteConfigAs(fileName); err != nil {
 		return fmt.Errorf("unable to write the config file %s, make sure the file doesn't already exist: %w", fileName, err)
 	}
@@ -1058,12 +1080,13 @@ func (o *devGenerateConfigOptions) run(_ *cobra.Command, args []string) error {
 }
 
 type devLintOptions struct {
+	*architectureOptions
 	setPkgTmpl map[string]string
 	flavor     string
 }
 
-func newDevLintCommand(v *viper.Viper) *cobra.Command {
-	o := &devLintOptions{}
+func newDevLintCommand(v *viper.Viper, architecture *architectureOptions) *cobra.Command {
+	o := &devLintOptions{architectureOptions: architecture}
 
 	cmd := &cobra.Command{
 		Use:     "lint [ PATH ]",
@@ -1094,6 +1117,7 @@ func (o *devLintOptions) run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	err = packager.Lint(ctx, basePath, packager.LintOptions{
+		Architecture:  o.selectedArchitecture(),
 		Flavor:        o.flavor,
 		SetVariables:  o.setPkgTmpl,
 		CachePath:     cachePath,

@@ -1,0 +1,222 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "registry": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "persistence": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "existingClaim": {
+              "type": "string"
+            },
+            "enabled": {
+              "type": "boolean"
+            },
+            "size": {
+              "type": "string"
+            },
+            "storageClass": {
+              "type": "string"
+            },
+            "accessMode": {
+              "enum": [
+                "ReadWriteOnce",
+                "ReadOnlyMany",
+                "ReadWriteMany",
+                "ReadWriteOncePod"
+              ],
+              "type": "string"
+            }
+          }
+        },
+        "resources": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "requests": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "cpu": {
+                  "type": [
+                    "string",
+                    "number"
+                  ]
+                },
+                "memory": {
+                  "type": [
+                    "string",
+                    "number"
+                  ]
+                }
+              }
+            },
+            "limits": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "cpu": {
+                  "type": [
+                    "string",
+                    "number"
+                  ]
+                },
+                "memory": {
+                  "type": [
+                    "string",
+                    "number"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "autoscaling": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "minReplicas": {
+              "type": [
+                "integer",
+                "string"
+              ]
+            },
+            "maxReplicas": {
+              "type": [
+                "integer",
+                "string"
+              ]
+            },
+            "enabled": {
+              "type": "boolean"
+            },
+            "mapReplicasToNodes": {
+              "type": "boolean"
+            },
+            "targetCPUUtilizationPercentage": {
+              "type": [
+                "integer",
+                "string"
+              ]
+            }
+          }
+        },
+        "caBundle": {
+          "type": "string"
+        },
+        "extraEnvVars": {
+          "items": {
+            "type": "object"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "opentelemetry": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "exporter": {
+              "type": "string"
+            }
+          }
+        },
+        "serviceAccount": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "create": {
+              "type": "boolean"
+            },
+            "name": {
+              "type": "string"
+            },
+            "annotations": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "properties": {},
+              "type": [
+                "object",
+                "null"
+              ]
+            }
+          }
+        },
+        "affinity": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "custom": {
+              "properties": {},
+              "type": [
+                "object",
+                "null"
+              ]
+            }
+          }
+        },
+        "tolerations": {
+          "items": {
+            "type": "object"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "nodeSelector": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "properties": {},
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "proxy": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "tolerations": {
+              "items": {
+                "type": "object"
+              },
+              "type": [
+                "array",
+                "null"
+              ]
+            },
+            "hostNetwork": {
+              "type": "boolean"
+            }
+          }
+        },
+        "securityContext": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "runAsUser": {
+              "type": "integer"
+            },
+            "fsGroup": {
+              "type": "integer"
+            },
+            "runAsGroup": {
+              "type": "integer"
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package v1beta1 holds the definition of the v1beta1 Zarf Package. This API is work in progress and not yet used within Zarf.
+// Package v1beta1 holds the definition of the v1beta1 Zarf Package.
 package v1beta1
 
 import "fmt"
@@ -34,8 +34,8 @@ type Package struct {
 	Components []Component `json:"components" jsonschema:"minItems=1"`
 	// Values imports Zarf values files for templating and overriding Helm values.
 	Values Values `json:"values,omitempty"`
-	// Documentation files included in the package.
-	Documentation map[string]string `json:"documentation,omitempty"`
+	// Attachments are files included in the package.
+	Attachments map[string]string `json:"attachments,omitempty"`
 }
 
 // GetComponent returns the component with the given name, or an error if no such component exists.
@@ -92,10 +92,8 @@ type BuildData struct {
 	Migrations []string `json:"migrations,omitempty"`
 	// Any registry domains that were overridden on package create when pulling images.
 	RegistryOverrides map[string]string `json:"registryOverrides,omitempty"`
-	// Whether this package was created with differential components.
-	Differential bool `json:"differential,omitempty"`
-	// Version of a previously built package used as the basis for creating this differential package.
-	DifferentialPackageVersion string `json:"differentialPackageVersion,omitempty"`
+	// Base package used to create this differential package. Omitted for full packages.
+	Differential *Differential `json:"differential,omitempty"`
 	// The flavor of Zarf used to build this package.
 	Flavor string `json:"flavor,omitempty"`
 	// Whether this package was signed.
@@ -106,6 +104,12 @@ type BuildData struct {
 	ProvenanceFiles []string `json:"provenanceFiles,omitempty"`
 	// Checksum of a checksums.txt file that contains checksums all the layers within the package.
 	AggregateChecksum string `json:"aggregateChecksum"`
+}
+
+// Differential identifies the base package used to create a differential package.
+type Differential struct {
+	// Version of a previously built package used as the basis for creating this differential package.
+	FromVersion string `json:"fromVersion"`
 }
 
 // VersionRequirement specifies a minimum Zarf version needed and the reason for the requirement.

@@ -86,7 +86,7 @@ jobs:
           CLI_VERSION=$CLI_VERSION make build-cli-linux-arm
 
       - name: "Zarf Agent: Login to GHCR"
-        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
         with:
           registry: ghcr.io
           username: dummy
@@ -144,6 +144,16 @@ jobs:
           path: build/
           retention-days: 1
 
+  publish-v1beta1-init:
+    needs: build-release
+    permissions:
+      contents: read
+      id-token: write
+      packages: write
+    uses: ./.github/workflows/publish-v1beta1-init-package.yml
+    with:
+      version: ${{ needs.build-release.outputs.cli_version }}
+
   validate-release:
     needs: [repo-gate, build-release]
     if: ${{ needs.repo-gate.outputs.should_run == 'true' }}
@@ -175,7 +185,7 @@ jobs:
           sudo env "PATH=$PATH" CI=true APPLIANCE_MODE=true CLI_VERSION=$CLI_VERSION make test-e2e ARCH=amd64
 
   create-release:
-    needs: [repo-gate, build-release]
+    needs: [repo-gate, build-release, publish-v1beta1-init]
     if: ${{ needs.repo-gate.outputs.should_run == 'true' }}
     runs-on: large-ubuntu-zarf-release
     env:
