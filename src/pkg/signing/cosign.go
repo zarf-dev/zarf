@@ -311,7 +311,7 @@ func VerifyManifest(ctx context.Context, manifestRef string, opts types.VerifyOp
 	// caller supplied one
 	trustedRootPath := opts.TrustedRoot
 	if trustedRootPath == "" && opts.Key == "" {
-		path, cleanup, prepErr := writeEmbeddedTrustedRoot("")
+		path, cleanup, prepErr := writeEmbeddedTrustedRoot(opts.TempDir)
 		if prepErr != nil {
 			return fmt.Errorf("preparing embedded trusted root: %w", prepErr)
 		}

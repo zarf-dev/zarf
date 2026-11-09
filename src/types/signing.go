@@ -33,6 +33,12 @@ type VerifyOptions struct {
 	TrustedRoot                 string
 	InsecureIgnoreTlog          bool
 	UseSignedTimestamps         bool
+	// TempDir is the parent for staging an embedded trusted root during verification.
+	// It does not control package extraction, signing, caches, or backend-managed files.
+	// Empty uses Zarf's configured temp directory for package verification and the
+	// system temp directory for manifest verification. An explicit TrustedRoot or
+	// public Key avoids embedded-root staging.
+	TempDir string
 }
 
 // DefaultSignOptions returns library defaults, without CLI endpoint defaults.

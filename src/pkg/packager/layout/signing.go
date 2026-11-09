@@ -34,5 +34,6 @@ func verifyBlobOptions(opts types.VerifyOptions) signing.VerifyBlobOptions {
 	backendOpts.CommonVerifyOptions.TrustedRootPath = opts.TrustedRoot
 	backendOpts.CommonVerifyOptions.IgnoreTlog = opts.InsecureIgnoreTlog
 	backendOpts.CommonVerifyOptions.UseSignedTimestamps = opts.UseSignedTimestamps
+	backendOpts.TempDir = opts.TempDir
 	return backendOpts
 }

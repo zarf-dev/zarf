@@ -52,6 +52,20 @@ func TestCosignSignManifestPublishesOCIReferrer(t *testing.T) {
 	require.Len(t, manifest.Manifests, 1)
 }
 
+func TestVerifyManifestRejectsInvalidTempDir(t *testing.T) {
+	t.Parallel()
+	blocker := filepath.Join(t.TempDir(), "not-a-directory")
+	require.NoError(t, os.WriteFile(blocker, []byte("blocker"), 0o600))
+	opts := types.DefaultVerifyOptions()
+	opts.CertificateIdentity = "user@example.com"
+	opts.CertificateOIDCIssuer = "https://issuer.example.com"
+	opts.TempDir = filepath.Join(blocker, "staging")
+
+	err := VerifyManifest(testutil.TestContext(t), "invalid-reference", opts, types.RemoteOptions{})
+	require.ErrorContains(t, err, "preparing embedded trusted root")
+	require.ErrorContains(t, err, blocker)
+}
+
 // TestCosignSignVerifyRoundTrip exercises CosignSignBlobWithOptions and
 // CosignVerifyBlobWithOptions for both the bundle format (cosign v3.1.1+ default)
 // and the legacy .sig format.

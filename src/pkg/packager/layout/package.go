@@ -476,7 +476,9 @@ func (p *PackageLayout) VerifyPackageSignature(ctx context.Context, opts types.V
 	}
 
 	backendOpts := verifyBlobOptions(opts)
-	backendOpts.TempDir = config.CommonOptions.TempDirectory
+	if backendOpts.TempDir == "" {
+		backendOpts.TempDir = config.CommonOptions.TempDirectory
+	}
 
 	if hasBundleInfo {
 		backendOpts.BundlePath = bundlePath
