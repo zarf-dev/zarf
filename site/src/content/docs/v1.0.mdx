@@ -41,7 +41,7 @@ The flag `--storage-class` has been removed from `zarf init`. The storage class 
 
 Starting in v1.0, [deployed package secrets](/ref/packages/#deployed-packages) contain deploy configuration and more granular deployment status. This information will enable additional features described by the [Enhanced State Management ZEP](https://github.com/zarf-dev/proposals/blob/main/0026-enhanced-state-management/README.md). Failure to write package state will now cause deployment to fail. To prevent oversized secret write failures, secrets are now gzip-compressed.
 
-Pre-v1.0 Zarf versions cannot read the gzipped secrets v1.0+ creates. Old CLIs may fail when accessing deployed packages created with v1.0+.
+Zarf versions before v1.0 cannot read the gzipped secrets created by v1.0 and later, which can cause failures when accessing deployed packages.
 
 ### Removed Features
 
