@@ -4,6 +4,8 @@
 
 Zarf is a Go CLI (`main.go`, `go.mod`). Application code under `src/`. Unit tests stay alongside code; E2E and integration suites live in `src/test/`. Production support packages in `packages/`, Examples in `examples/`; Astro docs are in `site/`. Do not edit `vendor/` by hand.
 
+`CHANGELOG.md` is managed by CI. Agents must not add, edit, or remove changelog entries.
+
 ## Build, Test, and Development Commands
 
 - `make build` tidies, vendors, and builds the CLI.
