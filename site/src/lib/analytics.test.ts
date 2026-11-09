@@ -6,17 +6,29 @@ import { initializeAnalytics, captureDocsEvent, shouldCaptureAnalytics } from '.
 test('analytics is optional, initializes once, and cannot break interactions', async (t) => {
   const originalWindow = Object.getOwnPropertyDescriptor(globalThis, 'window');
   const originalDocument = Object.getOwnPropertyDescriptor(globalThis, 'document');
+  const originalInput = Object.getOwnPropertyDescriptor(globalThis, 'HTMLInputElement');
   const listeners: string[] = [];
+  const handlers = new Map<string, (event: any) => void>();
+  class FakeInput {
+    value = '';
+    matches(selector: string) { return selector === '#starlight__search .pagefind-ui__search-input'; }
+  }
   const fakeWindow = { location: { hostname: 'localhost', pathname: '/v0-76/ref/' } };
   Object.defineProperty(globalThis, 'window', { configurable: true, value: fakeWindow });
+  Object.defineProperty(globalThis, 'HTMLInputElement', { configurable: true, value: FakeInput });
   Object.defineProperty(globalThis, 'document', {
-    configurable: true, value: { addEventListener: (name: string) => listeners.push(name) },
+    configurable: true, value: { addEventListener: (name: string, handler: (event: any) => void) => {
+      listeners.push(name);
+      handlers.set(name, handler);
+    } },
   });
   t.after(() => {
     if (originalWindow) Object.defineProperty(globalThis, 'window', originalWindow);
     else Reflect.deleteProperty(globalThis, 'window');
     if (originalDocument) Object.defineProperty(globalThis, 'document', originalDocument);
     else Reflect.deleteProperty(globalThis, 'document');
+    if (originalInput) Object.defineProperty(globalThis, 'HTMLInputElement', originalInput);
+    else Reflect.deleteProperty(globalThis, 'HTMLInputElement');
   });
   let loads = 0;
   let inits = 0;
@@ -54,6 +66,22 @@ test('analytics is optional, initializes once, and cannot break interactions', a
   captureDocsEvent('documentation_version_selected', { target_version: 'current' });
   assert.deepEqual(captures[0], ['documentation_version_selected', {
     site: 'docs', docs_version: 'v0-76', target_version: 'current',
+  }]);
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const input = new FakeInput();
+  for (const clearPath of ['clear button', 'Escape']) {
+    input.value = 'zarf';
+    handlers.get('input')!({ target: input });
+    // Both Pagefind clear paths change the value without dispatching input.
+    input.value = '';
+    t.mock.timers.tick(600);
+    assert.equal(captures.length, 1, `${clearPath} must not record a search`);
+  }
+  input.value = ' zarf ';
+  handlers.get('input')!({ target: input });
+  t.mock.timers.tick(600);
+  assert.deepEqual(captures[1], ['docs_search', {
+    site: 'docs', docs_version: 'v0-76', query_length: 4,
   }]);
   sdk.capture = () => { throw new Error('storage unavailable'); };
   assert.doesNotThrow(() => captureDocsEvent('docs_code_copy_clicked'));

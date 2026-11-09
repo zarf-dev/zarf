@@ -45,11 +45,12 @@ function trackInteractions() {
     if (!(event.target instanceof HTMLInputElement) ||
         !event.target.matches('#starlight__search .pagefind-ui__search-input')) return;
     clearSearch();
-    const length = event.target.value.trim().length;
-    if (!length) return;
+    const input = event.target;
+    if (!input.value.trim()) return;
     searchTimer = setTimeout(() => {
-      // Record usage without sending search text or copied code.
-      captureDocsEvent('docs_search', { query_length: length });
+      // Pagefind clears the input programmatically without firing an input event.
+      const length = input.value.trim().length;
+      if (length) captureDocsEvent('docs_search', { query_length: length });
     }, 600);
   });
   document.addEventListener('astro:before-swap', clearSearch);
