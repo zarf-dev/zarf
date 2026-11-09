@@ -1,5 +1,7 @@
 persistence:
   storageClass: {{ .State.StorageClass | quote }}
+  # usually set by the action, default true when not exists for inspect commands
+  create: {{ dig "create" true .Values.gitServer.persistence }}
 gitea:
   admin:
     username: {{ .State.Git.PushUsername | quote }}
