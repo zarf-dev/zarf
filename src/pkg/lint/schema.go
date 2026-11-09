@@ -17,6 +17,8 @@ import (
 
 // ValidatePackageSchemaV1Alpha1 validates a package's fields against the v1alpha1 schema.
 // Use an untyped value to retain unknown fields for validation.
+//
+// Deprecated: Only supported by deprecated v1alpha1 packages.
 func ValidatePackageSchemaV1Alpha1(pkg any, setVariables map[string]string) ([]PackageFinding, error) {
 	if err := templateZarfObj(&pkg, setVariables); err != nil {
 		return nil, err

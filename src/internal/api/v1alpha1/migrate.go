@@ -21,6 +21,8 @@ const (
 )
 
 // ApplyMigrations applies all v1alpha1 schema migrations to pkg, logging any warnings to ctx.
+//
+// Deprecated: Only supported by deprecated v1alpha1 packages.
 func ApplyMigrations(ctx context.Context, pkg v1alpha1.ZarfPackage) v1alpha1.ZarfPackage {
 	pkg, warnings := migrateDeprecated(pkg)
 	for _, warning := range warnings {

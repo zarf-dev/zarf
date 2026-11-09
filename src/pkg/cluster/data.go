@@ -31,6 +31,8 @@ import (
 
 // HandleDataInjection waits for the target pod(s) to come up and inject the data into them
 // todo:  this currently requires kubectl but we should have enough k8s work to make this native now.
+//
+// Deprecated: Only supported by deprecated v1alpha1 packages.
 func (c *Cluster) HandleDataInjection(ctx context.Context, data api.ZarfDataInjection, dataInjectionPath string, dataIdx int) error {
 	l := logger.From(ctx)
 	injectionCompletionMarker := filepath.Join(dataInjectionPath, config.GetDataInjectionMarker())

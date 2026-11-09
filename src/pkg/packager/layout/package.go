@@ -95,6 +95,8 @@ func (p *PackageLayout) Digest() string {
 }
 
 // AsV1alpha1 returns the package definition as a v1alpha1 ZarfPackage.
+//
+// Deprecated: Only supported by deprecated v1alpha1 packages.
 func (p *PackageLayout) AsV1alpha1() v1alpha1.ZarfPackage {
 	return convert.PackageToV1alpha1(p.pkg)
 }
