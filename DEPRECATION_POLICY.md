@@ -76,3 +76,7 @@ The change MUST be limited to the required remediation. Release notes MUST ident
 Zarf MAY accelerate a migration or make an otherwise incompatible change within a major release when an upstream dependency removes or incompatibly changes a required capability, including Kubernetes API removals, container-runtime incompatibilities, or OCI specification changes.
 
 Before using this exception, maintainers SHOULD preserve compatibility through an adapter, compatibility layer, or documented workaround where practical. If that is not practical, the release notes MUST identify the upstream change, affected Zarf contract, impacted environments and releases, required operator action, and migration or workaround.
+
+## Policy Changes
+
+Changing this policy changes Zarf's declared public API. A policy change MUST be reviewed as a project decision and MUST NOT silently narrow an existing major-version guarantee.
