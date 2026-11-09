@@ -24,9 +24,8 @@ components:
   - name: remote-import
     description: Serve a different page using the same component imported from a registry
     import:
-      # FIXME: Publish components/web-server.yaml and replace this registry before creating the package.
       remote:
-        - url: oci://ghcr.io/austinabro321/web-server:1.0.0
+        - url: oci://ghcr.io/zarf-dev/components/examples/compose/web-server:1.0.0
     charts:
       - name: web-server
         namespace: imports-remote
