@@ -67,9 +67,21 @@ A later compatible `zarf package deploy` MUST continue to load and verify a vali
 
 Likewise, a later compatible `zarf package deploy` MUST continue to consume a compatible package artifact stored in OCI by an earlier supported package workflow. It MAY change standalone publish or pull commands and OCI utility APIs.
 
+## General Deprecation Process
+
+When Zarf functionality is deprecated, including functionality not tied to a schema version, it follows this minimum retirement schedule:
+
+1. For at least six months after deprecation is announced, the functionality MUST remain enabled by default behind a feature flag.
+2. After that period, the feature flag MAY default to disabled, but the functionality MUST remain available when explicitly enabled for at least three more months. This period starts with the first release that changes the default.
+3. After both periods have elapsed, the functionality MAY be removed without a major Zarf release, provided removal does not violate a compatibility guarantee in this policy.
+
+When Zarf detects use of deprecated functionality, it MUST emit a warning to standard error identifying the functionality, its replacement if available, and the scheduled default change and removal dates or releases if known. Release notes and documentation MUST identify the feature flag and explain how to migrate.
+
 ## Deprecating Stable Package Behavior
 
 A deprecation of stable package behavior MUST identify the affected package contract and replacement, describe the migration in release notes and package documentation, preserve the deprecated behavior for the remainder of the major version, and add or update compatibility coverage for create, deploy, runtime behavior, and managed state.
+
+The general deprecation process does not override the stable package contract: behavior protected by that contract MUST remain enabled by default throughout Zarf 1.x. Its default-disabled period starts no earlier than the first release that can change the default without violating that contract.
 
 The project MAY add an automated migration tool. Such tooling MUST either perform a safe transformation or fail with an actionable description of the manual migration required. It MUST NOT claim lossless conversion where removed features cannot be represented in the target schema.
 
