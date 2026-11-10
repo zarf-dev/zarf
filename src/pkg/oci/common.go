@@ -30,7 +30,7 @@ type OrasRemote struct {
 	repo               *remote.Repository
 	cache              content.Storage
 	credentialFunc     auth.CredentialFunc
-	root               *Manifest
+	root               *resolvedManifest
 	progTransport      *retry.Transport
 	targetPlatform     *ocispec.Platform
 	insecureSkipVerify *bool

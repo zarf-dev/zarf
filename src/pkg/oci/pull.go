@@ -12,6 +12,10 @@ import (
 
 // CopyToTarget copies the given layers from the remote repository to the given target
 func (o *OrasRemote) CopyToTarget(ctx context.Context, layers []ocispec.Descriptor, target oras.Target, copyOpts oras.CopyOptions) error {
+	if _, err := o.FetchRoot(ctx); err != nil {
+		return err
+	}
+
 	layerDigests := make(map[string]struct{}, len(layers))
 	for _, layer := range layers {
 		if len(layer.Digest.String()) > 0 {
@@ -33,7 +37,7 @@ func (o *OrasRemote) CopyToTarget(ctx context.Context, layers []ocispec.Descript
 		return oras.SkipNode
 	}
 
-	_, err := oras.Copy(ctx, o.src(), o.repo.Reference.String(), target, o.repo.Reference.String(), copyOpts)
+	_, err := oras.Copy(ctx, o.src(), o.root.descriptor.Digest.String(), target, o.repo.Reference.String(), copyOpts)
 	if err != nil {
 		return err
 	}

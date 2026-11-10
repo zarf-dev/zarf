@@ -15,6 +15,11 @@ import (
 	"oras.land/oras-go/v2/content"
 )
 
+type resolvedManifest struct {
+	descriptor ocispec.Descriptor
+	manifest   *Manifest
+}
+
 // ResolveRoot returns the root descriptor for the remote repository
 func (o *OrasRemote) ResolveRoot(ctx context.Context) (ocispec.Descriptor, error) {
 	// first try to resolve the reference into an OCI descriptor directly
@@ -42,7 +47,7 @@ func (o *OrasRemote) ResolveRoot(ctx context.Context) (ocispec.Descriptor, error
 // FetchRoot fetches the root manifest from the remote repository.
 func (o *OrasRemote) FetchRoot(ctx context.Context) (*Manifest, error) {
 	if o.root != nil {
-		return o.root, nil
+		return o.root.manifest, nil
 	}
 	// get the manifest descriptor
 	descriptor, err := o.ResolveRoot(ctx)
@@ -55,8 +60,8 @@ func (o *OrasRemote) FetchRoot(ctx context.Context) (*Manifest, error) {
 	if err != nil {
 		return nil, err
 	}
-	o.root = root
-	return o.root, nil
+	o.root = &resolvedManifest{descriptor: descriptor, manifest: root}
+	return root, nil
 }
 
 // FetchManifest fetches the manifest with the given descriptor from the remote repository.
