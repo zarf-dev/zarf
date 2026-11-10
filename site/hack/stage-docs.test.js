@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
 import yaml from "yaml";
-import { stageDocs } from "./build-versions.mjs";
+import { stageDocs } from "./stage-docs.js";
 
 test("stages archived pages with version-scoped explicit slugs", async (t) => {
   const root = await mkdtemp(path.join(tmpdir(), "zarf-archived-docs-"));
