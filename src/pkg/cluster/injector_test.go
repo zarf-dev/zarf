@@ -715,3 +715,331 @@ func TestGetInjectorImageAndNode(t *testing.T) {
 		require.Contains(t, err.Error(), "no suitable injector image or node")
 	})
 }
+
+func TestLoadInjectionTemplates(t *testing.T) {
+	t.Parallel()
+
+	t.Run("valid multi-doc template", func(t *testing.T) {
+		t.Parallel()
+		manifest := `
+apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    custom.io/sidecar: "false"
+spec:
+  containers:
+  - name: injector
+    resources:
+      requests:
+        cpu: "200m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    custom.io/lb: "internal"
+`
+		tmpDir := t.TempDir()
+		require.NoError(t, os.WriteFile(filepath.Join(tmpDir, injectionTemplateFileName), []byte(manifest), 0o600))
+		pod, svc, err := loadInjectionTemplates(tmpDir)
+		require.NoError(t, err)
+		require.NotNil(t, pod)
+		require.NotNil(t, svc)
+		require.Equal(t, "false", pod.Annotations["custom.io/sidecar"])
+		require.Equal(t, "internal", svc.Annotations["custom.io/lb"])
+	})
+
+	t.Run("file does not exist", func(t *testing.T) {
+		t.Parallel()
+		tmpDir := t.TempDir()
+		pod, svc, err := loadInjectionTemplates(tmpDir)
+		require.NoError(t, err)
+		require.Nil(t, pod)
+		require.Nil(t, svc)
+	})
+
+	t.Run("missing service in template", func(t *testing.T) {
+		t.Parallel()
+		manifest := `
+apiVersion: v1
+kind: Pod
+spec:
+  containers:
+  - name: injector
+`
+		tmpDir := t.TempDir()
+		require.NoError(t, os.WriteFile(filepath.Join(tmpDir, injectionTemplateFileName), []byte(manifest), 0o600))
+		_, _, err := loadInjectionTemplates(tmpDir)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "one Pod and one Service")
+	})
+
+	t.Run("pod missing injector container", func(t *testing.T) {
+		t.Parallel()
+		manifest := `
+apiVersion: v1
+kind: Pod
+spec:
+  containers:
+  - name: sidecar
+---
+apiVersion: v1
+kind: Service
+`
+		tmpDir := t.TempDir()
+		require.NoError(t, os.WriteFile(filepath.Join(tmpDir, injectionTemplateFileName), []byte(manifest), 0o600))
+		_, _, err := loadInjectionTemplates(tmpDir)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "must contain a container named \"injector\"")
+	})
+
+	t.Run("unsupported kind in template", func(t *testing.T) {
+		t.Parallel()
+		manifest := `
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: foo
+`
+		tmpDir := t.TempDir()
+		require.NoError(t, os.WriteFile(filepath.Join(tmpDir, injectionTemplateFileName), []byte(manifest), 0o600))
+		_, _, err := loadInjectionTemplates(tmpDir)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "unsupported kind \"Deployment\"")
+	})
+}
+
+func TestMergeInjectionPodTemplate(t *testing.T) {
+	t.Parallel()
+
+	resReq := v1ac.ResourceRequirements().
+		WithRequests(corev1.ResourceList{
+			corev1.ResourceCPU: resource.MustParse(".5"),
+		})
+	basePod := buildInjectionPod("node-1", "busybox:latest", []string{"cm-0"}, "shasum123", resReq, "pkg-test", state.IPFamilyIPv4, nil, nil)
+
+	template := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "should-be-overridden",
+			Annotations: map[string]string{
+				"custom.annotation/test": "applied",
+			},
+			Labels: map[string]string{
+				"custom-label": "custom-value",
+			},
+		},
+		Spec: corev1.PodSpec{
+			NodeSelector: map[string]string{
+				"kubernetes.io/os": "linux",
+			},
+			Tolerations: []corev1.Toleration{{
+				Key:      "dedicated",
+				Operator: corev1.TolerationOpExists,
+			}},
+			SecurityContext: &corev1.PodSecurityContext{
+				RunAsUser: func(i int64) *int64 { return &i }(2000),
+			},
+			ImagePullSecrets: []corev1.LocalObjectReference{{Name: "my-registry-secret"}},
+		},
+	}
+
+	merged, err := mergeInjectionPodTemplate(basePod, template)
+	require.NoError(t, err)
+	require.NotNil(t, merged)
+
+	// Invariants preserved
+	require.Equal(t, "injector", *merged.Name)
+	require.Equal(t, state.ZarfNamespaceName, *merged.Namespace)
+	require.Equal(t, "node-1", *merged.Spec.NodeName)
+	require.Equal(t, corev1.RestartPolicyNever, *merged.Spec.RestartPolicy)
+
+	// Invariant container command and working dir preserved
+	require.Len(t, merged.Spec.Containers, 1)
+	require.Equal(t, "injector", *merged.Spec.Containers[0].Name)
+	require.Equal(t, "busybox:latest", *merged.Spec.Containers[0].Image)
+	require.Equal(t, "/zarf-init", *merged.Spec.Containers[0].WorkingDir)
+	require.Equal(t, []string{"/zarf-init/zarf-injector", "shasum123", "0.0.0.0:5000"}, merged.Spec.Containers[0].Command)
+
+	// Invariant volume mounts and volumes preserved
+	require.NotEmpty(t, merged.Spec.Containers[0].VolumeMounts)
+	require.NotEmpty(t, merged.Spec.Volumes)
+
+	// Merged user overrides
+	require.Equal(t, "applied", merged.Annotations["custom.annotation/test"])
+	require.Equal(t, "custom-value", merged.Labels["custom-label"])
+	require.Equal(t, "pkg-test", merged.Labels[PackageLabel])
+	require.Equal(t, "zarf-injector", merged.Labels["app"])
+	require.Equal(t, "linux", merged.Spec.NodeSelector["kubernetes.io/os"])
+	require.Len(t, merged.Spec.Tolerations, 1)
+	require.Equal(t, "dedicated", *merged.Spec.Tolerations[0].Key)
+	require.Equal(t, int64(2000), *merged.Spec.SecurityContext.RunAsUser)
+	require.Len(t, merged.Spec.ImagePullSecrets, 1)
+	require.Equal(t, "my-registry-secret", *merged.Spec.ImagePullSecrets[0].Name)
+}
+
+func TestMergeInjectionServiceTemplate(t *testing.T) {
+	t.Parallel()
+
+	baseSvc := v1ac.Service("zarf-injector", state.ZarfNamespaceName).
+		WithSpec(v1ac.ServiceSpec().
+			WithType(corev1.ServiceTypeNodePort).
+			WithPorts(v1ac.ServicePort().WithPort(5000)).
+			WithSelector(map[string]string{"app": "zarf-injector"})).
+		WithLabels(map[string]string{PackageLabel: "pkg-test"})
+
+	template := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "should-be-overridden",
+			Annotations: map[string]string{
+				"service.beta.kubernetes.io/aws-load-balancer-internal": "true",
+			},
+			Labels: map[string]string{
+				"custom-svc-label": "svc-value",
+			},
+		},
+		Spec: corev1.ServiceSpec{
+			Type: corev1.ServiceTypeClusterIP, // Should be overridden back to NodePort
+		},
+	}
+
+	opts := ZarfInjectorOptions{InjectorNodePort: 31999}
+	merged, err := mergeInjectionServiceTemplate(baseSvc, template, opts, "pkg-test")
+	require.NoError(t, err)
+	require.NotNil(t, merged)
+
+	// Invariants preserved
+	require.Equal(t, "zarf-injector", *merged.Name)
+	require.Equal(t, state.ZarfNamespaceName, *merged.Namespace)
+	require.Equal(t, corev1.ServiceTypeNodePort, *merged.Spec.Type)
+	require.Equal(t, map[string]string{"app": "zarf-injector"}, merged.Spec.Selector)
+	require.Equal(t, int32(5000), *merged.Spec.Ports[0].Port)
+	require.Equal(t, int32(31999), *merged.Spec.Ports[0].NodePort)
+
+	// User overrides applied
+	require.Equal(t, "true", merged.Annotations["service.beta.kubernetes.io/aws-load-balancer-internal"])
+	require.Equal(t, "svc-value", merged.Labels["custom-svc-label"])
+	require.Equal(t, "pkg-test", merged.Labels[PackageLabel])
+}
+
+func TestInjectionTemplateResources(t *testing.T) {
+	t.Parallel()
+
+	fallback := v1ac.ResourceRequirements().
+		WithRequests(corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse(".5"),
+			corev1.ResourceMemory: resource.MustParse("64Mi"),
+		}).
+		WithLimits(corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse("1"),
+			corev1.ResourceMemory: resource.MustParse("256Mi"),
+		})
+
+	t.Run("nil template returns fallback", func(t *testing.T) {
+		t.Parallel()
+		res := injectionTemplateResources(nil, fallback)
+		require.Equal(t, fallback, res)
+	})
+
+	t.Run("template without resources returns fallback", func(t *testing.T) {
+		t.Parallel()
+		pod := &corev1.Pod{
+			Spec: corev1.PodSpec{
+				Containers: []corev1.Container{{Name: "injector"}},
+			},
+		}
+		res := injectionTemplateResources(pod, fallback)
+		require.Equal(t, fallback, res)
+	})
+
+	t.Run("template with custom resources updates requirements", func(t *testing.T) {
+		t.Parallel()
+		pod := &corev1.Pod{
+			Spec: corev1.PodSpec{
+				Containers: []corev1.Container{{
+					Name: "injector",
+					Resources: corev1.ResourceRequirements{
+						Requests: corev1.ResourceList{
+							corev1.ResourceCPU: resource.MustParse("250m"),
+						},
+						Limits: corev1.ResourceList{
+							corev1.ResourceCPU: resource.MustParse("2"),
+						},
+					},
+				}},
+			},
+		}
+		res := injectionTemplateResources(pod, fallback)
+		require.Equal(t, resource.MustParse("250m"), (*res.Requests)[corev1.ResourceCPU])
+		require.Equal(t, resource.MustParse("64Mi"), (*res.Requests)[corev1.ResourceMemory])
+		require.Equal(t, resource.MustParse("2"), (*res.Limits)[corev1.ResourceCPU])
+		require.Equal(t, resource.MustParse("256Mi"), (*res.Limits)[corev1.ResourceMemory])
+	})
+}
+
+func TestStartInjectionWithTemplates(t *testing.T) {
+	ctx := context.Background()
+	cs := fake.NewClientset()
+	c := &Cluster{
+		Clientset: cs,
+		Watcher:   healthchecks.NewImmediateWatcher(status.CurrentStatus),
+	}
+
+	node := corev1.Node{
+		ObjectMeta: metav1.ObjectMeta{Name: "test-node", Labels: map[string]string{"env": "test"}},
+		Status: corev1.NodeStatus{
+			Allocatable: corev1.ResourceList{
+				corev1.ResourceCPU:    resource.MustParse("4"),
+				corev1.ResourceMemory: resource.MustParse("8Gi"),
+			},
+			NodeInfo: corev1.NodeSystemInfo{Architecture: "amd64"},
+		},
+	}
+	_, err := cs.CoreV1().Nodes().Create(ctx, &node, metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	tmpDir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "zarf-injector"), []byte("dummy-bin"), 0o700))
+
+	idx, err := random.Index(1, 1, 1)
+	require.NoError(t, err)
+	_, err = layout.Write(filepath.Join(tmpDir, "seed-images"), idx)
+	require.NoError(t, err)
+
+	podTemplate := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Annotations: map[string]string{"zarf.dev/injector-test": "true"},
+		},
+		Spec: corev1.PodSpec{
+			NodeSelector: map[string]string{"env": "test"},
+			Containers:   []corev1.Container{{Name: "injector"}},
+		},
+	}
+	svcTemplate := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Annotations: map[string]string{"zarf.dev/service-test": "true"},
+		},
+	}
+
+	opts := ZarfInjectorOptions{
+		Image:            "public-image:v1",
+		PodTemplate:      podTemplate,
+		ServiceTemplate:  svcTemplate,
+		InjectorNodePort: 32000,
+	}
+
+	img, port, err := c.StartInjection(ctx, tmpDir, t.TempDir(), nil, "test-pkg", "amd64", opts)
+	require.NoError(t, err)
+	require.Equal(t, "public-image:v1", img)
+	require.Equal(t, 32000, port)
+
+	pod, err := cs.CoreV1().Pods(state.ZarfNamespaceName).Get(ctx, "injector", metav1.GetOptions{})
+	require.NoError(t, err)
+	require.Equal(t, "true", pod.Annotations["zarf.dev/injector-test"])
+	require.Equal(t, "test", pod.Spec.NodeSelector["env"])
+
+	svc, err := cs.CoreV1().Services(state.ZarfNamespaceName).Get(ctx, "zarf-injector", metav1.GetOptions{})
+	require.NoError(t, err)
+	require.Equal(t, "true", svc.Annotations["zarf.dev/service-test"])
+}
+

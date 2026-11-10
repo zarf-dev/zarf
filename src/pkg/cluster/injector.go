@@ -51,6 +51,10 @@ type ZarfInjectorOptions struct {
 	Tolerations []corev1.Toleration
 	// NodeSelector defines labels that candidate nodes must match for injector pod scheduling.
 	NodeSelector map[string]string
+	// PodTemplate is an optional declarative Pod manifest used to mutate the injector pod.
+	PodTemplate *corev1.Pod
+	// ServiceTemplate is an optional declarative Service manifest used to mutate the injector service.
+	ServiceTemplate *corev1.Service
 }
 
 // StartInjection initializes a Zarf injection into the cluster.
@@ -68,9 +72,24 @@ func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, 
 		return "", 0, err
 	}
 
+	podTemplate := opts.PodTemplate
+	serviceTemplate := opts.ServiceTemplate
+	if podTemplate == nil || serviceTemplate == nil {
+		loadedPod, loadedSvc, err := loadInjectionTemplates(tmpDir)
+		if err != nil {
+			return "", 0, err
+		}
+		if podTemplate == nil {
+			podTemplate = loadedPod
+		}
+		if serviceTemplate == nil {
+			serviceTemplate = loadedSvc
+		}
+	}
+
 	l.Info("creating Zarf injector resources")
 
-	svc, err := c.createInjectorNodeportService(ctx, pkgName, opts)
+	svc, err := c.createInjectorNodeportService(ctx, pkgName, opts, serviceTemplate)
 	if err != nil {
 		return "", 0, err
 	}
@@ -89,17 +108,41 @@ func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, 
 			corev1.ResourceCPU:    resource.MustParse("1"),
 			corev1.ResourceMemory: resource.MustParse("256Mi"),
 		})
+	resReq = injectionTemplateResources(podTemplate, resReq)
+
+	tolerations := opts.Tolerations
+	nodeSelector := opts.NodeSelector
+	if podTemplate != nil {
+		if len(podTemplate.Spec.Tolerations) > 0 {
+			tolerations = append(tolerations, podTemplate.Spec.Tolerations...)
+		}
+		if len(podTemplate.Spec.NodeSelector) > 0 {
+			if nodeSelector == nil {
+				nodeSelector = map[string]string{}
+			}
+			for k, v := range podTemplate.Spec.NodeSelector {
+				nodeSelector[k] = v
+			}
+		}
+	}
+
 	injectorImage := opts.Image
 	injectorNodeName := ""
 	if injectorImage == "" {
 		var err error
-		injectorImage, injectorNodeName, err = c.getInjectorImageAndNode(ctx, resReq, architecture, opts.Tolerations, opts.NodeSelector)
+		injectorImage, injectorNodeName, err = c.getInjectorImageAndNode(ctx, resReq, architecture, tolerations, nodeSelector)
 		if err != nil {
 			return "", 0, err
 		}
 	}
 
-	pod := buildInjectionPod(injectorNodeName, injectorImage, payloadCmNames, shasum, resReq, pkgName, opts.IPFamily, opts.Tolerations, opts.NodeSelector)
+	pod := buildInjectionPod(injectorNodeName, injectorImage, payloadCmNames, shasum, resReq, pkgName, opts.IPFamily, tolerations, nodeSelector)
+	if podTemplate != nil {
+		pod, err = mergeInjectionPodTemplate(pod, podTemplate)
+		if err != nil {
+			return "", 0, err
+		}
+	}
 	_, err = c.Clientset.CoreV1().Pods(*pod.Namespace).Apply(ctx, pod, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
 	if err != nil {
 		return "", 0, fmt.Errorf("error creating pod in cluster: %w", err)
@@ -571,7 +614,7 @@ func buildInjectionPod(nodeName, image string, payloadCmNames []string, shasum s
 }
 
 // createInjectorNodeportService creates the injector service on an available port different than the registryNodePort service
-func (c *Cluster) createInjectorNodeportService(ctx context.Context, pkgName string, opts ZarfInjectorOptions) (*corev1.Service, error) {
+func (c *Cluster) createInjectorNodeportService(ctx context.Context, pkgName string, opts ZarfInjectorOptions, template *corev1.Service) (*corev1.Service, error) {
 	l := logger.From(ctx)
 	var svc *corev1.Service
 	timeoutCtx, cancel := context.WithTimeout(ctx, time.Second*30)
@@ -591,6 +634,13 @@ func (c *Cluster) createInjectorNodeportService(ctx context.Context, pkgName str
 			})).WithLabels(map[string]string{
 			PackageLabel: pkgName,
 		})
+		if template != nil {
+			var mergeErr error
+			svcAc, mergeErr = mergeInjectionServiceTemplate(svcAc, template, opts, pkgName)
+			if mergeErr != nil {
+				return mergeErr
+			}
+		}
 
 		var err error
 		svc, err = c.Clientset.CoreV1().Services(*svcAc.Namespace).Apply(ctx, svcAc, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
