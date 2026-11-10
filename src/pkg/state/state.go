@@ -620,6 +620,8 @@ func Merge(oldState *State, opts MergeOptions) (*State, error) {
 		}
 		if opts.AgentMutationPolicy != "" {
 			agentInfo.MutationPolicy = opts.AgentMutationPolicy
+		} else if agentInfo.MutationPolicy == "" {
+			agentInfo.MutationPolicy = MutationPolicyAll
 		}
 		newState.AgentInfo = agentInfo
 	}
