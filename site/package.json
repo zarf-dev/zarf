@@ -16,7 +16,7 @@
     "build:versions": "node hack/build-versions.mjs",
     "preview": "astro preview",
     "astro": "astro",
-    "link-check": "linkinator --recurse dist/ --config linkinator.config.json"
+    "link-check": "linkinator --server-root dist/ \"**/*.html\" --retry-errors --config linkinator.config.json"
   },
   "dependencies": {
     "@astrojs/check": "^0.9.9",

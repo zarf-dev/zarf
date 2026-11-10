@@ -93,6 +93,7 @@ const topicsOption: Record<string, string[]> = {
 
 // https://astro.build/config
 export default defineConfig({
+  prerenderConflictBehavior: "error",
   redirects: {
     "/docs/zarf-overview": "/",
   },

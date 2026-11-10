@@ -37,5 +37,5 @@ jobs:
       - name: run site build
         run: npm run build:versions
 
-      - name: check links
+      - name: check links in all built pages
         run: npm run link-check
