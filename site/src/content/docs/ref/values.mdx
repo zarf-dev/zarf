@@ -7,6 +7,12 @@ sidebar:
 import Properties from '@components/SchemaItemProperties.astro';
 import ExampleYAML from "@components/ExampleYAML.astro";
 
+:::caution
+
+Variables and constants are supported in v1alpha1 but removed in v1beta1. See the [Package Values reference](/ref/package-values/) and the [Variables to Values migration guide](/best-practices/variables-to-values/).
+
+:::
+
 Deploy time values are used throughout the Zarf deployment process to template `manifests` and `files`, set Helm values, or provide environment variables for `actions`, and can be provided by the `zarf package deploy` user, the `zarf package create` user, or internally by Zarf itself.
 
 ## Using Variables

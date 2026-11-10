@@ -1,3 +1,4 @@
+apiVersion: zarf.dev/v1beta1
 kind: ZarfPackageConfig
 metadata:
   name: manifests
@@ -5,7 +6,6 @@ metadata:
 
 components:
   - name: httpd-local
-    required: true
     manifests:
       - name: simple-httpd-deployment
         namespace: httpd
@@ -15,9 +15,8 @@ components:
     # image discovery is supported in all manifests and charts using:
     # zarf prepare find-images
     images:
-      - httpd:alpine3.18
+      - name: httpd:alpine3.18
   - name: nginx-remote
-    required: true
     manifests:
       - name: simple-nginx-deployment
         namespace: nginx
@@ -30,22 +29,22 @@ components:
     # image discovery is supported in all manifests and charts using:
     # zarf prepare find-images
     images:
-      - nginx:1.14.2
+      - name: nginx:1.14.2
   - name: podinfo-kustomize
-    required: true
     manifests:
       - name: simple-podinfo-deployment
         namespace: podinfo
-        kustomizations:
-          # kustomizations can be specified relative to the `zarf.yaml` or as remoteBuild resources with the
-          # following syntax: https://github.com/kubernetes-sigs/kustomize/blob/master/examples/remoteBuild.md:
-          - https://github.com/stefanprodan/podinfo/kustomize?ref=6.4.0
-          # while ?ref= is not a requirement, it is recommended to use a specific commit hash / git tag to
-          # ensure that the kustomization is not changed in a way that breaks your deployment.
+        kustomize:
+          files:
+            # kustomizations can be specified relative to the `zarf.yaml` or as remoteBuild resources with the
+            # following syntax: https://github.com/kubernetes-sigs/kustomize/blob/master/examples/remoteBuild.md:
+            - https://github.com/stefanprodan/podinfo/kustomize?ref=6.4.0
+            # while ?ref= is not a requirement, it is recommended to use a specific commit hash / git tag to
+            # ensure that the kustomization is not changed in a way that breaks your deployment.
     # image discovery is supported in all manifests and charts using:
     # zarf prepare find-images
     images:
-      - ghcr.io/stefanprodan/podinfo:6.4.0
-      
-documentation:
+      - name: ghcr.io/stefanprodan/podinfo:6.4.0
+
+attachments:
   readme: readme.md

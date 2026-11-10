@@ -1,44 +1,37 @@
+apiVersion: zarf.dev/v1beta1
 kind: ZarfPackageConfig
 metadata:
   name: composable-packages
   description: Demo Zarf package composability
 
+values:
+  files:
+    - values.yaml
+
 components:
-  - name: local-games-path
-    # The component logic keys ('required', 'group', and 'default') always override those of the imported package
-    required: true
-    # group: ""         # the initial value overrides the child component
-    # default: false    # the initial value overrides the child component
-    description: "Example of a local composed package with a unique description for this component"
+  - name: local-import
+    description: Serve a page supplied by this package using a local web-server component
     import:
-      # The local relative path to the folder containing this component's package definition
-      path: ../dos-games
-      # Example optional custom name to point to in the imported package (default is to use this component's name)
-      name: baseline
-    # 'name'd Zarf primitives will merge the arrays together on import:
-    # - 'manifests' of the same name will merge namespace, files and kustomizations
-    # - 'charts' of the same name will merge namespace, releaseName and valuesFiles
-    # Zarf primitives without matching 'name's will be appended to the end of the primitive's list for that component.
-    manifests:
-      - name: multi-games
-        files:
-          - quake-service.yaml
+      local:
+        - path: components/web-server.yaml
+    charts:
+      - name: web-server
+        namespace: imports-local
+        values:
+          - sourcePath: .webServers.local
+            targetPath: .
 
-  - name: oci-games-url
-    # The component logic keys ('required', 'group', and 'default') always override those of the imported package
-    # required: false   # the initial value overrides the child component
-    # group: ""         # the initial value overrides the child component
-    # default: false    # the initial value overrides the child component
+  - name: remote-import
+    description: Serve a different page using the same component imported from a registry
     import:
-      # The URL to the skeleton package containing this component's package definition
-      url: oci://ghcr.io/zarf-dev/packages/dos-games:1.3.0
-      # Example optional custom name to point to in the imported package (default is to use this component's name)
-      name: baseline
-    # Un'name'd Zarf primitives will be appended to the end of the primitive's list for that component.
-    actions:
-      onDeploy:
-        before:
-          - cmd: ./zarf tools kubectl get -n dos-games deployment -o jsonpath={.items[0].metadata.creationTimestamp}
+      remote:
+        - url: oci://ghcr.io/zarf-dev/components/examples/compose/web-server:1.0.0
+    charts:
+      - name: web-server
+        namespace: imports-remote
+        values:
+          - sourcePath: .webServers.remote
+            targetPath: .
 
-documentation:
+attachments:
   readme: readme.md

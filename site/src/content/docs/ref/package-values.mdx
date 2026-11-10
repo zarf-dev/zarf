@@ -95,31 +95,33 @@ Values are accessed in templates through the `.Values` template object. See the 
 
 ### In Manifests
 
-Enable Go templating in manifest files by setting `template: true`:
+In v1beta1, enable Go templating in manifest files by setting `enableTemplating: true`:
 
 ```yaml
 components:
   - name: my-component
     manifests:
       - name: app-manifests
-        template: true  # Enables Go template processing
+        enableTemplating: true
         files:
           - deployment.yaml
 ```
 
 ### In Actions
 
-Each action requires opt-in templating, set `template: true` on each `cmd`:
+Each action requires opt-in templating. In v1beta1, set `enableTemplating: true` on the action:
 
 ```yaml
 components:
   - name: my-component
     actions:
       onDeploy:
-        after:
+        onSuccess:
           - cmd: echo "Environment: {{ .Values.app.environment }}"
-            template: true  # Required to enable templating in actions
+            enableTemplating: true
 ```
+
+For v1alpha1 packages, use `template: true` and `after` instead of `onSuccess`.
 
 :::note
 
@@ -209,19 +211,22 @@ values:
 
 #### Templated Values Files
 
-Use `templatedValuesFiles` when you need Zarf's built-in [templating](#templating) inside a Helm values file. Templated values files have Go templates rendered at deploy time, giving you access to `.Values`, `.State`, and the templating functions:
+In v1beta1, set `enableTemplating: true` on a `valuesFiles` entry when you need Zarf's built-in [templating](#templating) inside a Helm values file. The file is rendered at deploy time, giving you access to `.Values`, `.State`, and the templating functions:
 
 ```yaml
 components:
   - name: helm-component
     charts:
       - name: my-chart
-        version: 1.0.0
         namespace: my-app
-        localPath: charts/my-chart
-        templatedValuesFiles:
-          - chart-values.yaml
+        local:
+          path: charts/my-chart
+        valuesFiles:
+          - path: chart-values.yaml
+            enableTemplating: true
 ```
+
+For v1alpha1 packages, use `templatedValuesFiles` instead of `valuesFiles` for files that need Zarf templating.
 
 ```yaml
 # chart-values.yaml

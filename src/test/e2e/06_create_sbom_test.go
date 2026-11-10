@@ -22,7 +22,7 @@ func TestCreateSBOM(t *testing.T) {
 	ctx := testutil.TestContext(t)
 
 	const (
-		imageSBOM   = "ghcr.io_zarf-dev_doom-game_0.0.1.json"
+		imageSBOM   = "images/ghcr.io_zarf-dev_doom-game_0.0.1.json"
 		packageName = "dos-games"
 	)
 

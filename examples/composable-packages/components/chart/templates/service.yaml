@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: web-server
+  labels:
+    zarf.dev/connect-name: {{ .Values.connectName | quote }}
+  annotations:
+    zarf.dev/connect-description: Open this web server's page
+    zarf.dev/connect-url: /
+spec:
+  selector:
+    app: web-server
+  ports:
+    - name: http
+      port: 80
+      targetPort: http

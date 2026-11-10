@@ -1,25 +1,28 @@
+apiVersion: zarf.dev/v1beta1
 kind: ZarfPackageConfig
 metadata:
   name: config-file
-  description: Test component to demonstrate using a config file to control the cli. Files are generated using "zarf prepare generate-config"
+  description: Demonstrates using a config file to configure the Zarf CLI
 
 values:
   files:
     - values.yaml
-
 components:
   - name: lion
     description: By default, only this component will be deployed when using the config file
-    required: true
     manifests:
       - name: config-example-configmap
-        template: true
+        enableTemplating: true
         files:
           - simple-configmap.yaml
 
   - name: zebra
-    # Notice this string is wrapped in quotes, as Zarf package templates use #### as a delimiter, which is also used in YAML for comments
-    description: "This is a zebra and they have ###ZARF_PKG_TMPL_ZEBRA###"
+    optional: true
+    description: An optional component that is not selected by the config file
 
   - name: leopard
-    description: "This is a leopard and they have ###ZARF_PKG_TMPL_LEOPARD###"
+    optional: true
+    description: Another optional component that is not selected by the config file
+
+attachments:
+  readme: readme.md
