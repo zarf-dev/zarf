@@ -296,7 +296,10 @@ scan-govulncheck: ## Scan source for vulnerabilities with reachable code paths u
 
 scan-grype: build ## Scan the Zarf binary for CVEs using grype + VEX suppression (must `brew install grype` first); fails on High+
 	@test -d ./build || mkdir ./build
-	$(GRYPE) file:$(ZARF_BIN) --config .grype.yaml -o json > build/grype.json --fail-on high
+	$(GRYPE) file:$(ZARF_BIN) --config .grype.yaml --fail-on high \
+		-o json=build/grype.json \
+		-o sarif=build/grype.sarif \
+		-o template=build/grype-summary.md --template hack/grype-summary.tmpl
 
 vex-lint: ## Check for orphaned VEX statements in .vex/zarf.cli.openvex.json (requires: run scan-grype first)
 	@test -f build/grype.json || (echo "ERROR: build/grype.json not found — run 'make scan-grype' first" && exit 1)

@@ -13,7 +13,8 @@ permissions:
 
 jobs:
   cve-scan:
-    if: ${{ github.repository == 'zarf-dev/zarf' }}
+    # Only run this job for the main Zarf repository unless explicitly triggered manually
+    if: ${{ github.repository == 'zarf-dev/zarf' || github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -22,8 +23,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: main
 
       - name: Setup golang
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
@@ -58,6 +57,22 @@ jobs:
       - name: Run grype scan (fails on High+)
         run: make scan-grype GRYPE="${{ steps.grype.outputs.cmd }}"
 
+      - name: Publish Grype package summary
+        if: always()
+        run: |
+          if [[ ! -s build/grype-summary.md ]]; then
+            printf '## Grype CVE scan\n\nNo report was generated. Check the scan step for errors.\n' >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+          cat build/grype-summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload grype SARIF to Code Scanning
+        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        if: always()
+        with:
+          sarif_file: build/grype.sarif
+          category: grype
+
       - name: Check for orphaned VEX statements
         if: always()
         run: make vex-lint
@@ -70,9 +85,11 @@ jobs:
           retention-days: 30
           path: |
             build/grype.json
+            build/grype.sarif
+            build/grype-summary.md
 
-      - name: Send trigger to Slack on workflow failure
-        if: failure()
+      - name: Send trigger to Slack on scheduled workflow failure
+        if: ${{ failure() && github.event_name == 'schedule' }}
         uses: ./.github/actions/slack
         with:
           slack-webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}

@@ -1,0 +1,31 @@
+{{- /*
+SPDX-License-Identifier: Apache-2.0
+SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+*/ -}}
+{{- define "cell" -}}
+{{- . | html | replace "|" "&#124;" | replace "`" "&#96;" | replace "\r" " " | replace "\n" " " -}}
+{{- end -}}
+{{- $blocking := list -}}
+{{- range .Matches -}}
+{{- if or (eq .Vulnerability.Severity "Critical") (eq .Vulnerability.Severity "High") -}}
+{{- $blocking = append $blocking . -}}
+{{- end -}}
+{{- end -}}
+## Grype CVE scan
+
+{{ if $blocking -}}
+**High/Critical findings: {{ len $blocking }}.** These findings fail the scan.
+
+| Package | Installed | Severity | Vulnerability | Fixed in |
+| --- | --- | --- | --- | --- |
+{{ range $severity := list "Critical" "High" -}}
+{{ range $blocking -}}
+{{ if eq .Vulnerability.Severity $severity -}}
+| {{ template "cell" .Artifact.Name }} | {{ template "cell" .Artifact.Version }} | {{ .Vulnerability.Severity }} | {{ template "cell" .Vulnerability.ID }} | {{ if .Vulnerability.Fix.Versions }}{{ template "cell" (join ", " .Vulnerability.Fix.Versions) }}{{ else }}Not reported{{ end }} |
+{{ end -}}
+{{ end -}}
+{{ end -}}
+{{ else -}}
+No unsuppressed High or Critical vulnerabilities found.
+{{ end }}
+Full scan results are available in the `cve-scan-results` artifact and GitHub Code Scanning.
