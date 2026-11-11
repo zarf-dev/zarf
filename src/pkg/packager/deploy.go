@@ -14,6 +14,8 @@ import (
 	"strings"
 	"time"
 
+	"helm.sh/helm/v4/pkg/storage/driver"
+
 	"github.com/opencontainers/go-digest"
 	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
@@ -94,10 +96,15 @@ type DeployOptions struct {
 	SkipArchitectureCheck bool
 	// SkipVersionCheck skips version requirement validation
 	SkipVersionCheck bool
+	// PruneScopes specifies the scopes to prune during deployment.
+	PruneScopes PruneScopes
 }
 
 // Validate checks whether the deployment options are supported by the package.
 func (opts DeployOptions) Validate(pkg api.Package) error {
+	if err := opts.PruneScopes.Validate(PruneCommandDeploy); err != nil {
+		return err
+	}
 	if !opts.Connectivity.IsValid() {
 		return fmt.Errorf("unsupported package connectivity mode %q", opts.Connectivity)
 	}
@@ -134,7 +141,10 @@ type deployer struct {
 	vals         value.Values
 	deployedPkg  *state.DeployedPackage
 	deployConfig state.DeployConfig
-	configDigest digest.Digest
+	configDigest  digest.Digest
+	oldComponents map[string]api.Component
+	removeChart   func(ctx context.Context, namespace, name string, timeout time.Duration) error
+	deleteImage   func(ctx context.Context, c *cluster.Cluster, s *state.State, ref string) error
 
 	// runtimeDir holds runtime files across components. v1alpha1 uses the package layout.
 	runtimeDir string
@@ -286,6 +296,12 @@ func (d *deployer) startDeploymentState(ctx context.Context, pkgLayout *layout.P
 	switch {
 	case err == nil:
 		deployedPkg.Generation++
+		if oldDef, defErr := deployedPkg.Definition(); defErr == nil {
+			d.oldComponents = make(map[string]api.Component, len(oldDef.Components))
+			for _, comp := range oldDef.Components {
+				d.oldComponents[comp.Name] = comp
+			}
+		}
 	case kerrors.IsNotFound(err):
 		deployedPkg, err = state.NewDeployedPackage(
 			pkg,
@@ -358,6 +374,128 @@ func (d *deployer) persistDeploymentState(ctx context.Context, components []stat
 	return d.c.StoreDeployedPackage(ctx, *d.deployedPkg)
 }
 
+func (d *deployer) reconcileDroppedComponents(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOptions) error {
+	if d.deployedPkg == nil || !d.isConnectedToCluster() {
+		return nil
+	}
+	l := logger.From(ctx)
+	pkg := pkgLayout.Definition()
+	newComps := make(map[string]bool, len(pkg.Components))
+	for _, c := range pkg.Components {
+		newComps[c.Name] = true
+	}
+
+	cwd, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+
+	timeout := opts.Timeout
+	if timeout == 0 {
+		timeout = config.ZarfDefaultTimeout
+	}
+
+	for i := len(d.deployedPkg.DeployedComponents) - 1; i >= 0; i-- {
+		depComp := d.deployedPkg.DeployedComponents[i]
+		if newComps[depComp.Name] {
+			continue
+		}
+		l.Info("pruning orphaned component", "component", depComp.Name)
+		comp := d.oldComponents[depComp.Name]
+		if comp.Name == "" {
+			comp = api.Component{Name: depComp.Name}
+		}
+		err := removeComponent(ctx, removeComponentOptions{
+			cluster:      d.c,
+			depPkg:       d.deployedPkg,
+			compIdx:      i,
+			comp:         comp,
+			s:            d.s,
+			vals:         d.vals,
+			cwd:          cwd,
+			timeout:      timeout,
+			persistState: true,
+			removeChart:  d.removeChart,
+		})
+		if err != nil {
+			return fmt.Errorf("unable to prune component %s: %w", depComp.Name, err)
+		}
+	}
+	return nil
+}
+
+func (d *deployer) reconcileComponentCharts(ctx context.Context, depComp *state.DeployedComponent, newCharts []state.InstalledChart, timeout time.Duration) error {
+	l := logger.From(ctx)
+	if timeout == 0 {
+		timeout = config.ZarfDefaultTimeout
+	}
+	newKeys := make(map[string]bool, len(newCharts))
+	for _, c := range newCharts {
+		newKeys[fmt.Sprintf("%s/%s", c.Namespace, c.ChartName)] = true
+	}
+
+	removeChartFn := d.removeChart
+	if removeChartFn == nil {
+		removeChartFn = helm.RemoveChart
+	}
+
+	var remainingCharts []state.InstalledChart
+	for _, oldChart := range depComp.InstalledCharts {
+		key := fmt.Sprintf("%s/%s", oldChart.Namespace, oldChart.ChartName)
+		if !newKeys[key] {
+			l.Info("pruning orphaned helm chart", "name", oldChart.ChartName, "namespace", oldChart.Namespace)
+			err := removeChartFn(ctx, oldChart.Namespace, oldChart.ChartName, timeout)
+			if err != nil && !errors.Is(err, driver.ErrReleaseNotFound) {
+				return fmt.Errorf("unable to remove orphaned chart %s in namespace %s: %w", oldChart.ChartName, oldChart.Namespace, err)
+			}
+		} else {
+			remainingCharts = append(remainingCharts, oldChart)
+		}
+	}
+	depComp.InstalledCharts = remainingCharts
+	return nil
+}
+
+func (d *deployer) pruneOrphanedImages(ctx context.Context, pkgLayout *layout.PackageLayout) error {
+	if d.deployedPkg == nil || !d.isConnectedToCluster() || d.s == nil {
+		return nil
+	}
+	l := logger.From(ctx)
+	pkg := pkgLayout.Definition()
+
+	activeImages := make(map[string]bool)
+	for _, comp := range pkg.Components {
+		for _, img := range comp.GetImages() {
+			activeImages[img] = true
+		}
+	}
+
+	var candidateImages []string
+	for _, oldComp := range d.oldComponents {
+		for _, img := range oldComp.GetImages() {
+			if !activeImages[img] {
+				candidateImages = append(candidateImages, img)
+			}
+		}
+	}
+	if len(candidateImages) == 0 {
+		return nil
+	}
+
+	allPackages, err := d.c.GetDeployedZarfPackages(ctx)
+	if err != nil {
+		l.Warn("unable to query deployed packages for image reference counting", "error", err.Error())
+		return nil
+	}
+
+	unref := FilterUnreferencedImages(candidateImages, allPackages, d.deployedPkg.Name, activeImages)
+	if len(unref) == 0 {
+		return nil
+	}
+
+	return pruneImagesFromRegistry(ctx, d.c, d.s, unref, d.deleteImage)
+}
+
 func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOptions) (deployedComponents []state.DeployedComponent, err error) {
 	l := logger.From(ctx)
 	pkg := pkgLayout.Definition()
@@ -376,6 +514,41 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 		defer func() {
 			err = errors.Join(err, os.RemoveAll(d.runtimeDir))
 		}()
+	}
+
+	clusterRequired := opts.PruneScopes.ClusterResources() || opts.PruneScopes.Images()
+	if !clusterRequired {
+		for _, c := range pkg.Components {
+			if c.RequiresCluster() {
+				clusterRequired = true
+				break
+			}
+		}
+	}
+	if clusterRequired && !d.isConnectedToCluster() {
+		timeout := cluster.DefaultTimeout
+		if pkg.IsInitConfig() {
+			timeout = 5 * time.Minute
+		}
+		connectCtx, cancel := context.WithTimeout(ctx, timeout)
+		defer cancel()
+		d.c, err = cluster.NewWithWait(connectCtx)
+		if err != nil {
+			return nil, fmt.Errorf("unable to connect to the Kubernetes cluster: %w", err)
+		}
+		if err := d.verifyPackageIsDeployable(ctx, pkgLayout, opts.SkipArchitectureCheck); err != nil {
+			return nil, fmt.Errorf("package is not deployable to this system: %w", err)
+		}
+	}
+	if clusterRequired && !pkg.IsInitConfig() && (d.s == nil || d.deployedPkg == nil) {
+		if err := d.prepareDeploymentState(ctx, pkgLayout, opts); err != nil {
+			return nil, err
+		}
+	}
+	if opts.PruneScopes.ClusterResources() {
+		if err := d.reconcileDroppedComponents(ctx, pkgLayout, opts); err != nil {
+			return nil, err
+		}
 	}
 
 	for _, component := range pkg.Components {
@@ -493,6 +666,12 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 			}
 		}
 
+		if opts.PruneScopes.ClusterResources() && d.isConnectedToCluster() {
+			if err := d.reconcileComponentCharts(ctx, &deployedComponents[idx], charts, opts.Timeout); err != nil {
+				return nil, err
+			}
+		}
+
 		// Update the package secret to indicate that we successfully deployed this component.
 		deployedComponents[idx].InstalledCharts = state.MergeInstalledChartsForComponent(deployedComponents[idx].InstalledCharts, charts, false)
 		deployedComponents[idx].Status = state.ComponentStatusSucceeded //nolint:staticcheck // Legacy status remains persisted for compatibility.
@@ -517,6 +696,11 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 		d.deployedPkg.AppendEvent(d.deployPackageEvent(pkgLayout, opts, state.EventOutcomeSucceeded))
 		d.deployedPkg.SetDeployConfig(d.deployConfig)
 		if err := d.persistDeploymentState(ctx, deployedComponents); err != nil {
+			return nil, err
+		}
+	}
+	if opts.PruneScopes.Images() && d.isConnectedToCluster() {
+		if err := d.pruneOrphanedImages(ctx, pkgLayout); err != nil {
 			return nil, err
 		}
 	}

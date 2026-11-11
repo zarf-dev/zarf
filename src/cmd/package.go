@@ -397,6 +397,7 @@ type packageDeployOptions struct {
 	skipArchitectureCheck      bool
 	skipVersionCheck           bool
 	ociConcurrency             int
+	prune                      string
 	packageVerifyFlags
 }
 
@@ -435,11 +436,18 @@ func newPackageDeployCommand(v *viper.Viper, architecture *architectureOptions) 
 	cmd.Flags().BoolVar(&o.skipArchitectureCheck, "skip-architecture-check", false, lang.CmdPackageDeployFlagSkipArchitectureCheck)
 	cmd.Flags().BoolVar(&o.skipVersionCheck, "skip-version-check", false, "Ignore version requirements when deploying the package")
 	_ = cmd.Flags().MarkHidden("skip-version-check")
+	cmd.Flags().StringVar(&o.prune, "prune", "", lang.CmdPackageDeployFlagPrune)
+	cmd.Flags().Lookup("prune").NoOptDefVal = string(packager.PruneScopeAll)
 	addVerifyFlags(cmd, v, &o.packageVerifyFlags)
 	return cmd
 }
 
 func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error) {
+	pruneScopes, err := packager.ParsePruneScopes(o.prune, packager.PruneCommandDeploy)
+	if err != nil {
+		return err
+	}
+
 	ctx := cmd.Context()
 	packageSource, err := choosePackage(ctx, args)
 	if err != nil {
@@ -518,6 +526,7 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 		SkipValuesSchemaValidation: o.skipValuesSchemaValidation,
 		SkipArchitectureCheck:      o.skipArchitectureCheck,
 		SkipVersionCheck:           o.skipVersionCheck,
+		PruneScopes:                pruneScopes,
 	}
 
 	deployedComponents, err := deploy(ctx, pkgLayout, deployOpts, optionalComponents)
@@ -1608,6 +1617,7 @@ type packageRemoveOptions struct {
 	optionalComponents string
 	skipVersionCheck   bool
 	ociConcurrency     int
+	prune              string
 	valuesFiles        []string
 	setValues          map[string]string
 	packageVerifyFlags
@@ -1634,6 +1644,8 @@ func newPackageRemoveCommand(v *viper.Viper, architecture *architectureOptions) 
 	cmd.Flags().StringVarP(&o.namespaceOverride, "namespace", "n", v.GetString(VPkgDeployNamespace), lang.CmdPackageRemoveFlagNamespace)
 	cmd.Flags().BoolVar(&o.skipVersionCheck, "skip-version-check", false, "Ignore version requirements when removing the package")
 	_ = cmd.Flags().MarkHidden("skip-version-check")
+	cmd.Flags().StringVar(&o.prune, "prune", "", lang.CmdPackageRemoveFlagPrune)
+	cmd.Flags().Lookup("prune").NoOptDefVal = string(packager.PruneScopeAll)
 	cmd.Flags().StringSliceVarP(&o.valuesFiles, "values", "v", []string{}, lang.CmdPackageRemoveFlagValuesFiles)
 	cmd.Flags().StringToStringVar(&o.setValues, "set-values", v.GetStringMapString(VPkgRemoveSetValues), lang.CmdPackageDeployFlagSetValues)
 	addVerifyFlags(cmd, v, &o.packageVerifyFlags)
@@ -1641,6 +1653,10 @@ func newPackageRemoveCommand(v *viper.Viper, architecture *architectureOptions) 
 }
 
 func (o *packageRemoveOptions) run(cmd *cobra.Command, args []string) error {
+	pruneScopes, err := packager.ParsePruneScopes(o.prune, packager.PruneCommandRemove)
+	if err != nil {
+		return err
+	}
 	ctx := cmd.Context()
 	componentSelectors, err := filters.ParseComponentSelectors(o.optionalComponents)
 	if err != nil {
@@ -1687,6 +1703,7 @@ func (o *packageRemoveOptions) run(cmd *cobra.Command, args []string) error {
 		Cluster:          c,
 		Timeout:          config.ZarfDefaultTimeout,
 		SkipVersionCheck: o.skipVersionCheck,
+		PruneScopes:      pruneScopes,
 	}
 	logger.From(ctx).Info("loaded package for removal", "name", pkg.Metadata.Name)
 	displayPackage, err := packageForDisplay(pkg)
