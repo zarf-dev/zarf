@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -214,6 +215,78 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 	vals, err := loadDeploymentValues(ctx, pkgLayout, opts.Values, opts.SkipValuesSchemaValidation)
 	if err != nil {
 		return DeployResult{}, err
+	}
+
+	if pkg.IsInitConfig() {
+		if opts.RegistryInfo.Port == 0 {
+			if v, err := vals.Extract(value.Path(".registry.nodePort")); err == nil {
+				if p, ok := toInt(v); ok && p > 0 {
+					opts.RegistryInfo.Port = p
+				}
+			} else if v, err := vals.Extract(value.Path(".registry.port")); err == nil {
+				if p, ok := toInt(v); ok && p > 0 {
+					opts.RegistryInfo.Port = p
+				}
+			}
+			if opts.RegistryInfo.Port == 0 && opts.SetVariables != nil {
+				if p, ok := toInt(opts.SetVariables["REGISTRY_NODEPORT"]); ok && p > 0 {
+					opts.RegistryInfo.Port = p
+				}
+			}
+		}
+		if opts.InjectorPort == 0 {
+			if v, err := vals.Extract(value.Path(".registry.injector.port")); err == nil {
+				if p, ok := toInt(v); ok && p > 0 {
+					opts.InjectorPort = p
+				}
+			} else if v, err := vals.Extract(value.Path(".injector.port")); err == nil {
+				if p, ok := toInt(v); ok && p > 0 {
+					opts.InjectorPort = p
+				}
+			}
+			if opts.InjectorPort == 0 && opts.SetVariables != nil {
+				if p, ok := toInt(opts.SetVariables["INJECTOR_PORT"]); ok && p > 0 {
+					opts.InjectorPort = p
+				}
+			}
+		}
+		if opts.InjectorImage == "" {
+			if v, err := vals.Extract(value.Path(".registry.injector.image")); err == nil {
+				if s, ok := v.(string); ok && s != "" {
+					opts.InjectorImage = s
+				}
+			} else if v, err := vals.Extract(value.Path(".injector.image")); err == nil {
+				if s, ok := v.(string); ok && s != "" {
+					opts.InjectorImage = s
+				}
+			}
+			if opts.InjectorImage == "" && opts.SetVariables != nil {
+				if img, ok := opts.SetVariables["INJECTOR_IMAGE"]; ok && img != "" {
+					opts.InjectorImage = img
+				}
+			}
+		}
+		if opts.RegistryInfo.Port > 0 {
+			v, err := vals.Extract(value.Path(".registry.nodePort"))
+			p, ok := toInt(v)
+			if err != nil || !ok || p == 0 {
+				_ = vals.Set(value.Path(".registry.nodePort"), opts.RegistryInfo.Port)
+			}
+		}
+		if opts.InjectorPort > 0 {
+			v, err := vals.Extract(value.Path(".registry.injector.port"))
+			p, ok := toInt(v)
+			if err != nil || !ok || p == 0 {
+				_ = vals.Set(value.Path(".registry.injector.port"), opts.InjectorPort)
+			}
+		}
+		if opts.InjectorImage != "" {
+			v, err := vals.Extract(value.Path(".registry.injector.image"))
+			s, ok := v.(string)
+			if err != nil || !ok || s == "" {
+				_ = vals.Set(value.Path(".registry.injector.image"), opts.InjectorImage)
+			}
+		}
 	}
 
 	d := deployer{
@@ -1170,4 +1243,28 @@ func (d *deployer) processComponentFiles(ctx context.Context, pkgLayout *layout.
 	l.Debug("done copying files", "duration", time.Since(start))
 
 	return nil
+}
+
+func toInt(v any) (int, bool) {
+	switch val := v.(type) {
+	case int:
+		return val, true
+	case int64:
+		return int(val), true
+	case int32:
+		return int(val), true
+	case uint:
+		return int(val), true
+	case uint64:
+		return int(val), true
+	case uint32:
+		return int(val), true
+	case float64:
+		return int(val), true
+	case string:
+		i, err := strconv.Atoi(val)
+		return i, err == nil
+	default:
+		return 0, false
+	}
 }

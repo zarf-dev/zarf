@@ -215,6 +215,33 @@
               "type": "integer"
             }
           }
+        },
+        "nodePort": {
+          "type": [
+            "integer",
+            "string"
+          ]
+        },
+        "port": {
+          "type": [
+            "integer",
+            "string"
+          ]
+        },
+        "injector": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "port": {
+              "type": [
+                "integer",
+                "string"
+              ]
+            },
+            "image": {
+              "type": "string"
+            }
+          }
         }
       }
     }
