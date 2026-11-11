@@ -38,3 +38,7 @@ registry:
   proxy:
     hostNetwork: false
     tolerations: []
+  nodePort: 0
+  injector:
+    port: 0
+    image: ""
