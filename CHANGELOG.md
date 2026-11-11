@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.1](https://github.com/zarf-dev/zarf/compare/v1.0.0...v1.0.1) (2026-11-11)
+
+
+### Bug Fixes
+
+* update agent mutation policy handling helm schema validation ([#5644](https://github.com/zarf-dev/zarf/issues/5644)) ([e445545](https://github.com/zarf-dev/zarf/commit/e4455451cb2ef171b939bfc802c69cc96ac42524))
+
 ## [1.0.0](https://github.com/zarf-dev/zarf/compare/v0.89.0...v1.0.0) (2026-11-10)
 
 
