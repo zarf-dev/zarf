@@ -179,6 +179,17 @@ func WritePackageDefinition(path string, definition api.Package) error {
 // VerifyIfPossible tolerates this; all other verification errors are always fatal.
 var ErrNoVerificationMaterial = errors.New("no verification material available")
 
+// ErrPackageNotSigned is returned when signature information is requested from an unsigned package.
+var ErrPackageNotSigned = errors.New("package is not signed")
+
+// SignatureInfo contains parsed signature metadata for a package.
+type SignatureInfo struct {
+	Method           signing.SigningMethod `json:"method" yaml:"method"`
+	Identity         string                `json:"identity,omitempty" yaml:"identity,omitempty"`
+	Issuer           string                `json:"issuer,omitempty" yaml:"issuer,omitempty"`
+	HasTSATimestamps bool                  `json:"hasTSATimestamps,omitempty" yaml:"hasTSATimestamps,omitempty"`
+}
+
 // DirPath returns base directory of the package layout
 func (p *PackageLayout) DirPath() string {
 	return p.dirPath
@@ -535,12 +546,66 @@ func (p *PackageLayout) IsSigned() bool {
 	// Backward compatibility: check for signature file existence
 	// This handles packages created before the Build.Signed field was added
 	if p.dirPath != "" {
+		if _, err := os.Stat(filepath.Join(p.dirPath, Bundle)); err == nil {
+			return true
+		}
 		if _, err := os.Stat(filepath.Join(p.dirPath, Signature)); err == nil {
 			return true
 		}
 	}
 
 	return false
+}
+
+// SignatureInfo extracts and returns signature metadata from the package layout.
+// If the package is unsigned, it returns ErrPackageNotSigned.
+func (p *PackageLayout) SignatureInfo() (SignatureInfo, error) {
+	if p.dirPath == "" {
+		return SignatureInfo{}, errors.New("invalid package layout: dirPath is empty")
+	}
+
+	bundlePath := filepath.Join(p.dirPath, Bundle)
+	if _, err := os.Stat(bundlePath); err == nil {
+		info, err := signing.ReadBundleInfo(bundlePath)
+		if err != nil {
+			return SignatureInfo{}, fmt.Errorf("reading bundle signature: %w", err)
+		}
+		return SignatureInfo{
+			Method:           info.Method,
+			Identity:         info.Identity,
+			Issuer:           info.Issuer,
+			HasTSATimestamps: info.HasTSATimestamps,
+		}, nil
+	}
+
+	legacySigPath := filepath.Join(p.dirPath, Signature)
+	if _, err := os.Stat(legacySigPath); err == nil {
+		return SignatureInfo{
+			Method: signing.SigningMethodKey,
+		}, nil
+	}
+
+	return SignatureInfo{}, ErrPackageNotSigned
+}
+
+// RawSignature returns the raw signature data (Sigstore bundle JSON or legacy signature bytes).
+// If the package is unsigned, it returns ErrPackageNotSigned.
+func (p *PackageLayout) RawSignature() ([]byte, error) {
+	if p.dirPath == "" {
+		return nil, errors.New("invalid package layout: dirPath is empty")
+	}
+
+	bundlePath := filepath.Join(p.dirPath, Bundle)
+	if b, err := os.ReadFile(bundlePath); err == nil {
+		return b, nil
+	}
+
+	legacySigPath := filepath.Join(p.dirPath, Signature)
+	if b, err := os.ReadFile(legacySigPath); err == nil {
+		return b, nil
+	}
+
+	return nil, ErrPackageNotSigned
 }
 
 // GetSBOM outputs selected SBOM data from the package to the given destination path.
