@@ -369,7 +369,7 @@ func findImages(ctx context.Context, pkg api.Package, resourceSet *load.Resource
 		matchedImages := map[string]bool{}
 		maybeImages := map[string]bool{}
 		for _, zarfChart := range component.Charts {
-			chartResource, values, err := getTemplatedChart(ctx, zarfChart, component.Name, resourceSet, compBuildPath, variableConfig, vals, pkg, s, component.StateAccess, opts.KubeVersionOverride, opts.IsInteractive, opts.CachePath, opts.RemoteOptions)
+			chartResource, values, err := getTemplatedChart(ctx, zarfChart, component, resourceSet, compBuildPath, variableConfig, vals, pkg, s, opts.KubeVersionOverride, opts.IsInteractive, opts.CachePath, opts.RemoteOptions)
 			if err != nil {
 				return nil, err
 			}
@@ -413,7 +413,7 @@ func findImages(ctx context.Context, pkg api.Package, resourceSet *load.Resource
 			}
 		}
 		for _, manifest := range component.Manifests {
-			manifestResources, err := getTemplatedManifests(ctx, manifest, resourceSet, compBuildPath, variableConfig, vals, pkg, itpl.StateAccess{State: s, AccessKeys: component.StateAccess}, opts.EnableKustomizePlugins)
+			manifestResources, err := getTemplatedManifests(ctx, component, manifest, resourceSet, compBuildPath, variableConfig, vals, pkg, itpl.StateAccess{State: s, AccessKeys: component.StateAccess}, opts.EnableKustomizePlugins)
 			if err != nil {
 				return nil, err
 			}

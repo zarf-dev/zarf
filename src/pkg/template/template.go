@@ -46,6 +46,7 @@ const (
 	objectKeyConstants = "Constants"
 	objectKeyVariables = "Variables"
 	objectKeyState     = "State"
+	objectKeyComponent = "Component"
 )
 
 // NewObjects instantiates an Objects map, which provides templating context. The "with" options below allow for
@@ -94,6 +95,32 @@ func (o Objects) WithPackage(pkg api.Package) Objects {
 		o[objectKeyPackage] = convert.PackageToV1alpha1(pkg)
 	case v1beta1.APIVersion:
 		o[objectKeyPackage] = convert.PackageToV1beta1(pkg)
+	}
+	return o
+}
+
+// WithComponent makes the current component available on the Objects map using the package's authored API version.
+func (o Objects) WithComponent(component api.Component, pkg api.Package) Objects {
+	if component.Name == "" {
+		return o
+	}
+	switch pkg.GetAPIVersion() {
+	case v1alpha1.APIVersion:
+		zarfPkg := convert.PackageToV1alpha1(api.Package{
+			APIVersion: v1alpha1.APIVersion,
+			Components: []api.Component{component},
+		})
+		if len(zarfPkg.Components) > 0 {
+			o[objectKeyComponent] = zarfPkg.Components[0]
+		}
+	case v1beta1.APIVersion:
+		betaPkg := convert.PackageToV1beta1(api.Package{
+			APIVersion: v1beta1.APIVersion,
+			Components: []api.Component{component},
+		})
+		if len(betaPkg.Components) > 0 {
+			o[objectKeyComponent] = betaPkg.Components[0]
+		}
 	}
 	return o
 }
