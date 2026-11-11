@@ -1,0 +1,7 @@
+webServers:
+  local:
+    connectName: web-server-local
+    message: Hello from the local component import!
+  remote:
+    connectName: web-server-remote
+    message: Hello from the published component import!

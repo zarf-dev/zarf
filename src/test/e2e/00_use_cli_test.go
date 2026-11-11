@@ -166,6 +166,43 @@ components:
 		require.Contains(t, stdOut, "name: local-chart")
 	})
 
+	t.Run("zarf dev inspect v1beta1 init package", func(t *testing.T) {
+		t.Parallel()
+		dir := t.TempDir()
+		require.NoError(t, copy.Copy("packages", filepath.Join(dir, "packages")))
+		require.NoError(t, copy.Copy(".vex", filepath.Join(dir, ".vex")))
+		initPath := filepath.Join(dir, "packages", "init", "v1beta1")
+		templates, err := filepath.Glob(filepath.Join(initPath, "*", "*.tpl.yaml"))
+		require.NoError(t, err)
+		templates = append(templates, filepath.Join(initPath, "zarf.tpl.yaml"))
+		for _, source := range templates {
+			stdOut, stdErr, err := e2e.Zarf(t, "dev", "template", source, "--set-file", filepath.Join(initPath, "template-values.yaml"))
+			require.NoError(t, err, stdOut, stdErr)
+		}
+
+		for _, tc := range []struct {
+			command string
+			want    []string
+		}{
+			{
+				command: "manifests",
+				want:    []string{"name: agent-hook", "name: zarf-docker-registry", "name: zarf-gitea"},
+			},
+			{
+				command: "values-files",
+				want:    []string{"# associated chart: zarf-agent", "# associated chart: docker-registry", "# associated chart: gitea", "claimName: data-zarf-gitea-0"},
+			},
+		} {
+			t.Run(tc.command, func(t *testing.T) {
+				stdOut, stdErr, err := e2e.Zarf(t, "dev", "inspect", tc.command, initPath)
+				require.NoError(t, err, stdOut, stdErr)
+				for _, want := range tc.want {
+					require.Contains(t, stdOut, want)
+				}
+			})
+		}
+	})
+
 	t.Run("zarf dev inspect values-files with components", func(t *testing.T) {
 		t.Parallel()
 		pathToPackage := filepath.Join("src", "cmd", "testdata", "inspect-values-files", "chart")

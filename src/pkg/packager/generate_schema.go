@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 
 	"github.com/zarf-dev/zarf/src/config"
+	internalv1alpha1 "github.com/zarf-dev/zarf/src/internal/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
 	"github.com/zarf-dev/zarf/src/pkg/helpers"
@@ -53,6 +54,7 @@ func GenerateValuesSchema(ctx context.Context, source string, opts GenerateValue
 		}
 	}()
 	pkg := loaded.Definition
+	internalv1alpha1.WarnAuthorIfDeprecated(ctx, pkg)
 
 	variableConfig, err := getPopulatedVariableConfig(ctx, pkg, nil, opts.IsInteractive)
 	if err != nil {

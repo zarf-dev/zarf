@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	internalv1alpha1 "github.com/zarf-dev/zarf/src/internal/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
@@ -140,6 +141,8 @@ func PublishPackage(ctx context.Context, pkgLayout *layout.PackageLayout, dst re
 		return registry.Reference{}, fmt.Errorf("package layout must be specified")
 	}
 
+	internalv1alpha1.WarnIfDeprecated(ctx, pkgLayout.Definition())
+
 	referenceOptions := zoci.ReferenceFromMetadataOptions{
 		Tag: opts.Tag,
 	}
@@ -179,6 +182,8 @@ type PublishSkeletonOptions struct {
 
 // PublishSkeleton takes a Path to the package definition and uploads a skeleton package to the given a registry.
 // dst is the path to the registry namespace, e.g. my-registry.com/my-namespace. The full package ref is created using the package name and returned
+//
+// Deprecated: Only supported by deprecated v1alpha1 packages.
 func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, opts PublishSkeletonOptions) (_ registry.Reference, err error) {
 	l := logger.From(ctx)
 
@@ -224,6 +229,7 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 		err = errors.Join(err, loaded.Close())
 	}()
 	pkg := loaded.Definition
+	internalv1alpha1.WarnAuthorIfDeprecated(ctx, pkg)
 	for _, comp := range pkg.Components {
 		if comp.ImageArchives != nil {
 			return registry.Reference{}, fmt.Errorf("cannot publish skeleton package with image archives")

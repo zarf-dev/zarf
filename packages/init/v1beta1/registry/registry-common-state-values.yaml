@@ -5,8 +5,6 @@ proxy:
     image: {{ .State.Injector.Image | quote }}
     payLoadConfigMapAmount: {{ .State.Injector.PayloadConfigMaps | quote }}
     shasum: {{ .State.Injector.PayloadShaSum | quote }}
-persistence:
-  storageClass: {{ .State.StorageClass | quote }}
 imagePullSecrets:
   - name: private-registry
 mtls:
@@ -22,5 +20,3 @@ service:
   registryPort: {{ .State.Registry.Port }}
   nodePort: {{ .State.Registry.Port }}
 fullnameOverride: zarf-docker-registry
-podLabels:
-  zarf.dev/agent: ignore

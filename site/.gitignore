@@ -26,3 +26,6 @@ src/content/docs/ref/Examples
 src/content/docs/v[0-9]*-[0-9]*/
 src/assets/versioned-assets/
 versions.json
+
+# Local PostHog setup wizard state
+.posthog-wizard-cache/

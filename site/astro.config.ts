@@ -60,6 +60,7 @@ function buildSidebar(slug: string): any[] {
   dirGroup("Schema", "schema", { collapsed: true });
   pageLink("FAQ", "faq");
   pageLink("Roadmap", "roadmap");
+  pageLink("Zarf v1.0.0", "v1.0");
   pageLink("Support", "support");
   dirGroup("Contribute", "contribute", { collapsed: true });
   return items;
@@ -92,6 +93,7 @@ const topicsOption: Record<string, string[]> = {
 
 // https://astro.build/config
 export default defineConfig({
+  prerenderConflictBehavior: "error",
   redirects: {
     "/docs/zarf-overview": "/",
   },
@@ -131,6 +133,7 @@ export default defineConfig({
         },
       ],
       components: {
+        Head: "./src/components/StarlightHead.astro",
         SkipLink: "./src/components/SkipLink.astro",
         ThemeSelect: "./src/components/ThemeSelect.astro",
         Sidebar: "./src/components/Sidebar.astro",

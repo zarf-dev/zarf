@@ -13,7 +13,7 @@ Zarf supports config files written in `toml` and `yaml`. By default Zarf will lo
 
 To use a custom config filename, set the `ZARF_CONFIG` environment variable to the config file's path. For example, to use the `my-cool-env.yaml` config file in the current working directory, you can set the `ZARF_CONFIG` environment variable to `my-cool-env.yaml`. The `ZARF_CONFIG` environment variable can be set either in the shell or in a `.env` file in the current working directory. Note that the `ZARF_CONFIG` environment variable takes precedence over the default config file path.
 
-Additionally, you can set any supported config parameter via an environment variable using the `ZARF_` prefix. For example, you can set the `zarf init` `--storage-class` flag by setting the `ZARF_INIT_STORAGE_CLASS` environment variable. Note that the `ZARF_` environment variable takes precedence over a config file.
+Additionally, you can set any supported config parameter via an environment variable using the `ZARF_` prefix. Note that the `ZARF_` environment variable takes precedence over a config file.
 
 While config files set default values, these values can still be overwritten by command line flags. For example, if the config file sets the log level to `info` and the command line flag is set to `debug`, the log level will be set to `debug`. The order of precedence for command line configuration is as follows:
 
@@ -45,9 +45,10 @@ import configToml from "../../../../../examples/config-file/zarf-config.toml?raw
 import packageConfig from "../../../../../examples/config-file/zarf.yaml?raw";
 
 ```bash
-export ZARF_CONFIG=examples/config-file/zarf-config.yaml
+cd examples/config-file
+export ZARF_CONFIG=zarf-config.yaml
 
-zarf package create examples/config-file --confirm
+zarf package create . --confirm
 
 # replace <arch> with your system architecture
 zarf package deploy zarf-package-config-file-<arch>.tar.zst --confirm

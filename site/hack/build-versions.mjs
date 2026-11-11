@@ -7,6 +7,7 @@ import { promises as fs, existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { generateExamples } from "./copy-examples.js";
+import { stageDocs } from "./stage-docs.js";
 
 const siteDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const repoDir = path.resolve(siteDir, "..");
@@ -186,8 +187,7 @@ async function stageVersion({ ref, slug }) {
   git(["worktree", "add", "--detach", worktree, ref]);
   try {
     const dst = path.join(docsDir, slug);
-    await fs.rm(dst, { recursive: true, force: true });
-    await fs.cp(path.join(worktree, "site/src/content/docs"), dst, { recursive: true });
+    await stageDocs({ srcDir: path.join(worktree, "site/src/content/docs"), dstDir: dst, slug });
     await stageVersionedAssets(worktree, slug);
     // Examples and schema are generated artifacts, absent from the checkout.
     await generateExamples({

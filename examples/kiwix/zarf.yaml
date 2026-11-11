@@ -1,3 +1,4 @@
+apiVersion: zarf.dev/v1beta1
 kind: ZarfPackageConfig
 metadata:
   name: kiwix
@@ -6,7 +7,6 @@ metadata:
 
 components:
   - name: kiwix-serve
-    required: true
     manifests:
       - name: kiwix-serve
         namespace: kiwix
@@ -14,12 +14,12 @@ components:
           - manifests/deployment.yaml
           - manifests/service.yaml
     images:
-      - ghcr.io/kiwix/kiwix-serve:3.5.0-2
+      - name: ghcr.io/kiwix/kiwix-serve:3.5.0-2
     imageArchives:
       - path: kiwix-data.tar
         images:
             # Using zarf.internal as our registry ensures our manifest will never pull from a squatted registry url even if mutation is never run.
-          - zarf.internal/kiwix-data:local
+          - name: zarf.internal/kiwix-data:local
     actions:
       onCreate:
         before:
@@ -35,5 +35,5 @@ components:
           # Export the container image to a tar archive for use as an image archive
           - cmd: docker save zarf.internal/kiwix-data:local -o kiwix-data.tar
 
-documentation:
+attachments:
   readme: readme.md

@@ -16,7 +16,7 @@
     "build:versions": "node hack/build-versions.mjs",
     "preview": "astro preview",
     "astro": "astro",
-    "link-check": "linkinator --recurse dist/ --config linkinator.config.json"
+    "link-check": "linkinator --server-root dist/ \"**/*.html\" --retry-errors --config linkinator.config.json"
   },
   "dependencies": {
     "@astrojs/check": "^0.9.9",
@@ -24,6 +24,7 @@
     "@astrojs/starlight": "^0.41.3",
     "@fontsource/source-code-pro": "^5.0.17",
     "astro": "^7.3.2",
+    "posthog-js": "^1.438.21",
     "mermaid": "^12.2.0",
     "rehype-autolink-headings": "^7.1.0",
     "sharp": "^0.35.5",

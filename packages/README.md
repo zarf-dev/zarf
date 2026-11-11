@@ -8,7 +8,7 @@ The distros package adds optional capabilities for spinning up and tearing down 
 
 - [EKS](https://aws.amazon.com/eks/) - Zarf deploys and tears down using the `eksctl` binary under the hood. See how it's done in the EKS package's [`zarf.yaml`](./distros/eks/zarf.yaml) and checkout the [EKS package's config](./distros/eks/eks.yaml) for more information.
 
-- [k3s](https://k3s.io/) - Zarf deploys and tears down using the `k3s` service under the hood. See how it's done in the k3s package's [`zarf.yaml`](./distros/k3s/common/zarf.yaml).
+- [k3s](https://k3s.io/) - Zarf deploys and tears down using the `k3s` service under the hood. See how it's done in the k3s package's [`zarf.yaml`](./distros/k3s/zarf.yaml).
 
 ### eks (used only for testing, not for production)
 
@@ -41,7 +41,7 @@ Run these targets from the repository root. The v1alpha1 component packages and 
 
 ### Gitea
 
-Users who rely heavily on GitOps find it useful to deploy an internal Git repository.  Zarf uses [Gitea](https://gitea.io/en-us/) to provide this functionality.  The Gitea package deploys a Gitea instance to the cluster and configures it to use the credentials in the `private-git-server` secret in the Zarf namespace.
+Users who rely heavily on GitOps find it useful to deploy an internal Git repository.  Zarf uses [Gitea](https://about.gitea.com/) to provide this functionality.  The Gitea package deploys a Gitea instance to the cluster and configures it to use the credentials in the `private-git-server` secret in the Zarf namespace.
 
 ```bash
 zarf init --components=git-server

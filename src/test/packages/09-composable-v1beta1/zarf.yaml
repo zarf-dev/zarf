@@ -1,0 +1,19 @@
+apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: test-compose-v1beta1
+components:
+  - name: local-import
+    description: Import and customize a component
+    import:
+      local:
+        - path: components/base.yaml
+    manifests:
+      - name: config
+        namespace: overridden
+        files:
+          - extra.yaml
+  - name: second-import
+    import:
+      local:
+        - path: components/base.yaml

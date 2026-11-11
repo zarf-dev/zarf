@@ -1,3 +1,4 @@
+apiVersion: zarf.dev/v1beta1
 kind: ZarfPackageConfig
 metadata:
   name: helm-charts
@@ -10,15 +11,15 @@ values:
 
 components:
   - name: demo-helm-charts
-    required: true
     charts:
       # Charts are organized in a list with unique chart names per component - note that a Zarf chart name does not need to match the chart name in a Chart.yaml
       - name: podinfo-local
+        # `local.path` loads the chart from the local filesystem.
+        local:
+          path: chart
         namespace: podinfo-from-local-chart
-        # In this case `localPath` will load the podinfo chart that is located in the `chart` directory
-        localPath: chart
         valuesFiles:
-          - values.yaml
+          - path: values.yaml
         # serverSideApply is a new option in Helm 4
         # Can be set to true, false, and "auto". Defaults to "auto" which uses SSA on new installs, and automatically selects the previously apply method on upgrade
         serverSideApply: "true"
@@ -29,38 +30,41 @@ components:
             targetPath: ".replicaCount"
 
       - name: podinfo-oci
-        version: 6.4.0
+        # `oci.url` and `oci.ref` select a chart from an OCI registry.
+        oci:
+          url: oci://ghcr.io/stefanprodan/charts/podinfo
+          ref:
+            tag: 6.4.0
         namespace: podinfo-from-oci
-        # In this case `url` will load the helm chart located in the podinfo OCI repository
-        url: oci://ghcr.io/stefanprodan/charts/podinfo
         valuesFiles:
-          - values.yaml
+          - path: values.yaml
 
       - name: podinfo-git
-        version: 6.4.0
+        # `git.ref` selects the revision and `git.path` selects the chart directory.
+        git:
+          url: https://github.com/stefanprodan/podinfo.git
+          ref:
+            tag: 6.4.0
+          path: charts/podinfo
         namespace: podinfo-from-git
-        # In this case `url` will load the helm chart located in the podinfo git repository
-        url: https://github.com/stefanprodan/podinfo.git
-        # By default git will look in the root of the git repository but you can define a sub directory with `gitPath`
-        gitPath: charts/podinfo
         valuesFiles:
-          - values.yaml
+          - path: values.yaml
 
       - name: podinfo-repo
-        version: 6.4.0
+        # `helmRepository.name` selects the upstream chart independently of the Zarf chart name.
+        helmRepository:
+          url: https://stefanprodan.github.io/podinfo
+          version: 6.4.0
+          name: podinfo
         namespace: podinfo-from-repo
-        # In this case `url` will load the helm chart located in the podinfo helm repository
-        url: https://stefanprodan.github.io/podinfo
-        # By default the chart `name` will be what is used to search a repository but since Zarf chart names must be unique per-component you can override this with `repoName`
-        repoName: podinfo
         # By default the release name will be the chart name, but you can override this with the `releaseName` key
         releaseName: cool-release-name
         valuesFiles:
-          - values.yaml
+          - path: values.yaml
     images:
-      - ghcr.io/stefanprodan/podinfo:6.4.0
+      - name: ghcr.io/stefanprodan/podinfo:6.4.0
       # This is the cosign signature for the podinfo image for image signature verification
-      - ghcr.io/stefanprodan/podinfo:sha256-57a654ace69ec02ba8973093b6a786faa15640575fbf0dbb603db55aca2ccec8.sig
+      - name: ghcr.io/stefanprodan/podinfo:sha256-57a654ace69ec02ba8973093b6a786faa15640575fbf0dbb603db55aca2ccec8.sig
 
-documentation:
+attachments:
   readme: readme.md
