@@ -1,0 +1,34 @@
+name: Verify Commit Signatures
+
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize, edited, ready_for_review]
+  merge_group:
+
+permissions: {}
+
+concurrency:
+  group: commit-signatures-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify-commit-signatures:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Check PR commit signatures
+        if: github.event_name == 'pull_request_target'
+        uses: 1Password/check-signed-commits-action@ed2885f3ed2577a4f5d3c3fe895432a557d23d52 # v1.2.0
+        with:
+          comment: |
+            This PR contains commits without GitHub-verified signatures. Please sign the commits and push the updated branch.
+
+            Commit signing and DCO sign-off are separate requirements. See [GitHub's signing guide](https://docs.github.com/en/authentication/managing-commit-signature-verification/signing-commits).
+
+      - name: Report merge queue status
+        if: github.event_name == 'merge_group'
+        # The action needs a PR payload; signature feedback runs before queuing.
+        run: echo "Signature feedback runs on PRs; existing signed-commit rules apply when merging."
