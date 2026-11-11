@@ -130,16 +130,7 @@ func Clone(ctx context.Context, rootPath string, source api.Repository, shallow 
 
 	repo, err := git.PlainCloneContext(ctx, r.path, false, cloneOpts)
 	if err != nil {
-		l.Info("falling back to host 'git', failed to clone the repo with Zarf", "url", gitURLNoRef, "error", err)
-		err := r.gitCloneFallback(ctx, gitURLNoRef, ref, shallow)
-		if err != nil {
-			return nil, err
-		}
-		err = checkout(refPlain, ref, r)
-		if err != nil {
-			return nil, err
-		}
-		return r, nil
+		return nil, fmt.Errorf("failed to clone the git repository: %w", err)
 	}
 
 	// If we're cloning the whole repo, we need to also fetch the other branches besides the default.
@@ -182,11 +173,10 @@ func (r *Repository) cloneCommit(ctx context.Context, address, commit string, au
 		Tags:       git.NoTags,
 		Auth:       auth,
 	})
-	if err == nil || errors.Is(err, git.NoErrAlreadyUpToDate) {
-		return nil
+	if err != nil && !errors.Is(err, git.NoErrAlreadyUpToDate) {
+		return fmt.Errorf("failed to fetch the commit with Zarf: %w", err)
 	}
-	logger.From(ctx).Info("falling back to host 'git', failed to fetch the commit with Zarf", "url", address, "commit", commit, "error", err)
-	return r.gitFetchCommitFallback(ctx, commit)
+	return nil
 }
 
 // Repository manages a local git repository.
