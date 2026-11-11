@@ -1182,3 +1182,29 @@ func TestDeployedPackageGetDeployConfigCopiesNestedValues(t *testing.T) {
 	require.True(t, ok)
 	require.Equal(t, config, laterSnapshot)
 }
+
+func TestMergeStateAgentMutationPolicy(t *testing.T) {
+	t.Parallel()
+	for _, tt := range []struct {
+		name     string
+		existing MutationPolicy
+		option   MutationPolicy
+		want     MutationPolicy
+	}{
+		{"new agent defaults to all", "", "", MutationPolicyAll},
+		{"explicit labeled", "", MutationPolicyLabeled, MutationPolicyLabeled},
+		{"preserve labeled", MutationPolicyLabeled, "", MutationPolicyLabeled},
+		{"explicit all overrides labeled", MutationPolicyLabeled, MutationPolicyAll, MutationPolicyAll},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			existing := &State{AgentInfo: AgentInfo{MutationPolicy: tt.existing}}
+			got, err := Merge(existing, MergeOptions{
+				Services:            NewServiceSet(AgentKey),
+				AgentMutationPolicy: tt.option,
+			})
+			require.NoError(t, err)
+			require.Equal(t, tt.want, got.AgentInfo.MutationPolicy)
+			require.Equal(t, tt.existing, existing.AgentInfo.MutationPolicy)
+		})
+	}
+}

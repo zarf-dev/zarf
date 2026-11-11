@@ -314,8 +314,12 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 		s.InjectorInfo.Port = opts.InjectorPort
 	}
 
-	if s.AgentInfo.IsConfigured() && opts.AgentMutationPolicy != "" {
-		s.AgentInfo.MutationPolicy = opts.AgentMutationPolicy
+	if s.AgentInfo.IsConfigured() {
+		if opts.AgentMutationPolicy != "" {
+			s.AgentInfo.MutationPolicy = opts.AgentMutationPolicy
+		} else if s.AgentInfo.MutationPolicy == "" {
+			s.AgentInfo.MutationPolicy = state.MutationPolicyAll
+		}
 	}
 
 	// Save the state back to K8s
