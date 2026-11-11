@@ -1,10 +1,45 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import path from "node:path";
-import { rewriteUrl, fixEscapingRelative, rewriteVersionedAssetImport } from "./remark-link-rewrite.ts";
+import { createMarkdownProcessor, unified } from "@astrojs/markdown-remark";
+import { remarkLinkRewrite, rewriteUrl, fixEscapingRelative, rewriteVersionedAssetImport } from "./remark-link-rewrite.ts";
 
 const sections = new Set(["commands", "ref", "tutorials", "getting-started", "faq"]);
 const prefix = "/v0-76";
+
+test("renders archived navigation links alongside shared tutorial recordings", async () => {
+  const processor = await createMarkdownProcessor({
+    syntaxHighlight: false,
+    remarkPlugins: [[remarkLinkRewrite, { srcDir: "/docs", sections: [...sections] }]],
+  });
+  const { code } = await processor.render(`
+[Tutorial](/tutorials/initializing/)
+
+<a href="/tutorials/initializing/">Tutorial</a>
+<iframe src="/tutorials/k3s_init.html" width="100%"></iframe>
+`, { fileURL: new URL("file:///docs/v1-0/tutorials/initializing.md") });
+
+  assert.ok(code.includes('href="/v1-0/tutorials/initializing/"'));
+  assert.ok(code.includes('<a href="/v1-0/tutorials/initializing/">'));
+  assert.ok(code.includes('src="/tutorials/k3s_init.html"'));
+});
+
+test("compiles archived MDX links alongside shared tutorial recordings", async () => {
+  const processor = unified({
+    remarkPlugins: [[remarkLinkRewrite, { srcDir: "/docs", sections: [...sections] }]],
+  });
+  const renderer = await processor.createMdxRenderer!(
+    { syntaxHighlight: false },
+    { optimize: false },
+  );
+  const { code } = await renderer.process(`
+<a href="/tutorials/initializing/">Tutorial</a>
+<iframe src="/tutorials/k3s_init.html" />
+`, "/docs/v1-0/tutorials/initializing.mdx", {});
+
+  assert.ok(code.includes('href: "/v1-0/tutorials/initializing/"'));
+  assert.ok(code.includes('src: "/tutorials/k3s_init.html"'));
+});
 
 test("prefixes root-absolute links into known sections", () => {
   assert.equal(rewriteUrl("/commands/zarf", prefix, sections), "/v0-76/commands/zarf");
