@@ -181,6 +181,8 @@ func Remove(ctx context.Context, definition api.Package, opts RemoveOptions) err
 				DefaultConfig: comp.Actions.OnRemove.Defaults,
 				Values:        vals,
 				StateAccess:   stateAccess,
+				Package:       definition,
+				Component:     comp,
 			})
 			if err != nil {
 				return fmt.Errorf("unable to run the before action: %w", err)
@@ -212,6 +214,8 @@ func Remove(ctx context.Context, definition api.Package, opts RemoveOptions) err
 				DefaultConfig: comp.Actions.OnRemove.Defaults,
 				Values:        vals,
 				StateAccess:   stateAccess,
+				Package:       definition,
+				Component:     comp,
 			})
 			if err != nil {
 				return fmt.Errorf("unable to run the after action: %w", err)
@@ -220,6 +224,8 @@ func Remove(ctx context.Context, definition api.Package, opts RemoveOptions) err
 				DefaultConfig: comp.Actions.OnRemove.Defaults,
 				Values:        vals,
 				StateAccess:   stateAccess,
+				Package:       definition,
+				Component:     comp,
 			})
 			if err != nil {
 				return fmt.Errorf("unable to run the success action: %w", err)
@@ -250,6 +256,8 @@ func Remove(ctx context.Context, definition api.Package, opts RemoveOptions) err
 				DefaultConfig: comp.Actions.OnRemove.Defaults,
 				Values:        vals,
 				StateAccess:   stateAccess,
+				Package:       definition,
+				Component:     comp,
 			})
 			if removeErr != nil {
 				return errors.Join(fmt.Errorf("unable to run the failure action: %w", err), removeErr)

@@ -156,6 +156,72 @@ func TestObjects_WithPackage(t *testing.T) {
 	}
 }
 
+func TestObjects_WithComponent(t *testing.T) {
+	tests := []struct {
+		name         string
+		pkg          api.Package
+		comp         api.Component
+		expectedType any
+		template     string
+		expected     string
+	}{
+		{
+			name:         "v1alpha1 component",
+			expectedType: v1alpha1.ZarfComponent{},
+			pkg: convert.PackageFromV1alpha1(v1alpha1.ZarfPackage{
+				APIVersion: v1alpha1.APIVersion,
+			}),
+			comp: api.Component{
+				Name: "my-comp",
+				Images: []api.Image{
+					{Name: "nginx:alpine"},
+				},
+			},
+			template: "{{ .Component.Name }}|{{ index .Component.GetImages 0 }}",
+			expected: "my-comp|nginx:alpine",
+		},
+		{
+			name:         "v1beta1 component",
+			expectedType: v1beta1.Component{},
+			pkg: convert.PackageFromV1beta1(v1beta1.Package{
+				APIVersion: v1beta1.APIVersion,
+			}),
+			comp: api.Component{
+				Name: "web-server",
+				Images: []api.Image{
+					{ID: "web-img", Name: "ghcr.io/zarf-dev/agent:1.2.3"},
+				},
+			},
+			template: `{{ .Component.Name }}|{{ (.Component.GetImageByID "web-img").Reference }}|{{ (.Component.GetImageByID "web-img").Tag }}`,
+			expected: "web-server|ghcr.io/zarf-dev/agent:1.2.3|1.2.3",
+		},
+		{
+			name: "empty component does not add key",
+			pkg: convert.PackageFromV1beta1(v1beta1.Package{
+				APIVersion: v1beta1.APIVersion,
+			}),
+			comp: api.Component{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			objects := make(Objects)
+			result := objects.WithComponent(tt.comp, tt.pkg)
+			if tt.expectedType == nil {
+				_, exists := result[objectKeyComponent]
+				require.False(t, exists)
+				return
+			}
+			require.IsType(t, tt.expectedType, result[objectKeyComponent])
+
+			output, err := Apply(context.Background(), tt.template, result)
+			require.NoError(t, err)
+			require.Equal(t, tt.expected, output)
+		})
+	}
+}
+
 func TestObjects_WithConstants(t *testing.T) {
 	tests := []struct {
 		name      string
@@ -352,6 +418,21 @@ func TestApply(t *testing.T) {
 				},
 			},
 			wantErr: true,
+		},
+		{
+			name: "component direct lookup",
+			s:    `component {{ .Component.Name }} has image {{ (.Component.GetImageByID "web").Reference }}`,
+			objects: Objects{
+				objectKeyComponent: v1beta1.Component{
+					Name: "web-component",
+					ComponentSpec: v1beta1.ComponentSpec{
+						Images: []v1beta1.Image{
+							{ID: "web", Name: "nginx:1.25"},
+						},
+					},
+				},
+			},
+			expected: "component web-component has image nginx:1.25",
 		},
 		{
 			name:    "invalid template syntax",
