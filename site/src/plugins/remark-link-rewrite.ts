@@ -114,11 +114,13 @@ export function remarkLinkRewrite(options: Options) {
       node.url = fixRelative(node.url);
     });
 
-    // Raw HTML anchors/images embedded in Markdown.
+    // Navigation links follow the archived version; asset sources stay shared
+    // at the root, matching Markdown images (e.g. public tutorial recordings).
     visit(tree, "html", (node: any) => {
       node.value = node.value.replace(
-        /((?:href|src)=")([^"]*)/g,
-        (_match: string, attr: string, url: string) => attr + fixUrl(url),
+        /((href|src)=")([^"]*)/g,
+        (_match: string, attr: string, name: string, url: string) =>
+          attr + (name === "href" ? fixUrl(url) : fixRelative(url)),
       );
     });
 
@@ -128,7 +130,7 @@ export function remarkLinkRewrite(options: Options) {
       for (const attr of node.attributes ?? []) {
         if (attr.type !== "mdxJsxAttribute") continue;
         if ((attr.name === "href" || attr.name === "src") && typeof attr.value === "string") {
-          attr.value = fixUrl(attr.value);
+          attr.value = attr.name === "href" ? fixUrl(attr.value) : fixRelative(attr.value);
         } else if (attr.value?.data?.estree) {
           fixEstreeSources(attr.value.data.estree, fixRelative);
         }
