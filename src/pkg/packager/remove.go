@@ -37,6 +37,8 @@ type RemoveOptions struct {
 	// Timeout for Helm operations.
 	Timeout          time.Duration
 	SkipVersionCheck bool
+	// PruneScopes specifies the scopes to prune during removal.
+	PruneScopes PruneScopes
 }
 
 // Remove runs removal actions and uninstalls recorded Helm charts for components
@@ -46,6 +48,9 @@ type RemoveOptions struct {
 // selections. Standalone local packages without a deployment record never create one.
 func Remove(ctx context.Context, definition api.Package, opts RemoveOptions) error {
 	if err := definition.Validate(); err != nil {
+		return err
+	}
+	if err := opts.PruneScopes.Validate(PruneCommandRemove); err != nil {
 		return err
 	}
 	l := logger.From(ctx)
@@ -167,92 +172,23 @@ func Remove(ctx context.Context, definition api.Package, opts RemoveOptions) err
 			continue
 		}
 
-		depComp.Status = state.ComponentStatusRemoving //nolint:staticcheck // Legacy status remains persisted for compatibility.
-		depComp.LastEvent = state.ComponentEvent{Type: state.EventTypeRemove, Outcome: state.EventOutcomeInProgress, Timestamp: time.Now()}
-		if persistState {
-			if err := opts.Cluster.StoreDeployedPackage(ctx, *depPkg); err != nil {
-				l.Warn("unable to update secret for package, this may be normal if the cluster was removed", "pkgName", depPkg.Name, "error", err.Error())
-			}
-		}
-
-		err := func() error {
-			stateAccess := template.StateAccess{State: s, AccessKeys: comp.StateAccess}
-			err := actions.Run(ctx, cwd, comp.Actions.OnRemove.Before, actions.RunOptions{
-				DefaultConfig: comp.Actions.OnRemove.Defaults,
-				Values:        vals,
-				StateAccess:   stateAccess,
-			})
-			if err != nil {
-				return fmt.Errorf("unable to run the before action: %w", err)
-			}
-
-			if persistState {
-				for j := len(depComp.InstalledCharts) - 1; j >= 0; j-- {
-					chart := depComp.InstalledCharts[j]
-					err := helm.RemoveChart(ctx, chart.Namespace, chart.ChartName, opts.Timeout)
-					if err != nil && !errors.Is(err, driver.ErrReleaseNotFound) {
-						return fmt.Errorf("unable to uninstall the helm chart %s in the namespace %s: %w", chart.ChartName, chart.Namespace, err)
-					}
-					if errors.Is(err, driver.ErrReleaseNotFound) {
-						l.Warn("helm release was not found. was it already removed?", "name", chart.ChartName, "namespace", chart.Namespace)
-					}
-
-					// remove the helm chart from the installed charts slice.
-					depComp.InstalledCharts = slices.Delete(depComp.InstalledCharts, j, j+1)
-
-					err = opts.Cluster.StoreDeployedPackage(ctx, *depPkg)
-					if err != nil {
-						// We warn and ignore errors because we may have removed the cluster that this package was inside of
-						l.Warn("unable to update secret for package, this may be normal if the cluster was removed", "pkgName", depPkg.Name, "error", err.Error())
-					}
-				}
-			}
-
-			err = actions.Run(ctx, cwd, comp.Actions.OnRemove.After, actions.RunOptions{
-				DefaultConfig: comp.Actions.OnRemove.Defaults,
-				Values:        vals,
-				StateAccess:   stateAccess,
-			})
-			if err != nil {
-				return fmt.Errorf("unable to run the after action: %w", err)
-			}
-			err = actions.Run(ctx, cwd, comp.Actions.OnRemove.OnSuccess, actions.RunOptions{
-				DefaultConfig: comp.Actions.OnRemove.Defaults,
-				Values:        vals,
-				StateAccess:   stateAccess,
-			})
-			if err != nil {
-				return fmt.Errorf("unable to run the success action: %w", err)
-			}
-
-			// Remove completed components locally even when no deployment record exists.
-			depPkg.DeployedComponents = slices.Delete(depPkg.DeployedComponents, i, i+1)
-			if persistState {
-				err = opts.Cluster.StoreDeployedPackage(ctx, *depPkg)
-				if err != nil {
-					// We warn and ignore errors because we may have removed the cluster that this package was inside of
-					l.Warn("unable to update secret package, this may be normal if the cluster was removed", "pkgName", depPkg.Name, "error", err.Error())
-				}
-			}
-			return nil
-		}()
+		err := removeComponent(ctx, removeComponentOptions{
+			cluster:      opts.Cluster,
+			depPkg:       depPkg,
+			compIdx:      i,
+			comp:         comp,
+			s:            s,
+			vals:         vals,
+			cwd:          cwd,
+			timeout:      opts.Timeout,
+			persistState: persistState,
+		})
 		if err != nil {
 			if persistState {
-				depComp.Status = state.ComponentStatusFailed //nolint:staticcheck // Legacy status remains persisted for compatibility.
-				depComp.LastEvent = state.ComponentEvent{Type: state.EventTypeRemove, Outcome: state.EventOutcomeFailed, Timestamp: time.Now()}
 				depPkg.AppendEvent(removePackageEvent(state.EventOutcomeFailed))
 				if updateErr := opts.Cluster.StoreDeployedPackage(ctx, *depPkg); updateErr != nil {
 					l.Warn("unable to update secret for package, this may be normal if the cluster was removed", "pkgName", depPkg.Name, "error", updateErr.Error())
 				}
-			}
-			stateAccess := template.StateAccess{State: s, AccessKeys: comp.StateAccess}
-			removeErr := actions.Run(ctx, cwd, comp.Actions.OnRemove.OnFailure, actions.RunOptions{
-				DefaultConfig: comp.Actions.OnRemove.Defaults,
-				Values:        vals,
-				StateAccess:   stateAccess,
-			})
-			if removeErr != nil {
-				return errors.Join(fmt.Errorf("unable to run the failure action: %w", err), removeErr)
 			}
 			return err
 		}
@@ -273,3 +209,115 @@ func Remove(ctx context.Context, definition api.Package, opts RemoveOptions) err
 	l.Info("package successfully removed", "name", definition.Metadata.Name)
 	return nil
 }
+
+type removeComponentOptions struct {
+	cluster      *cluster.Cluster
+	depPkg       *state.DeployedPackage
+	compIdx      int
+	comp         api.Component
+	s            *state.State
+	vals         value.Values
+	cwd          string
+	timeout      time.Duration
+	persistState bool
+	removeChart  func(ctx context.Context, namespace, name string, timeout time.Duration) error
+}
+
+// removeComponent uninstalls Helm charts and executes OnRemove actions for a single component.
+func removeComponent(ctx context.Context, opts removeComponentOptions) error {
+	l := logger.From(ctx)
+	depPkg := opts.depPkg
+	depComp := &depPkg.DeployedComponents[opts.compIdx]
+	comp := opts.comp
+
+	removeChartFn := opts.removeChart
+	if removeChartFn == nil {
+		removeChartFn = helm.RemoveChart
+	}
+
+	if opts.timeout == 0 {
+		opts.timeout = config.ZarfDefaultTimeout
+	}
+	if opts.cwd == "" {
+		var err error
+		opts.cwd, err = os.Getwd()
+		if err != nil {
+			return fmt.Errorf("failed to get working directory: %w", err)
+		}
+	}
+
+	depComp.Status = state.ComponentStatusRemoving //nolint:staticcheck // Legacy status remains persisted for compatibility.
+	depComp.LastEvent = state.ComponentEvent{Type: state.EventTypeRemove, Outcome: state.EventOutcomeInProgress, Timestamp: time.Now()}
+	if opts.persistState && opts.cluster != nil {
+		if err := opts.cluster.StoreDeployedPackage(ctx, *depPkg); err != nil {
+			l.Warn("unable to update secret for package, this may be normal if the cluster was removed", "pkgName", depPkg.Name, "error", err.Error())
+		}
+	}
+
+	stateAccess := template.StateAccess{State: opts.s, AccessKeys: comp.StateAccess}
+	runAction := func(actionList []api.Action) error {
+		return actions.Run(ctx, opts.cwd, actionList, actions.RunOptions{
+			DefaultConfig: comp.Actions.OnRemove.Defaults,
+			Values:        opts.vals,
+			StateAccess:   stateAccess,
+		})
+	}
+
+	err := func() error {
+		if err := runAction(comp.Actions.OnRemove.Before); err != nil {
+			return fmt.Errorf("unable to run the before action: %w", err)
+		}
+
+		if opts.persistState && opts.cluster != nil {
+			for j := len(depComp.InstalledCharts) - 1; j >= 0; j-- {
+				chart := depComp.InstalledCharts[j]
+				err := removeChartFn(ctx, chart.Namespace, chart.ChartName, opts.timeout)
+				if err != nil && !errors.Is(err, driver.ErrReleaseNotFound) {
+					return fmt.Errorf("unable to uninstall the helm chart %s in the namespace %s: %w", chart.ChartName, chart.Namespace, err)
+				}
+				if errors.Is(err, driver.ErrReleaseNotFound) {
+					l.Warn("helm release was not found. was it already removed?", "name", chart.ChartName, "namespace", chart.Namespace)
+				}
+
+				// remove the helm chart from the installed charts slice.
+				depComp.InstalledCharts = slices.Delete(depComp.InstalledCharts, j, j+1)
+
+				if err := opts.cluster.StoreDeployedPackage(ctx, *depPkg); err != nil {
+					l.Warn("unable to update secret for package, this may be normal if the cluster was removed", "pkgName", depPkg.Name, "error", err.Error())
+				}
+			}
+		}
+
+		if err := runAction(comp.Actions.OnRemove.After); err != nil {
+			return fmt.Errorf("unable to run the after action: %w", err)
+		}
+		if err := runAction(comp.Actions.OnRemove.OnSuccess); err != nil {
+			return fmt.Errorf("unable to run the success action: %w", err)
+		}
+
+		depPkg.DeployedComponents = slices.Delete(depPkg.DeployedComponents, opts.compIdx, opts.compIdx+1)
+		if opts.persistState && opts.cluster != nil {
+			if err := opts.cluster.StoreDeployedPackage(ctx, *depPkg); err != nil {
+				l.Warn("unable to update secret package, this may be normal if the cluster was removed", "pkgName", depPkg.Name, "error", err.Error())
+			}
+		}
+		return nil
+	}()
+
+	if err != nil {
+		if opts.persistState && opts.cluster != nil {
+			depComp.Status = state.ComponentStatusFailed //nolint:staticcheck // Legacy status remains persisted for compatibility.
+			depComp.LastEvent = state.ComponentEvent{Type: state.EventTypeRemove, Outcome: state.EventOutcomeFailed, Timestamp: time.Now()}
+			if updateErr := opts.cluster.StoreDeployedPackage(ctx, *depPkg); updateErr != nil {
+				l.Warn("unable to update secret for package, this may be normal if the cluster was removed", "pkgName", depPkg.Name, "error", updateErr.Error())
+			}
+		}
+		removeErr := runAction(comp.Actions.OnRemove.OnFailure)
+		if removeErr != nil {
+			return errors.Join(fmt.Errorf("unable to run the failure action: %w", err), removeErr)
+		}
+		return err
+	}
+	return nil
+}
+
