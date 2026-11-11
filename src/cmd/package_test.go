@@ -1021,3 +1021,35 @@ func TestSkeletonImportExample(t *testing.T) {
 `
 	require.Equal(t, expected, string(data))
 }
+
+func TestPackageInspectSignatureCommand(t *testing.T) {
+	t.Parallel()
+	v := viper.New()
+	arch := &architectureOptions{}
+
+	cmd := newPackageInspectSignatureCommand(v, arch)
+	require.Equal(t, "signature [ PACKAGE_SOURCE ]", cmd.Use)
+	require.NotEmpty(t, cmd.Short)
+	require.NotEmpty(t, cmd.Long)
+	require.NotEmpty(t, cmd.Example)
+
+	rawFlag := cmd.Flags().Lookup("raw")
+	require.NotNil(t, rawFlag)
+	require.Equal(t, "false", rawFlag.DefValue)
+
+	concurrencyFlag := cmd.Flags().Lookup("oci-concurrency")
+	require.NotNil(t, concurrencyFlag)
+
+	inspectCmd := newPackageInspectCommand(v, arch)
+	sigSubCmd, _, err := inspectCmd.Find([]string{"signature"})
+	require.NoError(t, err)
+	require.Equal(t, "signature [ PACKAGE_SOURCE ]", sigSubCmd.Use)
+
+	t.Run("rejects cluster sources", func(t *testing.T) {
+		t.Parallel()
+		o := newPackageInspectSignatureOptions()
+		o.architectureOptions = arch
+		err := o.run(t.Context(), []string{"my-package"})
+		require.ErrorContains(t, err, "inspect signature is not supported for cluster sources")
+	})
+}
