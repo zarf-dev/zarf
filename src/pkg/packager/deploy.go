@@ -144,6 +144,7 @@ type deployer struct {
 	configDigest  digest.Digest
 	oldComponents map[string]api.Component
 	removeChart   func(ctx context.Context, namespace, name string, timeout time.Duration) error
+	deleteImage   func(ctx context.Context, c *cluster.Cluster, s *state.State, ref string) error
 
 	// runtimeDir holds runtime files across components. v1alpha1 uses the package layout.
 	runtimeDir string
@@ -455,6 +456,46 @@ func (d *deployer) reconcileComponentCharts(ctx context.Context, depComp *state.
 	return nil
 }
 
+func (d *deployer) pruneOrphanedImages(ctx context.Context, pkgLayout *layout.PackageLayout) error {
+	if d.deployedPkg == nil || !d.isConnectedToCluster() || d.s == nil {
+		return nil
+	}
+	l := logger.From(ctx)
+	pkg := pkgLayout.Definition()
+
+	activeImages := make(map[string]bool)
+	for _, comp := range pkg.Components {
+		for _, img := range comp.GetImages() {
+			activeImages[img] = true
+		}
+	}
+
+	var candidateImages []string
+	for _, oldComp := range d.oldComponents {
+		for _, img := range oldComp.GetImages() {
+			if !activeImages[img] {
+				candidateImages = append(candidateImages, img)
+			}
+		}
+	}
+	if len(candidateImages) == 0 {
+		return nil
+	}
+
+	allPackages, err := d.c.GetDeployedZarfPackages(ctx)
+	if err != nil {
+		l.Warn("unable to query deployed packages for image reference counting", "error", err.Error())
+		return nil
+	}
+
+	unref := FilterUnreferencedImages(candidateImages, allPackages, d.deployedPkg.Name, activeImages)
+	if len(unref) == 0 {
+		return nil
+	}
+
+	return pruneImagesFromRegistry(ctx, d.c, d.s, unref, d.deleteImage)
+}
+
 func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOptions) (deployedComponents []state.DeployedComponent, err error) {
 	l := logger.From(ctx)
 	pkg := pkgLayout.Definition()
@@ -475,7 +516,7 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 		}()
 	}
 
-	clusterRequired := opts.PruneScopes.ClusterResources()
+	clusterRequired := opts.PruneScopes.ClusterResources() || opts.PruneScopes.Images()
 	if !clusterRequired {
 		for _, c := range pkg.Components {
 			if c.RequiresCluster() {
@@ -655,6 +696,11 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 		d.deployedPkg.AppendEvent(d.deployPackageEvent(pkgLayout, opts, state.EventOutcomeSucceeded))
 		d.deployedPkg.SetDeployConfig(d.deployConfig)
 		if err := d.persistDeploymentState(ctx, deployedComponents); err != nil {
+			return nil, err
+		}
+	}
+	if opts.PruneScopes.Images() && d.isConnectedToCluster() {
+		if err := d.pruneOrphanedImages(ctx, pkgLayout); err != nil {
 			return nil, err
 		}
 	}

@@ -146,3 +146,12 @@ func TestRemoveComponentFallback(t *testing.T) {
 	require.NoError(t, err)
 	require.Empty(t, depPkg.DeployedComponents)
 }
+
+func TestPruneOrphanedImagesNoCluster(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	d := &deployer{}
+
+	err := d.pruneOrphanedImages(ctx, nil)
+	require.NoError(t, err)
+}

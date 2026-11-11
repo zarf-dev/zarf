@@ -108,6 +108,16 @@ func Remove(ctx context.Context, definition api.Package, opts RemoveOptions) err
 			requiresCluster = true
 		}
 	}
+	if opts.PruneScopes.Images() && opts.Cluster == nil {
+		return fmt.Errorf("pruning images requires cluster access but none was configured")
+	}
+
+	var candidateImages []string
+	if opts.PruneScopes.Images() && opts.Cluster != nil {
+		for _, comp := range definition.Components {
+			candidateImages = append(candidateImages, comp.GetImages()...)
+		}
+	}
 
 	// A local-only selection may still belong to a package recorded in the cluster.
 	var depPkg *state.DeployedPackage
@@ -203,6 +213,20 @@ func Remove(ctx context.Context, definition api.Package, opts RemoveOptions) err
 			}
 		} else if err := opts.Cluster.StoreDeployedPackage(ctx, *depPkg); err != nil {
 			l.Warn("unable to update secret for package, this may be normal if the cluster was removed", "pkgName", depPkg.Name, "error", err.Error())
+		}
+	}
+
+	if opts.PruneScopes.Images() && opts.Cluster != nil && len(candidateImages) > 0 {
+		allPackages, err := opts.Cluster.GetDeployedZarfPackages(ctx)
+		if err != nil {
+			l.Warn("unable to query deployed packages for image reference counting", "error", err.Error())
+		} else {
+			unref := FilterUnreferencedImages(candidateImages, allPackages, definition.Metadata.Name, nil)
+			if len(unref) > 0 {
+				if err := pruneImagesFromRegistry(ctx, opts.Cluster, s, unref, nil); err != nil {
+					l.Warn("failed to prune images from registry", "error", err.Error())
+				}
+			}
 		}
 	}
 
