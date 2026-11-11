@@ -1,0 +1,11 @@
+# Configuration options for the Zarf injector pod and service.
+# Runtime-owned fields (image, node, command, payload mounts, and exposed port) are managed by Zarf.
+injector:
+  # Labels that candidate nodes must match for injector pod scheduling.
+  nodeSelector: {}
+  # Tolerations applied to the injector pod to allow scheduling on tainted nodes (e.g. control-plane).
+  tolerations: []
+  # Declarative Pod manifest overlay to mutate injector pod metadata, securityContext, volumes, etc.
+  podTemplate: {}
+  # Declarative Service manifest overlay to mutate injector service annotations, etc.
+  serviceTemplate: {}

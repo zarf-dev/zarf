@@ -1,0 +1,61 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "injector": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "nodeSelector": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Labels that candidate nodes must match for injector pod scheduling."
+        },
+        "tolerations": {
+          "type": "array",
+          "description": "Tolerations applied to the injector pod to allow scheduling on tainted nodes.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "key": {
+                "type": "string"
+              },
+              "operator": {
+                "type": "string",
+                "enum": [
+                  "Equal",
+                  "Exists"
+                ]
+              },
+              "value": {
+                "type": "string"
+              },
+              "effect": {
+                "type": "string",
+                "enum": [
+                  "NoSchedule",
+                  "PreferNoSchedule",
+                  "NoExecute"
+                ]
+              },
+              "tolerationSeconds": {
+                "type": "integer"
+              }
+            }
+          }
+        },
+        "podTemplate": {
+          "type": "object",
+          "description": "Declarative Pod manifest overlay to mutate the injector pod."
+        },
+        "serviceTemplate": {
+          "type": "object",
+          "description": "Declarative Service manifest overlay to mutate the injector service."
+        }
+      }
+    }
+  }
+}

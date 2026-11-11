@@ -46,6 +46,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/yaml"
 )
 
 // DeployOptions are optional parameters to Deploy. Component selection is applied
@@ -79,6 +80,14 @@ type DeployOptions struct {
 	InjectorPort int
 	// InjectorImage is the injector container image. Proxy mode defaults to the image saved in cluster state and requires an image on first init.
 	InjectorImage string
+	// InjectorNodeSelector defines labels that candidate nodes must match for injector pod scheduling.
+	InjectorNodeSelector map[string]string
+	// InjectorTolerations are the tolerations applied to the injector pod to allow scheduling on tainted nodes.
+	InjectorTolerations []corev1.Toleration
+	// InjectorPodTemplate is an optional declarative Pod manifest used to mutate the injector pod.
+	InjectorPodTemplate *corev1.Pod
+	// InjectorServiceTemplate is an optional declarative Service manifest used to mutate the injector service.
+	InjectorServiceTemplate *corev1.Service
 	// AgentTLS allows providing user-managed TLS certificates for the agent. When nil, certs are auto-generated.
 	AgentTLS *pki.GeneratedPKI
 	// AgentMutationPolicy controls whether the agent mutates by default (default-mutate) or only on explicit label (default-ignore).
@@ -601,12 +610,11 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 			d.s.InjectorInfo.PayLoadConfigMapAmount = len(payloadCMs)
 			d.s.InjectorInfo.PayLoadShaSum = shasum
 		case state.RegistryModeNodePort:
-			seedImage, seedPort, err := d.c.StartInjection(ctx, d.runtimeDir, pkgLayout.GetImageDirPath(), component.GetImages(), pkg.Metadata.Name, pkg.Metadata.Architecture, cluster.ZarfInjectorOptions{
-				InjectorNodePort: uint16(d.s.InjectorInfo.Port),
-				RegistryNodePort: uint16(d.s.RegistryInfo.Port),
-				IPFamily:         d.s.IPFamily,
-				Image:            opts.InjectorImage,
-			})
+			injectorOpts, err := d.resolveInjectorOptions(opts)
+			if err != nil {
+				return nil, err
+			}
+			seedImage, seedPort, err := d.c.StartInjection(ctx, d.runtimeDir, pkgLayout.GetImageDirPath(), component.GetImages(), pkg.Metadata.Name, pkg.Metadata.Architecture, injectorOpts)
 			if err != nil {
 				return nil, err
 			}
@@ -644,6 +652,84 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 	}
 
 	return charts, nil
+}
+
+func (d *deployer) resolveInjectorOptions(opts DeployOptions) (cluster.ZarfInjectorOptions, error) {
+	injectorOpts := cluster.ZarfInjectorOptions{
+		Image:           opts.InjectorImage,
+		NodeSelector:    opts.InjectorNodeSelector,
+		Tolerations:     append([]corev1.Toleration(nil), opts.InjectorTolerations...),
+		PodTemplate:     opts.InjectorPodTemplate,
+		ServiceTemplate: opts.InjectorServiceTemplate,
+	}
+	if d.s != nil {
+		injectorOpts.InjectorNodePort = uint16(d.s.InjectorInfo.Port)
+		injectorOpts.RegistryNodePort = uint16(d.s.RegistryInfo.Port)
+		injectorOpts.IPFamily = d.s.IPFamily
+	}
+
+	if len(d.vals) > 0 {
+		if rawNodeSelector, err := d.vals.Extract(value.Path(".injector.nodeSelector")); err == nil && rawNodeSelector != nil {
+			data, err := yaml.Marshal(rawNodeSelector)
+			if err != nil {
+				return injectorOpts, fmt.Errorf("unable to encode .injector.nodeSelector values: %w", err)
+			}
+			var ns map[string]string
+			if err := yaml.Unmarshal(data, &ns); err != nil {
+				return injectorOpts, fmt.Errorf("unable to decode .injector.nodeSelector values: %w", err)
+			}
+			if injectorOpts.NodeSelector == nil {
+				injectorOpts.NodeSelector = map[string]string{}
+			}
+			for k, v := range ns {
+				if _, exists := injectorOpts.NodeSelector[k]; !exists {
+					injectorOpts.NodeSelector[k] = v
+				}
+			}
+		}
+
+		if rawTolerations, err := d.vals.Extract(value.Path(".injector.tolerations")); err == nil && rawTolerations != nil {
+			data, err := yaml.Marshal(rawTolerations)
+			if err != nil {
+				return injectorOpts, fmt.Errorf("unable to encode .injector.tolerations values: %w", err)
+			}
+			var tols []corev1.Toleration
+			if err := yaml.Unmarshal(data, &tols); err != nil {
+				return injectorOpts, fmt.Errorf("unable to decode .injector.tolerations values: %w", err)
+			}
+			injectorOpts.Tolerations = append(injectorOpts.Tolerations, tols...)
+		}
+
+		if rawPodTemplate, err := d.vals.Extract(value.Path(".injector.podTemplate")); err == nil && rawPodTemplate != nil {
+			if injectorOpts.PodTemplate == nil {
+				data, err := yaml.Marshal(rawPodTemplate)
+				if err != nil {
+					return injectorOpts, fmt.Errorf("unable to encode .injector.podTemplate values: %w", err)
+				}
+				pod := &corev1.Pod{}
+				if err := yaml.Unmarshal(data, pod); err != nil {
+					return injectorOpts, fmt.Errorf("unable to decode .injector.podTemplate values: %w", err)
+				}
+				injectorOpts.PodTemplate = pod
+			}
+		}
+
+		if rawSvcTemplate, err := d.vals.Extract(value.Path(".injector.serviceTemplate")); err == nil && rawSvcTemplate != nil {
+			if injectorOpts.ServiceTemplate == nil {
+				data, err := yaml.Marshal(rawSvcTemplate)
+				if err != nil {
+					return injectorOpts, fmt.Errorf("unable to encode .injector.serviceTemplate values: %w", err)
+				}
+				svc := &corev1.Service{}
+				if err := yaml.Unmarshal(data, svc); err != nil {
+					return injectorOpts, fmt.Errorf("unable to decode .injector.serviceTemplate values: %w", err)
+				}
+				injectorOpts.ServiceTemplate = svc
+			}
+		}
+	}
+
+	return injectorOpts, nil
 }
 
 func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.PackageLayout, component api.Component, noImgChecksum bool, noImgPush bool, opts DeployOptions) (_ []state.InstalledChart, err error) {

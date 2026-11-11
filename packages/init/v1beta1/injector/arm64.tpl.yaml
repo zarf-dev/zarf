@@ -6,6 +6,10 @@ metadata:
   description: Inject the seed registry into a running cluster pod
 variant:
   architecture: arm64
+values:
+  schema: values.schema.json
+  files:
+    - injector-values.yaml
 component:
   service:
     name: injector
