@@ -47,79 +47,58 @@ b.BWHI {background-color: #aaaaaa}
 </head>
 <body>
 <pre>
-<b class="WHI">$ zarf package deploy --take-ownership sget://defenseunicorns/zarf-hello-world:$(uname -m) --confirm</b>
-<b class=YEL>Saving log file to</b>
-<b class=YEL>/var/folders/bk/rz1xx2sd5zn134c0_j1s2n5r0000gp/T/zarf-2023-03-23-10-20-59-1265818177.log</b>
-<b class=YEL></b>  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Loading Zarf Package sget://defenseunicorns/zarf-hello-world:$(uname -m)</b>
-<b style="color:#55ffff;"></b><b style="color:#55ffff;">Loading Zarf Package sget://defenseunicorns/zarf-hello-world:$(uname -m)</b>
+<b class="WHI">$ zarf package deploy \</b>
+<b class="WHI">  oci://ghcr.io/zarf-dev/packages/dos-games:1.3.0 \</b>
+<b class="WHI">  --take-ownership \</b>
+<b class="WHI">  --confirm</b>
+<b class="HIK">2026-11-04 12:56:53</b> <b class="HIG">INF</b> using config file <b class="HIC">location=</b><b class="WHI">/tmp/zarf/zarf-config.toml</b>
+<b class="HIK">2026-11-04 12:56:54</b> <b class="HIG">INF</b> pulling package <b class="HIC">name=</b><b class="WHI">ghcr.io/zarf-dev/packages/dos-games:1.3.0</b> <b class="HIC">size=</b><b class="WHI">3.76 MBs</b>
+<b class="HIK">2026-11-04 12:56:54</b> <b class="HIG">INF</b> finished pulling package layers <b class="HIC">duration=</b><b class="WHI">100ms</b>
+<b class="HIK">2026-11-04 12:56:54</b> <b class="HIY">WRN</b> package signature not verified; continuing <b class="HIC">reason=</b><b class="WHI">package is signed but no verification material was provided (--key, --certificate-identity + --certificate-oidc-issuer): no verification material available</b>
 
+<b class="HIC">kind</b>: <b class="HIM">ZarfPackageConfig</b>
+<b class="HIC">metadata</b>:
+  <b class="HIC">name</b>: <b class="HIM">dos-games</b>
+  <b class="HIC">description</b>: <b class="HIM">Simple example to load classic DOS games into K8s in the airgap</b>
+  <b class="HIC">version</b>: <b class="HIM">1.3.0</b>
+  <b class="HIC">architecture</b>: <b class="HIM">arm64</b>
+  <b class="HIC">aggregateChecksum</b>: <b class="HIM">fd88f8588ecd15256af8382417fcb15d1aa4875d7d1d9f4ba49b15ea1a4e62d7</b>
+  <b class="HIC">allowNamespaceOverride</b>: <b class="HIW">true</b>
+<b class="HIC">build</b>:
+  <b class="HIC">architecture</b>: <b class="HIM">arm64</b>
+  <b class="HIC">timestamp</b>: <b class="HIM">Mon, 26 Jan 2026 18:44:13 +0000</b>
+  <b class="HIC">version</b>: <b class="HIM">v0.70.1</b>
+  <b class="HIC">migrations</b>:
+  - <b class="HIM">scripts-to-actions</b>
+  - <b class="HIM">pluralize-set-variable</b>
+  <b class="HIC">signed</b>: <b class="HIW">true</b>
+<b class="HIC">components</b>:
+- <b class="HIC">name</b>: <b class="HIM">baseline</b>
+  <b class="HIC">required</b>: <b class="HIW">true</b>
+  <b class="HIC">manifests</b>:
+  - <b class="HIC">name</b>: <b class="HIM">multi-games</b>
+    <b class="HIC">namespace</b>: <b class="HIM">dos-games</b>
+    <b class="HIC">files</b>:
+    - <b class="HIM">manifests/deployment.yaml</b>
+    - <b class="HIM">manifests/service.yaml</b>
+    <b class="HIC">template</b>: <b class="HIW">false</b>
+  <b class="HIC">images</b>:
+  - <b class="HIM">ghcr.io/zarf-dev/doom-game:0.0.1</b>
+<b class="HIC">documentation</b>:
+  <b class="HIC">walkthrough</b>: <b class="HIM">secrets.md</b>
+<b class="HIK">2026-11-04 12:56:54</b> <b class="HIG">INF</b> documentation available for this package - use 'zarf package inspect documentation' to view
+<b class="HIK">2026-11-04 12:56:54</b> <b class="HIG">INF</b> starting deploy <b class="HIC">package=</b><b class="WHI">dos-games</b>
+<b class="HIK">2026-11-04 12:56:54</b> <b class="HIG">INF</b> waiting for cluster connection
+<b class="HIK">2026-11-04 12:56:54</b> <b class="HIG">INF</b> deploying component <b class="HIC">name=</b><b class="WHI">baseline</b>
+<b class="HIK">2026-11-04 12:56:54</b> <b class="HIG">INF</b> pushing image <b class="HIC">name=</b><b class="WHI">ghcr.io/zarf-dev/doom-game:0.0.1</b> <b class="HIC">count=</b><b class="WHI">1/1</b>
+<b class="HIK">2026-11-04 12:56:54</b> <b class="HIG">INF</b> done pushing images <b class="HIC">count=</b><b class="WHI">1</b> <b class="HIC">duration=</b><b class="WHI">700ms</b>
+<b class="HIK">2026-11-04 12:56:54</b> <b class="HIG">INF</b> processing Helm chart <b class="HIC">name=</b><b class="WHI">raw-dos-games-baseline-multi-games</b> <b class="HIC">source=</b><b class="WHI">Zarf-generated</b>
+<b class="HIK">2026-11-04 12:56:54</b> <b class="HIG">INF</b> performing Helm install <b class="HIC">chart=</b><b class="WHI">raw-dos-games-baseline-multi-games</b>
+<b class="HIK">2026-11-04 12:56:57</b> <b class="HIG">INF</b> running health checks <b class="HIC">chart=</b><b class="WHI">raw-dos-games-baseline-multi-games</b>
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-<b style="color:#55ffff;">kind</b>:<b style="color:#ff55ff;"> ZarfPackageConfig</b>
-<b style="color:#ff55ff;"></b><b style="color:#55ffff;">metadata</b>:<b style="color:#55ffff;"></b>
-<b style="color:#55ffff;">  name</b>:<b style="color:#ff55ff;"> dos-games</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">description</b>:<b style="color:#ff55ff;"> Simple example to load classic DOS games into K8s in the airgap</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">architecture</b>:<b style="color:#ff55ff;"> arm64</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">aggregateChecksum</b>:<b style="color:#ff55ff;"> ec858bf64904388ac3b0561fe9958e5811c7543ef7736c7eb760029d6f76c8ee</b>
-<b style="color:#ff55ff;"></b><b style="color:#55ffff;">build</b>:<b style="color:#55ffff;"></b>
-<b style="color:#55ffff;">  terminal</b>:<b style="color:#ff55ff;"> JvBUnicornMBP5</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">user</b>:<b style="color:#ff55ff;"> jason</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">architecture</b>:<b style="color:#ff55ff;"> arm64</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">timestamp</b>:<b style="color:#ff55ff;"> Wed, 10 May 2023 11:24:27 -0400</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">version</b>:<b style="color:#ff55ff;"> v0.26.2</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">migrations</b>:
-  -<b style="color:#ff55ff;"> scripts-to-actions</b>
-<b style="color:#ff55ff;">  </b>-<b style="color:#ff55ff;"> pluralize-set-variable</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">differential</b>:<b style="color:#ffffff;"> false</b>
-<b style="color:#ffffff;"></b><b style="color:#55ffff;">components</b>:
--<b style="color:#55ffff;"> name</b>:<b style="color:#ff55ff;"> baseline</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">required</b>:<b style="color:#ffffff;"> true</b>
-<b style="color:#ffffff;">  </b><b style="color:#55ffff;">manifests</b>:
-  -<b style="color:#55ffff;"> name</b>:<b style="color:#ff55ff;"> multi-games</b>
-<b style="color:#ff55ff;">    </b><b style="color:#55ffff;">namespace</b>:<b style="color:#ff55ff;"> dos-games</b>
-<b style="color:#ff55ff;">    </b><b style="color:#55ffff;">files</b>:
-    -<b style="color:#ff55ff;"> manifests/deployment.yaml</b>
-<b style="color:#ff55ff;">    </b>-<b style="color:#ff55ff;"> manifests/service.yaml</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">images</b>:
-  -<b style="color:#ff55ff;"> defenseunicorns/zarf-game:multi-tile-dark</b>
-
-<b class=YEL>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>
-<b class=YEL></b>
-<b class=YEL>This package has 1 artifacts with software bill-of-materials (SBOM) included. You can view them now</b>
-<b class=YEL>in the zarf-sbom folder in this directory or to go directly to one, open this in your browser:</b>
-<b class=YEL></b><b class=WHI></b><b class=HIW>/Users/jason/src/github.com/zarf-dev/zarf/zarf-sbom/sbom-viewer-defenseunicorns_zarf-game_multi-tile-dark.html</b><b class=YEL></b><b class=WHI></b><b class=YEL></b>
-<b class=YEL></b>
-<b class=YEL>* This directory will be removed after package deployment.</b>
-<b class=YEL></b>
-<b class=YEL>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>
-<b class=YEL></b><b style="color:#55ff55;"></b><b style="color:#55ff55;">  ✔ </b> <b style="color:#55ff55;"></b><b style="color:#55ff55;">Deploy Zarf package confirmed</b>
-
-<div style="background-color:#555555">
-<b style="background-color:#555555"></b><b style="background-color:#555555">                                                                                </b>
-<b style="background-color:#555555"></b><b style="background-color:#555555"></b><b style="color:#ffffff;background-color:#555555"></b><b style="color:#ffffff;background-color:#555555">  📦 BASELINE COMPONENT                                                         </b><b style="background-color:#555555"></b><b style="background-color:#555555"></b>
-<b style="background-color:#555555"></b><b style="background-color:#555555"></b><b style="color:#ffffff;background-color:#555555"></b><b style="color:#ffffff;background-color:#555555">                                                                                </b><b style="background-color:#555555"></b><b style="background-color:#555555"></b>
-<b style="background-color:#555555"></b><b style="background-color:#555555">                                                                                </b>
-</div>
-
-  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Waiting for cluster connection (30s timeout)</b>
-  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Waiting for cluster connection (30s timeout)</b>
-  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Loading the Zarf State from the Kubernetes cluster</b>
-  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Loading the Zarf State from the Kubernetes cluster</b>
-  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Pushing 1 images to the zarf registry</b>
-<b style="color:#55ff55;"></b><b style="color:#55ff55;">  ✔ </b> <b style="color:#55ff55;"></b><b style="color:#55ff55;">Pushed 1 images to the zarf registry</b>
-  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Starting helm chart generation multi-games</b>
-  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Starting helm chart generation multi-games</b>
-  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Processing helm chart raw-dos-games-baseline-multi-games:0.1.1683732591 from Zarf-generated helm</b>
-       <b style="color:#55ffff;"></b><b style="color:#55ffff;">chart</b>
-  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Processing helm chart raw-dos-games-baseline-multi-games:0.1.1683732591 from Zarf-generated helm</b>
-       <b style="color:#55ffff;"></b><b style="color:#55ffff;">chart</b>
-<b style="color:#55ff55;"></b><b style="color:#55ff55;">  ✔ </b> <b style="color:#55ff55;"></b><b style="color:#55ff55;">Zarf deployment complete</b>
-
-<b style="color:#55ffff;"></b><b style="color:#55ffff;">Connect Command   </b><b style="color:#555555;"></b><b style="color:#555555;"> | </b><b style="color:#55ffff;"></b><b style="color:#55ffff;">Description</b>
-<b style="color:#55ffff;"></b>zarf connect doom <b style="color:#555555;"></b><b style="color:#555555;"> | </b>Play doom!!!
-zarf connect games<b style="color:#555555;"></b><b style="color:#555555;"> | </b>Play some old dos games 🦄
-
+     <b class="HIC">Connect Command</b>    <b class="HIK">|</b> <b class="HIC">Description</b>
+     zarf connect doom  <b class="HIK">|</b> Play doom!!!
+     zarf connect games <b class="HIK">|</b> Play some old dos games 🦄
 </pre>
 </body>
 </html>
