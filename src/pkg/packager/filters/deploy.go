@@ -9,7 +9,6 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/agnivade/levenshtein"
 	"github.com/zarf-dev/zarf/src/api"
 )
 
@@ -160,7 +159,7 @@ func (f *deploymentFilter) applyComponents(pkg api.Package, requestedComponents 
 			if _, ok := matchedRequests[requestedComponent]; !ok {
 				closeEnough := []string{}
 				for _, c := range pkg.Components {
-					d := levenshtein.ComputeDistance(c.Name, requestedComponent)
+					d := levenshteinDistance(c.Name, requestedComponent)
 					if d <= 5 {
 						closeEnough = append(closeEnough, c.Name)
 					}
@@ -205,4 +204,49 @@ func (f *deploymentFilter) applyComponents(pkg api.Package, requestedComponents 
 	}
 
 	return selectedComponents, nil
+}
+
+// levenshteinDistance computes the Levenshtein distance between two strings using Wagner-Fischer algorithm.
+func levenshteinDistance(s1, s2 string) int {
+	r1, r2 := []rune(s1), []rune(s2)
+	len1, len2 := len(r1), len(r2)
+
+	if len1 == 0 {
+		return len2
+	}
+	if len2 == 0 {
+		return len1
+	}
+
+	row := make([]int, len2+1)
+	for j := 0; j <= len2; j++ {
+		row[j] = j
+	}
+
+	for i := 1; i <= len1; i++ {
+		prev := i - 1
+		row[0] = i
+		for j := 1; j <= len2; j++ {
+			cost := 0
+			if r1[i-1] != r2[j-1] {
+				cost = 1
+			}
+			temp := row[j]
+			// min(deletion, insertion, substitution)
+			del := row[j] + 1
+			ins := row[j-1] + 1
+			sub := prev + cost
+			minVal := del
+			if ins < minVal {
+				minVal = ins
+			}
+			if sub < minVal {
+				minVal = sub
+			}
+			prev = temp
+			row[j] = minVal
+		}
+	}
+
+	return row[len2]
 }
