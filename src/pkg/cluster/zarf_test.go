@@ -306,6 +306,26 @@ func TestGetDeployedPackageCompressedState(t *testing.T) {
 		"invalid checksum":        {"gzip", badChecksum, gzip.ErrChecksum.Error()},
 		"uncompressed gzip data":  {"gzip", []byte(`{"name":"compressed"}`), gzip.ErrHeader.Error()},
 		"unsupported compression": {"zstd", []byte(`{"name":"compressed"}`), `unsupported deployed package compression format "zstd"`},
+		"decompression limit exceeded": func() struct {
+			format string
+			data   []byte
+			err    string
+		} {
+			// Build a gzip payload that expands to > 10 MiB (maxDecompressedPackageStateSize).
+			var b bytes.Buffer
+			w := gzip.NewWriter(&b)
+			chunk := bytes.Repeat([]byte(" "), 1024*1024) // 1 MiB of spaces compress well
+			for i := 0; i < 11; i++ {
+				_, err := w.Write(chunk)
+				require.NoError(t, err)
+			}
+			require.NoError(t, w.Close())
+			return struct {
+				format string
+				data   []byte
+				err    string
+			}{"gzip", b.Bytes(), "deployed package state exceeds maximum decompressed size limit"}
+		}(),
 	} {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
