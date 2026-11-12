@@ -47,53 +47,466 @@ b.BWHI {background-color: #aaaaaa}
 </head>
 <body>
 <pre>
-<b class="GRN">? </b><b class="WHI">Deploy this Zarf package?</b> (y/N) <span style="color:#55ffff;">Yes</span>
-<b class=YEL></b>
-<b style="color:#555555;"></b>───────────────────────────────────────────────────────────────────────────────────────
-<b style="color:#55ffff;">name</b>:<b style="color:#ff55ff;"> k3s</b>
-<b style="color:#ff55ff;"></b><b style="color:#55ffff;">only</b>:
-<b style="color:#55ffff;">  localOS</b>:<b style="color:#ff55ff;"> linux</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">cluster</b>:
-<b style="color:#ff55ff;">    </b><b style="color:#55ffff;">architecture</b>:<b style="color:#ff55ff;"> amd64</b>
-<b style="color:#ff55ff;"></b><b style="color:#55ffff;">actions</b>:
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">onDeploy</b>:
-<b style="color:#ff55ff;">     </b><b style="color:#55ffff;">defaults</b>:
-<b style="color:#ff55ff;">       </b><b style="color:#55ffff;">maxRetries</b>:<b style="color:#ff55ff;"> 5</b>
-<b style="color:#ff55ff;">     </b><b style="color:#55ffff;">before</b>:
-<b style="color:#ff55ff;">     </b>- <b style="color:#55ffff;">maxRetries</b>:<b style="color:#ff55ff;"> 0</b>
-<b style="color:#ff55ff;">       </b><b style="color:#55ffff;">cmd</b>:<b style="color:#ff55ff;"> ./zarf internal is-valid-hostname</b>
-<b style="color:#ff55ff;">     </b>- <b style="color:#55ffff;">cmd</b>:<b style="color:#ff55ff;"> "[ -e /etc/redhat-release ] && systemctl disable firewalld --now || echo ''"</b>
-<b style="color:#ff55ff;">     </b><b style="color:#55ffff;">after</b>:
-<b style="color:#ff55ff;">     </b>- <b style="color:#55ffff;">cmd</b>:<b style="color:#ff55ff;"> systemctl daemon-reload</b>
-<b style="color:#ff55ff;">     </b>- <b style="color:#55ffff;">cmd</b>:<b style="color:#ff55ff;"> systemctl enable k3s</b>
-<b style="color:#ff55ff;">     </b>- <b style="color:#55ffff;">cmd</b>:<b style="color:#ff55ff;"> systemctl start k3s</b>
-<b style="color:#ff55ff;"></b><b style="color:#55ffff;">files</b>:
-<b style="color:#ff55ff;"></b>- <b style="color:#55ffff;">source</b>:<b style="color:#ff55ff;"> packages/distros/k3s/common/zarf-clean-k3s.sh</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">target</b>:<b style="color:#ff55ff;"> /opt/zarf/zarf-clean-k3s.sh</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">executable</b>: true
-<b style="color:#ff55ff;"></b>- <b style="color:#55ffff;">source</b>:<b style="color:#ff55ff;"> packages/distros/k3s/common/k3s.service</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">target</b>:<b style="color:#ff55ff;"> /etc/systemd/system/k3s.service</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">symlinks</b>:
-<b style="color:#ff55ff;">  </b>-<b style="color:#ff55ff;"> /etc/systemd/system/multi-user.target.wants/k3s.service</b>
-<b style="color:#ff55ff;"></b>- <b style="color:#55ffff;">source</b>:<b style="color:#ff55ff;"> https://github.com/k3s-io/k3s/releases/download/v1.24.1+k3s1/k3s</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">shasum</b>:<b style="color:#ff55ff;"> ca398d82fee8f9f52b05fb184582054be3c0285a1b9e8fb5c7b9a91448a</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">target</b>:<b style="color:#ff55ff;"> /usr/sbin/k3s</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">executable</b>:<b style="color:#ff55ff;"> true</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">symlinks</b>:
-<b style="color:#ff55ff;">  </b>-<b style="color:#ff55ff;"> /usr/sbin/kubctl</b>
-<b style="color:#ff55ff;">  </b>-<b style="color:#ff55ff;"> /usr/sbin/ctr</b>
-<b style="color:#ff55ff;">  </b>-<b style="color:#ff55ff;"> /usr/sbin/crictl</b>
-<b style="color:#ff55ff;"></b>- <b style="color:#55ffff;">source</b>:<b style="color:#ff55ff;"> https://github.com/k3s-io/k3s/releases/download/v1.24.1+k3s1/k3s-airgap-images-amd64.tar.zst</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">shasum</b>:<b style="color:#ff55ff;"> 6736bf9fa4d5754d60b0508bafb2f888a70cb99a203a3a1617a919ca4ee74034</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">target</b>:<b style="color:#ff55ff;"> /var/lib/rancher/k3s/agent/images/k3s.tar.zst</b>
+<b class="WHI"># zarf init</b>
+<b class="HIK">2026-11-02 06:39:26</b> <b class="HIG">INF</b> the init package was not found locally, but can be pulled in connected environments <b class="HIC">url=</b>oci://ghcr.io/zarf-dev/packages/init:v0.89.0
+<b class="HIG">? </b><b class="HIW">Do you want to pull this init package?</b> <b class="HIC">Yes</b>
+<b class="HIK">2026-11-02 06:40:37</b> <b class="HIG">INF</b> pulling package <b class="HIC">name=</b>ghcr.io/zarf-dev/packages/init:v0.89.0 <b class="HIC">size=</b>390.97 MBs
+<b class="HIK">2026-11-02 06:40:42</b> <b class="HIG">INF</b> package pull in progress <b class="HIC">name=</b>ghcr.io/zarf-dev/packages/init:v0.89.0 <b class="HIC">complete=</b>94.6% <b class="HIC">remaining=</b>21.03 MBs
+<b class="HIK">2026-11-02 06:40:42</b> <b class="HIG">INF</b> finished pulling package layers <b class="HIC">duration=</b>5.3s
+<b class="HIK">2026-11-02 06:40:43</b> <b class="HIY">WRN</b> package signature not verified; continuing <b class="HIC">reason=</b>package was signed with keyless method; provide --certificate-identity + --certificate-oidc-issuer to verify: no verification material available
+<b class="HIK">2026-11-02 06:40:43</b> <b class="HIG">INF</b> writing package to disk <b class="HIC">path=</b>/root/.zarf-cache/zarf-init-arm64-v0.89.0.tar.zst
+<b class="HIK">2026-11-02 06:40:43</b> <b class="HIY">WRN</b> package signature not verified; continuing <b class="HIC">reason=</b>package was signed with keyless method; provide --certificate-identity + --certificate-oidc-issuer to verify: no verification material available
 
-<b class=MAG>*** REQUIRES ROOT *** Install K3s, certified Kubernetes distribution built for IoT &amp; Edge computing</b>
-<b class=MAG>K3s provides the cluster need for Zarf running in Appliance Mode as well as can host a low-resource</b>
-<b class=MAG>Gitops Service if not using an existing Kubernetes platform.</b>
+<b class="HIC">kind</b>:<b class="HIM"> ZarfInitConfig</b>
+<b class="HIC">metadata</b>:
+  <b class="HIC">name</b>:<b class="HIM"> init</b>
+  <b class="HIC">description</b>:<b class="HIM"> Used to establish a new Zarf cluster</b>
+  <b class="HIC">version</b>:<b class="HIM"> v0.89.0</b>
+  <b class="HIC">architecture</b>:<b class="HIM"> arm64</b>
+  <b class="HIC">aggregateChecksum</b>:<b class="HIM"> 90e851c4d281b60f65ee9b446865f192c46db79ce0a662bbd0be0ffaa790c28f</b>
+  <b class="HIC">allowNamespaceOverride</b>:<b class="HIM"> false</b>
+<b class="HIC">build</b>:
+  <b class="HIC">architecture</b>:<b class="HIM"> arm64</b>
+  <b class="HIC">timestamp</b>:<b class="HIM"> Fri, 30 Oct 2026 00:26:57 +0000</b>
+  <b class="HIC">version</b>:<b class="HIM"> v0.89.0</b>
+  <b class="HIC">migrations</b>:
+  - scripts-to-actions
+  - pluralize-set-variable
+  <b class="HIC">signed</b>:<b class="HIM"> true</b>
+  <b class="HIC">versionRequirements</b>:
+  - <b class="HIC">version</b>:<b class="HIM"> v0.71.0</b>
+    <b class="HIC">reason</b>:<b class="HIM"> This package contains a bundle format signature which requires Zarf v0.71.0 or later</b>
+  <b class="HIC">provenanceFiles</b>:
+  - checksums.txt
+  - zarf.bundle.sig
+<b class="HIC">components</b>:
+- <b class="HIC">name</b>:<b class="HIM"> k3s</b>
+  <b class="HIC">description</b>:<b class="HIM"> "*** REQUIRES ROOT (not sudo) *** Install K3s, a certified Kubernetes distribution built for IoT &amp; Edge computing. K3s provides the cluster need for Zarf running in Appliance Mode as well as can host a low-resource Gitops Service if not using an existing Kubernetes platform.\n"</b>
+  <b class="HIC">required</b>:<b class="HIM"> false</b>
+  <b class="HIC">only</b>:
+    <b class="HIC">localOS</b>:<b class="HIM"> linux</b>
+    <b class="HIC">cluster</b>:
+      <b class="HIC">architecture</b>:<b class="HIM"> arm64</b>
+  <b class="HIC">files</b>:
+  - <b class="HIC">source</b>:<b class="HIM"> ../../distros/k3s/zarf-clean-k3s.sh</b>
+    <b class="HIC">target</b>:<b class="HIM"> /opt/zarf/zarf-clean-k3s.sh</b>
+    <b class="HIC">executable</b>:<b class="HIM"> true</b>
+    <b class="HIC">template</b>:<b class="HIM"> false</b>
+  - <b class="HIC">source</b>:<b class="HIM"> ../../distros/k3s/k3s.service</b>
+    <b class="HIC">target</b>:<b class="HIM"> /etc/systemd/system/k3s.service</b>
+    <b class="HIC">symlinks</b>:
+    - /etc/systemd/system/multi-user.target.wants/k3s.service
+    <b class="HIC">template</b>:<b class="HIM"> false</b>
+  - <b class="HIC">source</b>:<b class="HIM"> https://github.com/k3s-io/k3s/releases/download/v1.34.3+k3s1/k3s-arm64</b>
+    <b class="HIC">shasum</b>:<b class="HIM"> fa37b06df7ae82b46de6679a8682b6ece2adf531709bed6299086716c1038147</b>
+    <b class="HIC">target</b>:<b class="HIM"> /usr/sbin/k3s</b>
+    <b class="HIC">executable</b>:<b class="HIM"> true</b>
+    <b class="HIC">symlinks</b>:
+    - /usr/sbin/kubectl
+    - /usr/sbin/ctr
+    - /usr/sbin/crictl
+    <b class="HIC">template</b>:<b class="HIM"> false</b>
+  - <b class="HIC">source</b>:<b class="HIM"> https://github.com/k3s-io/k3s/releases/download/v1.34.3+k3s1/k3s-airgap-images-arm64.tar.zst</b>
+    <b class="HIC">shasum</b>:<b class="HIM"> b6cb3c06f19859d3a5fba54b305097e89d2a86b5bce9e8360a46b9d2e67da565</b>
+    <b class="HIC">target</b>:<b class="HIM"> /var/lib/rancher/k3s/agent/images/k3s.tar.zst</b>
+    <b class="HIC">template</b>:<b class="HIM"> false</b>
+  <b class="HIC">actions</b>:
+    <b class="HIC">onDeploy</b>:
+      <b class="HIC">before</b>:
+      - <b class="HIC">maxRetries</b>:<b class="HIM"> 0</b>
+        <b class="HIC">cmd</b>:<b class="HIM"> if [ "$(uname -m)" != "aarch64" ] &amp;&amp; [ "$(uname -m)" != "arm64" ]; then echo "this package architecture is arm64, but the target system has a different architecture. These architectures must be the same" &amp;&amp; exit 1; fi</b>
+        <b class="HIC">description</b>:<b class="HIM"> Check that the host architecture matches the package architecture</b>
+        <b class="HIC">template</b>:<b class="HIM"> false</b>
+      - <b class="HIC">maxRetries</b>:<b class="HIM"> 0</b>
+        <b class="HIC">cmd</b>:<b class="HIM"> ./zarf internal is-valid-hostname</b>
+        <b class="HIC">description</b>:<b class="HIM"> Check if the current system has a, RFC1123 compliant hostname</b>
+        <b class="HIC">template</b>:<b class="HIM"> false</b>
+      - <b class="HIC">cmd</b>:<b class="HIM"> "[ -e /etc/redhat-release ] &amp;&amp; systemctl disable firewalld --now || echo ''"</b>
+        <b class="HIC">description</b>:<b class="HIM"> If running a RHEL variant, disable 'firewalld' per k3s docs</b>
+        <b class="HIC">template</b>:<b class="HIM"> false</b>
+      <b class="HIC">after</b>:
+      - <b class="HIC">cmd</b>:<b class="HIM"> systemctl daemon-reload</b>
+        <b class="HIC">description</b>:<b class="HIM"> Reload the system services</b>
+        <b class="HIC">template</b>:<b class="HIM"> false</b>
+      - <b class="HIC">cmd</b>:<b class="HIM"> systemctl enable k3s</b>
+        <b class="HIC">description</b>:<b class="HIM"> Enable 'k3s' to run at system boot</b>
+        <b class="HIC">template</b>:<b class="HIM"> false</b>
+      - <b class="HIC">cmd</b>:<b class="HIM"> systemctl restart k3s</b>
+        <b class="HIC">description</b>:<b class="HIM"> Start the 'k3s' system service</b>
+        <b class="HIC">template</b>:<b class="HIM"> false</b>
+    <b class="HIC">onRemove</b>:
+      <b class="HIC">before</b>:
+      - <b class="HIC">cmd</b>:<b class="HIM"> /opt/zarf/zarf-clean-k3s.sh</b>
+        <b class="HIC">description</b>:<b class="HIM"> Remove 'k3s' from the system</b>
+        <b class="HIC">template</b>:<b class="HIM"> false</b>
+      - <b class="HIC">cmd</b>:<b class="HIM"> rm /opt/zarf/zarf-clean-k3s.sh</b>
+        <b class="HIC">description</b>:<b class="HIM"> Remove the cleanup script</b>
+        <b class="HIC">template</b>:<b class="HIM"> false</b>
+- <b class="HIC">name</b>:<b class="HIM"> zarf-injector</b>
+  <b class="HIC">description</b>:<b class="HIM"> |</b>
+    Bootstraps a Kubernetes cluster by cloning a running pod in the cluster and hosting the registry image.
+    Removed and destroyed after the Zarf Registry is self-hosting the registry image.
+  <b class="HIC">required</b>:<b class="HIM"> true</b>
+  <b class="HIC">only</b>:
+    <b class="HIC">cluster</b>:
+      <b class="HIC">architecture</b>:<b class="HIM"> arm64</b>
+  <b class="HIC">files</b>:
+  - <b class="HIC">source</b>:<b class="HIM"> https://github.com/zarf-dev/zarf-injector/releases/download/v0.3.0/zarf-injector-arm64</b>
+    <b class="HIC">shasum</b>:<b class="HIM"> 7a677809accc0d3d9b1cddc8d6be07ebf0a883a1db887e50828bb3df0e824577</b>
+    <b class="HIC">target</b>:<b class="HIM"> "###ZARF_TEMP###/zarf-injector"</b>
+    <b class="HIC">executable</b>:<b class="HIM"> true</b>
+    <b class="HIC">template</b>:<b class="HIM"> false</b>
+- <b class="HIC">name</b>:<b class="HIM"> zarf-seed-registry</b>
+  <b class="HIC">description</b>:<b class="HIM"> |</b>
+    Deploys the Zarf Registry using the registry image provided by the Zarf Injector.
+  <b class="HIC">required</b>:<b class="HIM"> true</b>
+  <b class="HIC">charts</b>:
+  - <b class="HIC">name</b>:<b class="HIM"> docker-registry</b>
+    <b class="HIC">version</b>:<b class="HIM"> 1.0.3</b>
+    <b class="HIC">localPath</b>:<b class="HIM"> zarf-registry/chart</b>
+    <b class="HIC">namespace</b>:<b class="HIM"> zarf</b>
+    <b class="HIC">releaseName</b>:<b class="HIM"> zarf-docker-registry</b>
+    <b class="HIC">valuesFiles</b>:
+    - zarf-registry/registry-values.yaml
+    - zarf-registry/registry-values-seed.yaml
+    <b class="HIC">schemaValidation</b>:<b class="HIM"> true</b>
+  <b class="HIC">images</b>:
+  - library/registry:3.1.1
+  - alpine/socat:1.8.0.3
+- <b class="HIC">name</b>:<b class="HIM"> zarf-registry</b>
+  <b class="HIC">description</b>:<b class="HIM"> |</b>
+    Updates the Zarf Registry to use the self-hosted registry image.
+    Serves as the primary docker registry for the cluster.
+  <b class="HIC">required</b>:<b class="HIM"> true</b>
+  <b class="HIC">manifests</b>:
+  - <b class="HIC">name</b>:<b class="HIM"> registry-connect</b>
+    <b class="HIC">namespace</b>:<b class="HIM"> zarf</b>
+    <b class="HIC">files</b>:
+    - zarf-registry/connect.yaml
+    <b class="HIC">template</b>:<b class="HIM"> false</b>
+  - <b class="HIC">name</b>:<b class="HIM"> kep-1755-registry-annotation</b>
+    <b class="HIC">namespace</b>:<b class="HIM"> zarf</b>
+    <b class="HIC">files</b>:
+    - zarf-registry/configmap.yaml
+    <b class="HIC">template</b>:<b class="HIM"> false</b>
+  <b class="HIC">charts</b>:
+  - <b class="HIC">name</b>:<b class="HIM"> docker-registry</b>
+    <b class="HIC">version</b>:<b class="HIM"> 1.0.3</b>
+    <b class="HIC">localPath</b>:<b class="HIM"> zarf-registry/chart</b>
+    <b class="HIC">namespace</b>:<b class="HIM"> zarf</b>
+    <b class="HIC">releaseName</b>:<b class="HIM"> zarf-docker-registry</b>
+    <b class="HIC">valuesFiles</b>:
+    - zarf-registry/registry-values.yaml
+    <b class="HIC">schemaValidation</b>:<b class="HIM"> true</b>
+  <b class="HIC">images</b>:
+  - library/registry:3.1.1
+  - alpine/socat:1.8.0.3
+- <b class="HIC">name</b>:<b class="HIM"> zarf-agent</b>
+  <b class="HIC">description</b>:<b class="HIM"> |</b>
+    A Kubernetes mutating webhook to enable automated URL rewriting for container
+    images and git repository references in Kubernetes manifests. This prevents
+    the need to manually update URLs from their original sources to the Zarf-managed
+    docker registry and git server.
+  <b class="HIC">required</b>:<b class="HIM"> true</b>
+  <b class="HIC">charts</b>:
+  - <b class="HIC">name</b>:<b class="HIM"> zarf-agent</b>
+    <b class="HIC">version</b>:<b class="HIM"> 0.1.2</b>
+    <b class="HIC">localPath</b>:<b class="HIM"> zarf-agent/chart</b>
+    <b class="HIC">namespace</b>:<b class="HIM"> zarf</b>
+    <b class="HIC">releaseName</b>:<b class="HIM"> zarf-d2db14ef40305397791454e883b26fc94ad9615d</b>
+    <b class="HIC">valuesFiles</b>:
+    - zarf-agent/agent-values.yaml
+    <b class="HIC">schemaValidation</b>:<b class="HIM"> true</b>
+  <b class="HIC">images</b>:
+  - ghcr.io/zarf-dev/zarf/agent:v0.89.0
+  <b class="HIC">actions</b>:
+    <b class="HIC">onCreate</b>:
+      <b class="HIC">before</b>:
+      - <b class="HIC">dir</b>:<b class="HIM"> ../../..</b>
+        <b class="HIC">cmd</b>:<b class="HIM"> test "v0.89.0" != "local" || make build-local-agent-image AGENT_IMAGE_TAG="v0.89.0" ARCH="arm64"</b>
+        <b class="HIC">shell</b>:
+          <b class="HIC">windows</b>:<b class="HIM"> pwsh</b>
+        <b class="HIC">description</b>:<b class="HIM"> Build the local agent image (if 'AGENT_IMAGE_TAG' was specified as 'local')</b>
+        <b class="HIC">template</b>:<b class="HIM"> false</b>
+- <b class="HIC">name</b>:<b class="HIM"> git-server</b>
+  <b class="HIC">description</b>:<b class="HIM"> |</b>
+    Deploys Gitea to provide git repositories for Kubernetes configurations.
+    Required for GitOps deployments if no other git server is available.
+  <b class="HIC">required</b>:<b class="HIM"> false</b>
+  <b class="HIC">manifests</b>:
+  - <b class="HIC">name</b>:<b class="HIM"> git-connect</b>
+    <b class="HIC">namespace</b>:<b class="HIM"> zarf</b>
+    <b class="HIC">files</b>:
+    - gitea/connect.yaml
+    <b class="HIC">template</b>:<b class="HIM"> false</b>
+  <b class="HIC">charts</b>:
+  - <b class="HIC">name</b>:<b class="HIM"> gitea</b>
+    <b class="HIC">version</b>:<b class="HIM"> 12.7.0</b>
+    <b class="HIC">url</b>:<b class="HIM"> oci://registry-1.docker.io/giteacharts/gitea</b>
+    <b class="HIC">namespace</b>:<b class="HIM"> zarf</b>
+    <b class="HIC">releaseName</b>:<b class="HIM"> zarf-gitea</b>
+    <b class="HIC">valuesFiles</b>:
+    - gitea/gitea-values.yaml
+    <b class="HIC">schemaValidation</b>:<b class="HIM"> true</b>
+  <b class="HIC">images</b>:
+  - ghcr.io/go-gitea/gitea:1.27.3-rootless
+  <b class="HIC">actions</b>:
+    <b class="HIC">onDeploy</b>:
+      <b class="HIC">before</b>:
+      - <b class="HIC">mute</b>:<b class="HIM"> true</b>
+        <b class="HIC">cmd</b>:<b class="HIM"> ./zarf internal update-gitea-pvc</b>
+        <b class="HIC">setVariables</b>:
+        - <b class="HIC">name</b>:<b class="HIM"> GIT_SERVER_CREATE_PVC</b>
+        <b class="HIC">template</b>:<b class="HIM"> false</b>
+      <b class="HIC">after</b>:
+      - <b class="HIC">maxTotalSeconds</b>:<b class="HIM"> 60</b>
+        <b class="HIC">maxRetries</b>:<b class="HIM"> 3</b>
+        <b class="HIC">cmd</b>:<b class="HIM"> ./zarf internal create-read-only-gitea-user</b>
+        <b class="HIC">description</b>:<b class="HIM"> Create the read-only Gitea user</b>
+        <b class="HIC">template</b>:<b class="HIM"> false</b>
+      - <b class="HIC">maxTotalSeconds</b>:<b class="HIM"> 60</b>
+        <b class="HIC">maxRetries</b>:<b class="HIM"> 3</b>
+        <b class="HIC">cmd</b>:<b class="HIM"> ./zarf internal create-artifact-registry-token</b>
+        <b class="HIC">description</b>:<b class="HIM"> Create an artifact registry token</b>
+        <b class="HIC">template</b>:<b class="HIM"> false</b>
+      <b class="HIC">onFailure</b>:
+      - <b class="HIC">cmd</b>:<b class="HIM"> ./zarf internal update-gitea-pvc --rollback</b>
+        <b class="HIC">template</b>:<b class="HIM"> false</b>
+<b class="HIC">constants</b>:
+- <b class="HIC">name</b>:<b class="HIM"> REGISTRY_IMAGE</b>
+  <b class="HIC">value</b>:<b class="HIM"> library/registry</b>
+- <b class="HIC">name</b>:<b class="HIM"> REGISTRY_IMAGE_TAG</b>
+  <b class="HIC">value</b>:<b class="HIM"> 3.1.1</b>
+- <b class="HIC">name</b>:<b class="HIM"> PROXY_IMAGE</b>
+  <b class="HIC">value</b>:<b class="HIM"> alpine/socat</b>
+- <b class="HIC">name</b>:<b class="HIM"> PROXY_IMAGE_TAG</b>
+  <b class="HIC">value</b>:<b class="HIM"> 1.8.0.3</b>
+- <b class="HIC">name</b>:<b class="HIM"> AGENT_IMAGE</b>
+  <b class="HIC">value</b>:<b class="HIM"> zarf-dev/zarf/agent</b>
+- <b class="HIC">name</b>:<b class="HIM"> AGENT_IMAGE_TAG</b>
+  <b class="HIC">value</b>:<b class="HIM"> v0.89.0</b>
+- <b class="HIC">name</b>:<b class="HIM"> GITEA_IMAGE</b>
+  <b class="HIC">value</b>:<b class="HIM"> ghcr.io/go-gitea/gitea:1.27.3-rootless</b>
+<b class="HIC">variables</b>:
+- <b class="HIC">name</b>:<b class="HIM"> K3S_ARGS  currently set to '--disable traefik' (default)</b>
+  <b class="HIC">description</b>:<b class="HIM"> Arguments to pass to K3s</b>
+  <b class="HIC">default</b>:<b class="HIM"> --disable traefik</b>
+- <b class="HIC">name</b>:<b class="HIM"> REGISTRY_EXISTING_PVC  currently set to '' (default)</b>
+  <b class="HIC">description</b>:<b class="HIM"> "Optional: Use an existing PVC for the registry instead of creating a new one. If this is set, the REGISTRY_PVC_SIZE variable will be ignored."</b>
+- <b class="HIC">name</b>:<b class="HIM"> REGISTRY_PVC_ENABLED  currently set to 'true' (default)</b>
+  <b class="HIC">description</b>:<b class="HIM"> Toggle the creation and use of a PVC off/on</b>
+  <b class="HIC">default</b>:<b class="HIM"> "true"</b>
+- <b class="HIC">name</b>:<b class="HIM"> REGISTRY_PVC_SIZE  currently set to '20Gi' (default)</b>
+  <b class="HIC">description</b>:<b class="HIM"> The size of the persistent volume claim for the registry</b>
+  <b class="HIC">default</b>:<b class="HIM"> 20Gi</b>
+- <b class="HIC">name</b>:<b class="HIM"> REGISTRY_PVC_ACCESS_MODE  currently set to 'ReadWriteOnce' (default)</b>
+  <b class="HIC">description</b>:<b class="HIM"> The access mode of the persistent volume claim for the registry</b>
+  <b class="HIC">default</b>:<b class="HIM"> ReadWriteOnce</b>
+- <b class="HIC">name</b>:<b class="HIM"> REGISTRY_CPU_REQ  currently set to '100m' (default)</b>
+  <b class="HIC">description</b>:<b class="HIM"> The CPU request for the registry</b>
+  <b class="HIC">default</b>:<b class="HIM"> 100m</b>
+- <b class="HIC">name</b>:<b class="HIM"> REGISTRY_MEM_REQ  currently set to '256Mi' (default)</b>
+  <b class="HIC">description</b>:<b class="HIM"> The memory request for the registry</b>
+  <b class="HIC">default</b>:<b class="HIM"> 256Mi</b>
+- <b class="HIC">name</b>:<b class="HIM"> REGISTRY_CPU_LIMIT  currently set to '3' (default)</b>
+  <b class="HIC">description</b>:<b class="HIM"> The CPU limit for the registry</b>
+  <b class="HIC">default</b>:<b class="HIM"> "3"</b>
+- <b class="HIC">name</b>:<b class="HIM"> REGISTRY_MEM_LIMIT  currently set to '2Gi' (default)</b>
+  <b class="HIC">description</b>:<b class="HIM"> The memory limit for the registry</b>
+  <b class="HIC">default</b>:<b class="HIM"> 2Gi</b>
+- <b class="HIC">name</b>:<b class="HIM"> REGISTRY_HPA_MIN  currently set to '1' (default)</b>
+  <b class="HIC">description</b>:<b class="HIM"> The minimum number of registry replicas</b>
+  <b class="HIC">default</b>:<b class="HIM"> "1"</b>
+- <b class="HIC">name</b>:<b class="HIM"> REGISTRY_HPA_MAX  currently set to '5' (default)</b>
+  <b class="HIC">description</b>:<b class="HIM"> The maximum number of registry replicas</b>
+  <b class="HIC">default</b>:<b class="HIM"> "5"</b>
+- <b class="HIC">name</b>:<b class="HIM"> REGISTRY_HPA_ENABLE  currently set to 'true' (default)</b>
+  <b class="HIC">description</b>:<b class="HIM"> Enable the Horizontal Pod Autoscaler for the registry</b>
+  <b class="HIC">default</b>:<b class="HIM"> "true"</b>
+- <b class="HIC">name</b>:<b class="HIM"> REGISTRY_CA_BUNDLE  currently set to '' (default)</b>
+  <b class="HIC">autoIndent</b>:<b class="HIM"> true</b>
+  <b class="HIC">type</b>:<b class="HIM"> file</b>
+  <b class="HIC">description</b>:<b class="HIM"> Filepath to a bundle of trusted certificates to mount into the registry container</b>
+- <b class="HIC">name</b>:<b class="HIM"> REGISTRY_EXTRA_ENVS  currently set to '' (default)</b>
+  <b class="HIC">autoIndent</b>:<b class="HIM"> true</b>
+  <b class="HIC">description</b>:<b class="HIM"> Array of additional environment variables passed to the registry container</b>
+- <b class="HIC">name</b>:<b class="HIM"> REGISTRY_OTEL_EXPORTER  currently set to 'none' (default)</b>
+  <b class="HIC">description</b>:<b class="HIM"> set the opentelemetry exporter</b>
+  <b class="HIC">default</b>:<b class="HIM"> none</b>
+- <b class="HIC">name</b>:<b class="HIM"> REGISTRY_CREATE_SERVICE_ACCOUNT  currently set to 'false' (default)</b>
+  <b class="HIC">description</b>:<b class="HIM"> Toggle the creation of a new service account for the registry</b>
+  <b class="HIC">default</b>:<b class="HIM"> "false"</b>
+- <b class="HIC">name</b>:<b class="HIM"> REGISTRY_SERVICE_ACCOUNT_NAME  currently set to '' (default)</b>
+  <b class="HIC">description</b>:<b class="HIM"> The name of the service account to use. If not set and create is true, a name is generated using fullname template</b>
+- <b class="HIC">name</b>:<b class="HIM"> REGISTRY_SERVICE_ACCOUNT_ANNOTATIONS  currently set to '' (default)</b>
+  <b class="HIC">autoIndent</b>:<b class="HIM"> true</b>
+  <b class="HIC">description</b>:<b class="HIM"> Map of annotations to add to the created service account</b>
+- <b class="HIC">name</b>:<b class="HIM"> REGISTRY_AFFINITY_ENABLE  currently set to 'true' (default)</b>
+  <b class="HIC">description</b>:<b class="HIM"> Enable pod affinity for the registry</b>
+  <b class="HIC">default</b>:<b class="HIM"> "true"</b>
+- <b class="HIC">name</b>:<b class="HIM"> REGISTRY_AFFINITY_CUSTOM  currently set to '' (default)</b>
+  <b class="HIC">autoIndent</b>:<b class="HIM"> true</b>
+  <b class="HIC">description</b>:<b class="HIM"> Custom pod affinity yaml block for the registry</b>
+- <b class="HIC">name</b>:<b class="HIM"> REGISTRY_TOLERATIONS  currently set to '' (default)</b>
+  <b class="HIC">autoIndent</b>:<b class="HIM"> true</b>
+  <b class="HIC">description</b>:<b class="HIM"> Custom tolerations array for the registry</b>
+- <b class="HIC">name</b>:<b class="HIM"> REGISTRY_NODE_SELECTOR  currently set to '' (default)</b>
+  <b class="HIC">autoIndent</b>:<b class="HIM"> true</b>
+  <b class="HIC">description</b>:<b class="HIM"> Custom node selector map for the registry</b>
+- <b class="HIC">name</b>:<b class="HIM"> PROXY_TOLERATIONS  currently set to '' (default)</b>
+  <b class="HIC">autoIndent</b>:<b class="HIM"> true</b>
+  <b class="HIC">description</b>:<b class="HIM"> Custom tolerations array for the registry proxy and injector</b>
+- <b class="HIC">name</b>:<b class="HIM"> REGISTRY_HPA_AUTO_SIZE  currently set to 'false' (default)</b>
+  <b class="HIC">description</b>:<b class="HIM"> Enable to set min and max replicas based on amount of nodes</b>
+  <b class="HIC">default</b>:<b class="HIM"> "false"</b>
+- <b class="HIC">name</b>:<b class="HIM"> REGISTRY_HPA_TARGET_CPU  currently set to '80' (default)</b>
+  <b class="HIC">description</b>:<b class="HIM"> The target CPU utilization percentage for the registry</b>
+  <b class="HIC">default</b>:<b class="HIM"> "80"</b>
+- <b class="HIC">name</b>:<b class="HIM"> HOST_NETWORK_PROXY  currently set to 'false' (default)</b>
+  <b class="HIC">description</b>:<b class="HIM"> Decides if host port or host network should be used with the registry proxy</b>
+  <b class="HIC">default</b>:<b class="HIM"> "false"</b>
+- <b class="HIC">name</b>:<b class="HIM"> REGISTRY_SECURITY_CONTEXT_RUN_AS_USER  currently set to '1000' (default)</b>
+  <b class="HIC">description</b>:<b class="HIM"> The user ID to run the registry as</b>
+  <b class="HIC">default</b>:<b class="HIM"> "1000"</b>
+- <b class="HIC">name</b>:<b class="HIM"> REGISTRY_SECURITY_CONTEXT_FS_GROUP  currently set to '2000' (default)</b>
+  <b class="HIC">description</b>:<b class="HIM"> The filesystem group ID to run the registry as</b>
+  <b class="HIC">default</b>:<b class="HIM"> "2000"</b>
+- <b class="HIC">name</b>:<b class="HIM"> REGISTRY_SECURITY_CONTEXT_RUN_AS_GROUP  currently set to '2000' (default)</b>
+  <b class="HIC">description</b>:<b class="HIM"> The group ID to run the registry as</b>
+  <b class="HIC">default</b>:<b class="HIM"> "2000"</b>
+- <b class="HIC">name</b>:<b class="HIM"> AGENT_AFFINITY  currently set to '' (default)</b>
+  <b class="HIC">autoIndent</b>:<b class="HIM"> true</b>
+  <b class="HIC">description</b>:<b class="HIM"> Custom affinity map for the zarf-agent deployment</b>
+- <b class="HIC">name</b>:<b class="HIM"> AGENT_TOLERATIONS  currently set to '' (default)</b>
+  <b class="HIC">autoIndent</b>:<b class="HIM"> true</b>
+  <b class="HIC">description</b>:<b class="HIM"> Custom tolerations array for the zarf-agent deployment</b>
+- <b class="HIC">name</b>:<b class="HIM"> AGENT_NODE_SELECTOR  currently set to '' (default)</b>
+  <b class="HIC">autoIndent</b>:<b class="HIM"> true</b>
+  <b class="HIC">description</b>:<b class="HIM"> Custom node selector map for the zarf-agent deployment</b>
+- <b class="HIC">name</b>:<b class="HIM"> AGENT_WEBHOOK_ANNOTATIONS  currently set to '{}' (default)</b>
+  <b class="HIC">autoIndent</b>:<b class="HIM"> true</b>
+  <b class="HIC">description</b>:<b class="HIM"> Custom annotations map for the zarf-agent mutating webhook</b>
+  <b class="HIC">default</b>:<b class="HIM"> "{}"</b>
+- <b class="HIC">name</b>:<b class="HIM"> AGENT_MUTATION_EXCLUSIONS  currently set to '[]' (default)</b>
+  <b class="HIC">autoIndent</b>:<b class="HIM"> true</b>
+  <b class="HIC">description</b>:<b class="HIM"> YAML list of GitOps resource groups the zarf-agent should not mutate (valid values are argocd and flux)</b>
+  <b class="HIC">default</b>:<b class="HIM"> "[]"</b>
+- <b class="HIC">name</b>:<b class="HIM"> GIT_SERVER_EXISTING_PVC  currently set to 'data-zarf-gitea-0' (default)</b>
+  <b class="HIC">description</b>:<b class="HIM"> "Optional: Use an existing PVC for the git server instead of creating a new one. If this is set, the GIT_SERVER_PVC_SIZE variable will be ignored."</b>
+  <b class="HIC">default</b>:<b class="HIM"> data-zarf-gitea-0</b>
+- <b class="HIC">name</b>:<b class="HIM"> GIT_SERVER_PVC_SIZE  currently set to '10Gi' (default)</b>
+  <b class="HIC">description</b>:<b class="HIM"> The size of the persistent volume claim for the git server</b>
+  <b class="HIC">default</b>:<b class="HIM"> 10Gi</b>
+- <b class="HIC">name</b>:<b class="HIM"> GIT_SERVER_PVC_ACCESS_MODE  currently set to 'ReadWriteOnce' (default)</b>
+  <b class="HIC">description</b>:<b class="HIM"> The access mode of the persistent volume claim for the git server</b>
+  <b class="HIC">default</b>:<b class="HIM"> ReadWriteOnce</b>
+- <b class="HIC">name</b>:<b class="HIM"> GIT_SERVER_CPU_REQ  currently set to '200m' (default)</b>
+  <b class="HIC">description</b>:<b class="HIM"> The CPU request for git server</b>
+  <b class="HIC">default</b>:<b class="HIM"> 200m</b>
+- <b class="HIC">name</b>:<b class="HIM"> GIT_SERVER_MEM_REQ  currently set to '512Mi' (default)</b>
+  <b class="HIC">description</b>:<b class="HIM"> The memory request for git server</b>
+  <b class="HIC">default</b>:<b class="HIM"> 512Mi</b>
+- <b class="HIC">name</b>:<b class="HIM"> GIT_SERVER_CPU_LIMIT  currently set to '3' (default)</b>
+  <b class="HIC">description</b>:<b class="HIM"> The CPU limit for git server</b>
+  <b class="HIC">default</b>:<b class="HIM"> "3"</b>
+- <b class="HIC">name</b>:<b class="HIM"> GIT_SERVER_MEM_LIMIT  currently set to '2Gi' (default)</b>
+  <b class="HIC">description</b>:<b class="HIM"> The memory limit for git server</b>
+  <b class="HIC">default</b>:<b class="HIM"> 2Gi</b>
+- <b class="HIC">name</b>:<b class="HIM"> GIT_SERVER_REPLICA_COUNT  currently set to '1' (default)</b>
+  <b class="HIC">description</b>:<b class="HIM"> The number of git server replicas to deploy</b>
+  <b class="HIC">default</b>:<b class="HIM"> "1"</b>
+- <b class="HIC">name</b>:<b class="HIM"> GIT_SERVER_DISABLE_REGISTRATION  currently set to 'true' (default)</b>
+  <b class="HIC">description</b>:<b class="HIM"> Disables the ability to register new users</b>
+  <b class="HIC">default</b>:<b class="HIM"> "true"</b>
+- <b class="HIC">name</b>:<b class="HIM"> GIT_SERVER_AFFINITY  currently set to '' (default)</b>
+  <b class="HIC">autoIndent</b>:<b class="HIM"> true</b>
+  <b class="HIC">description</b>:<b class="HIM"> Custom affinity map for the gitea deployment</b>
+- <b class="HIC">name</b>:<b class="HIM"> GIT_SERVER_TOLERATIONS  currently set to '' (default)</b>
+  <b class="HIC">autoIndent</b>:<b class="HIM"> true</b>
+  <b class="HIC">description</b>:<b class="HIM"> Custom tolerations array for the gitea deployment</b>
+- <b class="HIC">name</b>:<b class="HIM"> GIT_SERVER_NODE_SELECTOR  currently set to '' (default)</b>
+  <b class="HIC">autoIndent</b>:<b class="HIM"> true</b>
+  <b class="HIC">description</b>:<b class="HIM"> Custom node selector map for the gitea deployment</b>
+- <b class="HIC">name</b>:<b class="HIM"> GIT_SERVER_SECURITY_CONTEXT_RUN_AS_USER  currently set to '1000' (default)</b>
+  <b class="HIC">description</b>:<b class="HIM"> The user ID to run the git server as</b>
+  <b class="HIC">default</b>:<b class="HIM"> "1000"</b>
+- <b class="HIC">name</b>:<b class="HIM"> GIT_SERVER_SECURITY_CONTEXT_FS_GROUP  currently set to '1000' (default)</b>
+  <b class="HIC">description</b>:<b class="HIM"> The filesystem group ID to run the git server</b>
+  <b class="HIC">default</b>:<b class="HIM"> "1000"</b>
+- <b class="HIC">name</b>:<b class="HIM"> GIT_SERVER_SECURITY_CONTEXT_RUN_AS_GROUP  currently set to '1000' (default)</b>
+  <b class="HIC">description</b>:<b class="HIM"> The group ID to run the git server as</b>
+  <b class="HIC">default</b>:<b class="HIM"> "1000"</b>
+<b class="HIC">documentation</b>:
+  <b class="HIC">injector.config</b>:<b class="HIM"> ../../../injector-config.md</b>
+  <b class="HIC">zarf.cli.openvex.json</b>:<b class="HIM"> ../../../.vex/zarf.cli.openvex.json</b>
+<b class="HIK">2026-11-02 06:40:43</b> <b class="HIG">INF</b> documentation available for this package - use 'zarf package inspect documentation' to view
+<b class="HIK">2026-11-02 06:40:43</b> <b class="HIG">INF</b> this package has SBOMs available for review in a temporary directory <b class="HIC">directory=</b>/root/zarf-sbom
+<b class="HIG">? </b><b class="HIW">Deploy this Zarf package?</b> <b class="HIC">Yes</b>
 
-<b class="GRN">? </b><b class="WHI">Deploy the k3s component?</b> (y/N) <span style="color:#55ffff;">Yes</span>
-<b style="color:#555555;"></b>───────────────────────────────────────────────────────────────────────────────────────
+<b class="HIK">━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>
 
-<b style="color:#555555;"></b></pre>
+<b class="HIC">name</b>:<b class="HIM"> k3s</b>
+<b class="HIC">description</b>:<b class="HIM"> "*** REQUIRES ROOT (not sudo) *** Install K3s, a certified Kubernetes distribution built for IoT &amp; Edge computing. K3s provides the cluster need for Zarf running in Appliance Mode as well as can host a low-resource Gitops Service if not using an existing Kubernetes platform.\n"</b>
+<b class="HIC">required</b>:<b class="HIM"> false</b>
+<b class="HIC">only</b>:
+  <b class="HIC">localOS</b>:<b class="HIM"> linux</b>
+  <b class="HIC">cluster</b>:
+    <b class="HIC">architecture</b>:<b class="HIM"> arm64</b>
+<b class="HIC">files</b>:
+- <b class="HIC">source</b>:<b class="HIM"> ../../distros/k3s/zarf-clean-k3s.sh</b>
+  <b class="HIC">target</b>:<b class="HIM"> /opt/zarf/zarf-clean-k3s.sh</b>
+  <b class="HIC">executable</b>:<b class="HIM"> true</b>
+  <b class="HIC">template</b>:<b class="HIM"> false</b>
+- <b class="HIC">source</b>:<b class="HIM"> ../../distros/k3s/k3s.service</b>
+  <b class="HIC">target</b>:<b class="HIM"> /etc/systemd/system/k3s.service</b>
+  <b class="HIC">symlinks</b>:
+  - /etc/systemd/system/multi-user.target.wants/k3s.service
+  <b class="HIC">template</b>:<b class="HIM"> false</b>
+- <b class="HIC">source</b>:<b class="HIM"> https://github.com/k3s-io/k3s/releases/download/v1.34.3+k3s1/k3s-arm64</b>
+  <b class="HIC">shasum</b>:<b class="HIM"> fa37b06df7ae82b46de6679a8682b6ece2adf531709bed6299086716c1038147</b>
+  <b class="HIC">target</b>:<b class="HIM"> /usr/sbin/k3s</b>
+  <b class="HIC">executable</b>:<b class="HIM"> true</b>
+  <b class="HIC">symlinks</b>:
+  - /usr/sbin/kubectl
+  - /usr/sbin/ctr
+  - /usr/sbin/crictl
+  <b class="HIC">template</b>:<b class="HIM"> false</b>
+- <b class="HIC">source</b>:<b class="HIM"> https://github.com/k3s-io/k3s/releases/download/v1.34.3+k3s1/k3s-airgap-images-arm64.tar.zst</b>
+  <b class="HIC">shasum</b>:<b class="HIM"> b6cb3c06f19859d3a5fba54b305097e89d2a86b5bce9e8360a46b9d2e67da565</b>
+  <b class="HIC">target</b>:<b class="HIM"> /var/lib/rancher/k3s/agent/images/k3s.tar.zst</b>
+  <b class="HIC">template</b>:<b class="HIM"> false</b>
+<b class="HIC">actions</b>:
+  <b class="HIC">onDeploy</b>:
+    <b class="HIC">before</b>:
+    - <b class="HIC">maxRetries</b>:<b class="HIM"> 0</b>
+      <b class="HIC">cmd</b>:<b class="HIM"> if [ "$(uname -m)" != "aarch64" ] &amp;&amp; [ "$(uname -m)" != "arm64" ]; then echo "this package architecture is arm64, but the target system has a different architecture. These architectures must be the same" &amp;&amp; exit 1; fi</b>
+      <b class="HIC">description</b>:<b class="HIM"> Check that the host architecture matches the package architecture</b>
+      <b class="HIC">template</b>:<b class="HIM"> false</b>
+    - <b class="HIC">maxRetries</b>:<b class="HIM"> 0</b>
+      <b class="HIC">cmd</b>:<b class="HIM"> ./zarf internal is-valid-hostname</b>
+      <b class="HIC">description</b>:<b class="HIM"> Check if the current system has a, RFC1123 compliant hostname</b>
+      <b class="HIC">template</b>:<b class="HIM"> false</b>
+    - <b class="HIC">cmd</b>:<b class="HIM"> "[ -e /etc/redhat-release ] &amp;&amp; systemctl disable firewalld --now || echo ''"</b>
+      <b class="HIC">description</b>:<b class="HIM"> If running a RHEL variant, disable 'firewalld' per k3s docs</b>
+      <b class="HIC">template</b>:<b class="HIM"> false</b>
+    <b class="HIC">after</b>:
+    - <b class="HIC">cmd</b>:<b class="HIM"> systemctl daemon-reload</b>
+      <b class="HIC">description</b>:<b class="HIM"> Reload the system services</b>
+      <b class="HIC">template</b>:<b class="HIM"> false</b>
+    - <b class="HIC">cmd</b>:<b class="HIM"> systemctl enable k3s</b>
+      <b class="HIC">description</b>:<b class="HIM"> Enable 'k3s' to run at system boot</b>
+      <b class="HIC">template</b>:<b class="HIM"> false</b>
+    - <b class="HIC">cmd</b>:<b class="HIM"> systemctl restart k3s</b>
+      <b class="HIC">description</b>:<b class="HIM"> Start the 'k3s' system service</b>
+      <b class="HIC">template</b>:<b class="HIM"> false</b>
+  <b class="HIC">onRemove</b>:
+    <b class="HIC">before</b>:
+    - <b class="HIC">cmd</b>:<b class="HIM"> /opt/zarf/zarf-clean-k3s.sh</b>
+      <b class="HIC">description</b>:<b class="HIM"> Remove 'k3s' from the system</b>
+      <b class="HIC">template</b>:<b class="HIM"> false</b>
+    - <b class="HIC">cmd</b>:<b class="HIM"> rm /opt/zarf/zarf-clean-k3s.sh</b>
+      <b class="HIC">description</b>:<b class="HIM"> Remove the cleanup script</b>
+      <b class="HIC">template</b>:<b class="HIM"> false</b>
+<b class="HIG">? </b><b class="HIW">Deploy the k3s component? (y/N)</b></pre>
 </body>
 </html>

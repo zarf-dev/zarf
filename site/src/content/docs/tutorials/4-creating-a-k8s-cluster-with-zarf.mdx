@@ -20,27 +20,24 @@ The 'k3s' component requires root access (not just `sudo`!) when deploying as it
 
 Before beginning this tutorial you will need the following:
 
-- The [Zarf](https://github.com/zarf-dev/zarf) repository cloned: ([`git clone` Instructions](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository))
-- Zarf binary installed on your $PATH: ([Installing Zarf](/getting-started/install/))
-- An init-package built/downloaded: ([init-package Build Instructions](/tutorials/0-creating-a-zarf-package/)) or ([Download Location](https://github.com/zarf-dev/zarf/releases))
+- A Linux machine with root access.
+- The Zarf binary installed on your `$PATH`.
+- One of the following:
+  - Network access to `ghcr.io`, allowing `zarf init` to pull the matching init package automatically.
+  - A compatible init package [downloaded from a Zarf release](https://github.com/zarf-dev/zarf/releases), transferred from another machine, or [built in advance](/tutorials/7-custom-init-packages/).
 
 ## Creating the Cluster
 
 1. Run the `zarf init` command as `root`.
 
-```sh
-# zarf init
-```
-
-1. Confirm Package Deployment:
-
-- When prompted to deploy the package select `y` for Yes, then hit the `enter` key.
-
-1. Confirm k3s Component Deployment:
-
-- When prompted to deploy the k3s component select `y` for Yes, then hit the `enter` key.
-
 <iframe src="/tutorials/k3s_init.html" height="750px" width="100%"></iframe>
+
+2. If Zarf does not find a local init package, type `y` and press `enter` to pull the package matching your installed Zarf version.
+
+3. When prompted to deploy the init package, type `y` and press `enter`.
+
+4. When prompted to deploy the k3s component select `y` for Yes, then hit the `enter` key.
+
 
 :::tip
 
