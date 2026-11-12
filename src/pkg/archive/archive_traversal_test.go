@@ -7,7 +7,10 @@ import (
 	"archive/tar"
 	"compress/gzip"
 	"os"
+	"path"
 	"path/filepath"
+	"runtime"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -240,12 +243,14 @@ func TestSymlinkAliasCannotWriteOutsideRoot(t *testing.T) {
 	err := Decompress(t.Context(), archivePath, dst, DecompressOpts{})
 	require.Error(t, err)
 	require.NoFileExists(t, filepath.Join(filepath.Dir(dst), "outside", "attempt.txt"))
-	info, lstatErr := os.Lstat(filepath.Join(dst, "d"))
-	require.NoError(t, lstatErr)
-	require.NotZero(t, info.Mode()&os.ModeSymlink)
-	info, lstatErr = os.Lstat(filepath.Join(dst, "escape"))
-	require.NoError(t, lstatErr)
-	require.NotZero(t, info.Mode()&os.ModeSymlink)
+	if runtime.GOOS != "windows" {
+		info, lstatErr := os.Lstat(filepath.Join(dst, "d"))
+		require.NoError(t, lstatErr)
+		require.NotZero(t, info.Mode()&os.ModeSymlink)
+		info, lstatErr = os.Lstat(filepath.Join(dst, "escape"))
+		require.NoError(t, lstatErr)
+		require.NotZero(t, info.Mode()&os.ModeSymlink)
+	}
 }
 
 // TestWindowsReservedNames verifies that archive entries using Windows
@@ -615,4 +620,78 @@ func TestValidateEntryName(t *testing.T) {
 			require.ErrorContains(t, err, tc.contains)
 		})
 	}
+}
+
+// FuzzExtractionPathContainment fuzzes the archive entry name and link target validation,
+// asserting that every accepted entry or link target strictly satisfies containment rules
+// and never produces a path escaping the root destination directory.
+func FuzzExtractionPathContainment(f *testing.F) {
+	// Seed known valid path forms
+	f.Add("file.txt", "")
+	f.Add("sub/dir/file.txt", "")
+	f.Add("a/b/c", "")
+	f.Add(".hidden", "")
+	f.Add("sub/.hidden/file", "")
+	f.Add("sub/link", "file.txt")
+	f.Add("a/b/link", "../file.txt")
+
+	// Seed adversarial path traversal forms
+	f.Add("../escape.txt", "")
+	f.Add("../../etc/shadow", "")
+	f.Add("foo/../../bar", "")
+	f.Add("/etc/passwd", "")
+	f.Add(`\Windows\System32`, "")
+	f.Add("C:file.txt", "")
+	f.Add(`C:\file.txt`, "")
+	f.Add("file.txt:hidden", "")
+	f.Add("CON", "")
+	f.Add("PRN", "")
+	f.Add("AUX.txt", "")
+	f.Add("NUL", "")
+	f.Add("COM1.tar.gz", "")
+	f.Add("file.txt.", "")
+	f.Add("file.txt ", "")
+	f.Add(`sub\file.txt`, "")
+	f.Add("link", "../outside")
+	f.Add("link", "/outside")
+	f.Add("link", "C:outside")
+	f.Add("link", `\outside`)
+
+	f.Fuzz(func(t *testing.T, entryName, linkTarget string) {
+		// Test validateEntryName on entryName
+		errName := validateEntryName(entryName)
+		if errName == nil {
+			// Invariant 1: No backslashes
+			require.NotContains(t, entryName, `\`)
+			// Invariant 2: No colons
+			require.NotContains(t, entryName, ":")
+			// Invariant 3: No empty entry name
+			require.NotEmpty(t, entryName)
+			// Invariant 4: No Windows reserved names in path components
+			for part := range strings.SplitSeq(entryName, "/") {
+				upper := strings.ToUpper(part)
+				require.False(t, windowsReservedNames[upper], "must not match Windows reserved name: %s", part)
+				if dot := strings.IndexByte(upper, '.'); dot > 0 {
+					require.False(t, windowsReservedNames[upper[:dot]], "must not match Windows reserved name with ext: %s", part)
+				}
+				if part != "." && part != ".." {
+					require.Equal(t, part, strings.TrimRight(part, ". "), "must not have trailing dots or spaces")
+				}
+			}
+		}
+
+		// Test validateSymlink if linkTarget is provided
+		if linkTarget != "" {
+			errSym := validateSymlink(entryName, linkTarget)
+			if errSym == nil {
+				// Invariant 1: Target must not be rooted or absolute
+				require.False(t, linkTarget[0] == '/' || linkTarget[0] == '\\')
+				require.False(t, filepath.IsAbs(linkTarget))
+				require.Empty(t, filepath.VolumeName(linkTarget))
+				// Invariant 2: Resolved path must not escape root
+				resolved := path.Clean(path.Join(path.Dir(entryName), linkTarget))
+				require.False(t, resolved == ".." || strings.HasPrefix(resolved, "../"), "symlink must resolve within root: %s", resolved)
+			}
+		}
+	})
 }
