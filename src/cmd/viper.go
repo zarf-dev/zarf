@@ -166,6 +166,7 @@ const (
 	VDevTemplateSet            = "dev.template.set"
 	VDevTemplateSetFile        = "dev.template.set_file"
 	VDevTemplateSkipValidation = "dev.template.skip_validation"
+	VDevTemplateRecursive      = "dev.template.recursive"
 )
 
 var (
