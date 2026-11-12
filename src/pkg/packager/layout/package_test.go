@@ -5,16 +5,27 @@ package layout
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
 	"crypto/sha256"
+	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/asn1"
+	"encoding/base64"
 	"encoding/hex"
+	"encoding/json"
+	"math/big"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"testing"
+	"time"
 
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/sigstore/cosign/v3/pkg/cosign"
+	"github.com/sigstore/sigstore-go/pkg/fulcio/certificate"
 	"github.com/stretchr/testify/require"
 
 	"github.com/zarf-dev/zarf/src/api"
@@ -2352,4 +2363,210 @@ func writeDocumentationTar(t *testing.T, dir, tarPath string) {
 		sources = append(sources, filepath.Join(dir, entry.Name()))
 	}
 	require.NoError(t, archive.Compress(context.Background(), sources, tarPath, archive.CompressOpts{}))
+}
+
+func makeTestCert(t *testing.T, tmpl *x509.Certificate) *x509.Certificate {
+	t.Helper()
+	priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	require.NoError(t, err)
+	tmpl.SerialNumber = big.NewInt(1)
+	tmpl.NotBefore = time.Now()
+	tmpl.NotAfter = time.Now().Add(time.Hour)
+	der, err := x509.CreateCertificate(rand.Reader, tmpl, tmpl, &priv.PublicKey, priv)
+	require.NoError(t, err)
+	cert, err := x509.ParseCertificate(der)
+	require.NoError(t, err)
+	return cert
+}
+
+func writeKeylessBundleFixture(t *testing.T, dir string, identity, issuer string) string {
+	t.Helper()
+	issuerVal, err := asn1.Marshal(issuer)
+	require.NoError(t, err)
+	cert := makeTestCert(t, &x509.Certificate{
+		Subject:        pkix.Name{CommonName: "ephemeral"},
+		EmailAddresses: []string{identity},
+		ExtraExtensions: []pkix.Extension{
+			{Id: certificate.OIDIssuerV2, Value: issuerVal},
+		},
+	})
+	b := map[string]any{
+		"mediaType": "application/vnd.dev.sigstore.bundle+json;version=0.1",
+		"verificationMaterial": map[string]any{
+			"certificate": map[string]any{
+				"rawBytes": base64.StdEncoding.EncodeToString(cert.Raw),
+			},
+		},
+		"messageSignature": map[string]any{
+			"messageDigest": map[string]any{
+				"algorithm": "SHA2_256",
+				"digest":    base64.StdEncoding.EncodeToString(make([]byte, 32)),
+			},
+			"signature": base64.StdEncoding.EncodeToString([]byte("dummy")),
+		},
+	}
+	data, err := json.Marshal(b)
+	require.NoError(t, err)
+	path := filepath.Join(dir, Bundle)
+	require.NoError(t, os.WriteFile(path, data, 0o600))
+	return path
+}
+
+func writeKeyBundleFixture(t *testing.T, dir string) string {
+	t.Helper()
+	b := map[string]any{
+		"mediaType": "application/vnd.dev.sigstore.bundle+json;version=0.1",
+		"verificationMaterial": map[string]any{
+			"publicKey": map[string]any{"hint": "test-key-id"},
+		},
+		"messageSignature": map[string]any{
+			"messageDigest": map[string]any{
+				"algorithm": "SHA2_256",
+				"digest":    base64.StdEncoding.EncodeToString(make([]byte, 32)),
+			},
+			"signature": base64.StdEncoding.EncodeToString([]byte("dummy")),
+		},
+	}
+	data, err := json.Marshal(b)
+	require.NoError(t, err)
+	path := filepath.Join(dir, Bundle)
+	require.NoError(t, os.WriteFile(path, data, 0o600))
+	return path
+}
+
+func TestPackageLayoutSignatureInfo(t *testing.T) {
+	t.Parallel()
+
+	t.Run("returns ErrPackageNotSigned when unsigned", func(t *testing.T) {
+		t.Parallel()
+		p := &PackageLayout{dirPath: t.TempDir()}
+		_, err := p.SignatureInfo()
+		require.ErrorIs(t, err, ErrPackageNotSigned)
+	})
+
+	t.Run("returns error when dirPath is empty", func(t *testing.T) {
+		t.Parallel()
+		p := &PackageLayout{}
+		_, err := p.SignatureInfo()
+		require.ErrorContains(t, err, "dirPath is empty")
+	})
+
+	t.Run("returns keyless signature info from bundle", func(t *testing.T) {
+		t.Parallel()
+		dir := t.TempDir()
+		writeKeylessBundleFixture(t, dir, "user@example.com", "https://github.com/login/oauth")
+
+		p := &PackageLayout{dirPath: dir}
+		info, err := p.SignatureInfo()
+		require.NoError(t, err)
+		require.Equal(t, signing.SigningMethodKeyless, info.Method)
+		require.Equal(t, "user@example.com", info.Identity)
+		require.Equal(t, "https://github.com/login/oauth", info.Issuer)
+	})
+
+	t.Run("returns key signature info from bundle", func(t *testing.T) {
+		t.Parallel()
+		dir := t.TempDir()
+		writeKeyBundleFixture(t, dir)
+
+		p := &PackageLayout{dirPath: dir}
+		info, err := p.SignatureInfo()
+		require.NoError(t, err)
+		require.Equal(t, signing.SigningMethodKey, info.Method)
+		require.Empty(t, info.Identity)
+		require.Empty(t, info.Issuer)
+	})
+
+	t.Run("returns key signature info from legacy signature", func(t *testing.T) {
+		t.Parallel()
+		dir := t.TempDir()
+		require.NoError(t, os.WriteFile(filepath.Join(dir, Signature), []byte("dummy-sig"), 0o600))
+
+		p := &PackageLayout{dirPath: dir}
+		info, err := p.SignatureInfo()
+		require.NoError(t, err)
+		require.Equal(t, signing.SigningMethodKey, info.Method)
+		require.Empty(t, info.Identity)
+		require.Empty(t, info.Issuer)
+	})
+}
+
+func TestPackageLayoutRawSignature(t *testing.T) {
+	t.Parallel()
+
+	t.Run("returns ErrPackageNotSigned when unsigned", func(t *testing.T) {
+		t.Parallel()
+		p := &PackageLayout{dirPath: t.TempDir()}
+		_, err := p.RawSignature()
+		require.ErrorIs(t, err, ErrPackageNotSigned)
+	})
+
+	t.Run("returns error when dirPath is empty", func(t *testing.T) {
+		t.Parallel()
+		p := &PackageLayout{}
+		_, err := p.RawSignature()
+		require.ErrorContains(t, err, "dirPath is empty")
+	})
+
+	t.Run("returns raw bundle bytes", func(t *testing.T) {
+		t.Parallel()
+		dir := t.TempDir()
+		bundlePath := writeKeyBundleFixture(t, dir)
+		expected, err := os.ReadFile(bundlePath)
+		require.NoError(t, err)
+
+		p := &PackageLayout{dirPath: dir}
+		raw, err := p.RawSignature()
+		require.NoError(t, err)
+		require.Equal(t, expected, raw)
+	})
+
+	t.Run("returns raw legacy signature bytes", func(t *testing.T) {
+		t.Parallel()
+		dir := t.TempDir()
+		expected := []byte("raw-legacy-signature-bytes")
+		require.NoError(t, os.WriteFile(filepath.Join(dir, Signature), expected, 0o600))
+
+		p := &PackageLayout{dirPath: dir}
+		raw, err := p.RawSignature()
+		require.NoError(t, err)
+		require.Equal(t, expected, raw)
+	})
+}
+
+func TestPackageLayoutIsSigned(t *testing.T) {
+	t.Parallel()
+
+	t.Run("fallback detects bundle on disk when Build.Signed is nil", func(t *testing.T) {
+		t.Parallel()
+		dir := t.TempDir()
+		require.NoError(t, os.WriteFile(filepath.Join(dir, Bundle), []byte("{}"), 0o600))
+
+		p := &PackageLayout{
+			dirPath: dir,
+			pkg:     packageDefinition(v1alpha1.ZarfPackage{}),
+		}
+		require.True(t, p.IsSigned())
+	})
+
+	t.Run("fallback detects legacy signature on disk when Build.Signed is nil", func(t *testing.T) {
+		t.Parallel()
+		dir := t.TempDir()
+		require.NoError(t, os.WriteFile(filepath.Join(dir, Signature), []byte("sig"), 0o600))
+
+		p := &PackageLayout{
+			dirPath: dir,
+			pkg:     packageDefinition(v1alpha1.ZarfPackage{}),
+		}
+		require.True(t, p.IsSigned())
+	})
+
+	t.Run("returns false when unsigned and files absent", func(t *testing.T) {
+		t.Parallel()
+		p := &PackageLayout{
+			dirPath: t.TempDir(),
+			pkg:     packageDefinition(v1alpha1.ZarfPackage{}),
+		}
+		require.False(t, p.IsSigned())
+	})
 }

@@ -367,6 +367,20 @@ $ zarf package inspect documentation zarf-package-my-app-amd64-1.0.0.tar.zst
 $ zarf package inspect documentation oci://ghcr.io/my-org/my-package:1.0.0
 `
 
+	CmdPackageInspectSignatureShort = "Displays signature information for the specified package"
+	CmdPackageInspectSignatureLong  = "Displays cryptographic signature metadata (such as signing method, certificate identity, and OIDC issuer) from a signed package bundle without decompressing or downloading the entire package."
+	CmdPackageInspectSignatureExample = `
+# Inspect signature of a local package tarball
+$ zarf package inspect signature zarf-package-my-app-amd64-1.0.0.tar.zst
+
+# Inspect signature of a package in an OCI registry (oci:// prefix optional)
+$ zarf package inspect signature oci://ghcr.io/my-org/my-package:1.0.0
+
+# Output the raw signature or Sigstore bundle
+$ zarf package inspect signature zarf-package-my-app-amd64-1.0.0.tar.zst --raw
+`
+	CmdPackageInspectSignatureFlagRaw = "Output the raw signature or Sigstore bundle content"
+
 	CmdPackageInspectFlagSbomOut    = "Specify an output directory for the SBOMs from the inspected Zarf package"
 	CmdPackageInspectFlagListImages = "List images in the package (prints to stdout)"
 	CmdPackageInspectFlagNamespace  = "[Alpha] Override the namespace for package inspection. Applicable only to packages deployed using the namespace flag."
