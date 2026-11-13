@@ -14,8 +14,9 @@ spec:
     kind: Deployment
     name: {{ template "docker-registry.fullname" . }}
 {{- if .Values.autoscaling.mapReplicasToNodes }}
-  minReplicas: {{ len (lookup "v1" "Node" "" "") }}
-  maxReplicas: {{ add (len (lookup "v1" "Node" "" "")) 4 }}
+{{- $nodeCount := max 1 (len ((lookup "v1" "Node" "" "").items | default list)) }}
+  minReplicas: {{ $nodeCount }}
+  maxReplicas: {{ add $nodeCount 4 }}
 {{- else }}
   minReplicas: {{ .Values.autoscaling.minReplicas }}
   maxReplicas: {{ .Values.autoscaling.maxReplicas }}
