@@ -63,6 +63,14 @@ func (p Package) Validate() error {
 					errs = append(errs, fmt.Errorf("%s.images[%d].source must be %q in %s", path, j, ImageSourceRegistryDaemonFallback, version))
 				}
 			}
+			for j, chart := range component.Charts {
+				if chart.PostRenderStrategy != "" {
+					add(fmt.Sprintf("%s.charts[%d].postRenderStrategy", path, j))
+				}
+				if len(chart.PostRenderers) > 0 {
+					add(fmt.Sprintf("%s.charts[%d].postRenderers", path, j))
+				}
+			}
 		case v1beta1.APIVersion:
 			if component.Default {
 				add(path + ".default")

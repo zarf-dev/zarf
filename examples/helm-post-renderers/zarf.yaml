@@ -1,0 +1,93 @@
+apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: helm-post-renderers
+  description: Example using Helm chart post-renderers to harden and schedule a Velero hook Job that chart values cannot reach
+  version: 0.0.1
+
+values:
+  files:
+    - values.yaml
+
+components:
+  - name: velero
+    description: Deploys Velero with every pod, including the chart's namespace-labeling hook Job, compliant with Pod Security "restricted"
+    charts:
+      - name: velero
+        helmRepository:
+          url: https://vmware-tanzu.github.io/helm-charts
+          name: velero
+          version: 12.2.5
+        namespace: velero
+        # Use chart values for everything the chart exposes (see velero-values.yaml).
+        valuesFiles:
+          - path: velero-values.yaml
+        values:
+          - sourcePath: ".scheduling.nodeSelector"
+            targetPath: ".nodeSelector"
+          - sourcePath: ".scheduling.tolerations"
+            targetPath: ".tolerations"
+        # velero-label-namespace is a Helm hook (post-install,post-upgrade,post-rollback). The default strategy
+        # (nohooks) never shows hooks to post-renderers, so opt in. `separate` runs the hooks through the
+        # post-renderers in their own pass, apart from the chart's regular resources.
+        postRenderStrategy: separate
+        postRenderers:
+          # 1. Static hardening. The chart renders this Job without any securityContext and exposes no values for it.
+          - kustomize:
+              patches:
+                - target:
+                    group: batch
+                    version: v1
+                    kind: Job
+                    name: velero-label-namespace
+                  patch: |
+                    apiVersion: batch/v1
+                    kind: Job
+                    metadata:
+                      name: velero-label-namespace
+                    spec:
+                      template:
+                        spec:
+                          securityContext:
+                            runAsNonRoot: true
+                            # registry.k8s.io/kubectl runs as root (UID 0) by default.
+                            runAsUser: 65532
+                            runAsGroup: 65532
+                            seccompProfile:
+                              type: RuntimeDefault
+                          containers:
+                            - name: label-namespace
+                              securityContext:
+                                allowPrivilegeEscalation: false
+                                readOnlyRootFilesystem: true
+                                capabilities:
+                                  drop:
+                                    - ALL
+          # 2. Deploy-time scheduling. The chart applies `nodeSelector` and `tolerations` to the Velero
+          # Deployment and the CRD upgrade Job, but not to this Job. Templating reuses the same package values
+          # that are mapped into the chart above.
+          - kustomize:
+              enableTemplating: true
+              patches:
+                - target:
+                    group: batch
+                    version: v1
+                    kind: Job
+                    name: velero-label-namespace
+                  patch: |
+                    apiVersion: batch/v1
+                    kind: Job
+                    metadata:
+                      name: velero-label-namespace
+                    spec:
+                      template:
+                        spec:
+                          nodeSelector: {{ .Values.scheduling.nodeSelector | toJson }}
+                          tolerations: {{ .Values.scheduling.tolerations | toJson }}
+    images:
+      - name: docker.io/velero/velero:v1.18.2
+      # Used by the velero-label-namespace hook Job. The tag is pinned in velero-values.yaml.
+      - name: registry.k8s.io/kubectl:v1.36.6
+
+attachments:
+  readme: readme.md

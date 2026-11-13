@@ -127,8 +127,13 @@ func mergeCharts(base, headCharts []v1beta1.Chart) ([]v1beta1.Chart, error) {
 		if headChart.SkipSchemaValidation {
 			importedChart.SkipSchemaValidation = true
 		}
+		if headChart.PostRenderStrategy != "" {
+			importedChart.PostRenderStrategy = headChart.PostRenderStrategy
+		}
 		importedChart.ValuesFiles = append(importedChart.ValuesFiles, headChart.ValuesFiles...)
 		importedChart.Values = append(importedChart.Values, headChart.Values...)
+		// Importer post-renderers run after the imported chart's own post-renderers.
+		importedChart.PostRenderers = append(importedChart.PostRenderers, headChart.PostRenderers...)
 		out[idx] = importedChart
 	}
 	return out, nil

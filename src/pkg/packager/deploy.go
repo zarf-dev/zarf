@@ -24,6 +24,7 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/checksum"
 	"github.com/zarf-dev/zarf/src/internal/healthchecks"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
+	"github.com/zarf-dev/zarf/src/internal/packager/postrender"
 	"github.com/zarf-dev/zarf/src/internal/packager/requirements"
 	ptmpl "github.com/zarf-dev/zarf/src/internal/packager/template"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
@@ -815,12 +816,14 @@ func (d *deployer) installCharts(ctx context.Context, pkgLayout *layout.PackageL
 			chart.SkipWait = true
 		}
 
+		objs, err := chartTemplateObjects(chart, d.vals, pkg, d.vc, template.StateAccess{State: d.s, AccessKeys: component.StateAccess})
+		if err != nil {
+			return installedCharts, err
+		}
 		if err := templateValuesFiles(ctx, chart, valuesDir, templateValuesFilesOpts{
 			variableConfig: d.vc,
 			pkg:            pkg,
-			vals:           d.vals,
-			s:              d.s,
-			stateAccess:    component.StateAccess,
+			objs:           objs,
 		}); err != nil {
 			return installedCharts, err
 		}
@@ -834,10 +837,16 @@ func (d *deployer) installCharts(ctx context.Context, pkgLayout *layout.PackageL
 			return installedCharts, err
 		}
 
+		postRenderer, err := postrender.New(ctx, chart, objs)
+		if err != nil {
+			return installedCharts, err
+		}
+
 		helmOpts := helm.InstallUpgradeOptions{
 			TakeOwnership:     opts.TakeOwnership,
 			ForceConflicts:    opts.ForceConflicts,
 			VariableConfig:    d.vc,
+			PostRenderer:      postRenderer,
 			State:             d.s,
 			Cluster:           d.c,
 			ConnectedDeploy:   opts.Connectivity.IsConnected(),
@@ -897,8 +906,7 @@ func (d *deployer) installManifests(ctx context.Context, pkgLayout *layout.Packa
 				l.Debug("start manifest template", "manifest", manifest.Name, "path", path)
 				objs, err := template.NewObjects(d.vals).
 					WithPackage(pkg).
-					WithVariables(d.vc.GetSetVariableMap()).
-					WithConstants(d.vc.GetConstants()).
+					WithVariableConfig(d.vc).
 					WithState(template.StateAccess{State: d.s, AccessKeys: component.StateAccess})
 				if err != nil {
 					return nil, err
@@ -1128,8 +1136,7 @@ func (d *deployer) processComponentFiles(ctx context.Context, pkgLayout *layout.
 					l.Debug("templates enabled, processing file", "name", file.Destination)
 					objs, err := template.NewObjects(d.vals).
 						WithPackage(pkg).
-						WithVariables(d.vc.GetSetVariableMap()).
-						WithConstants(d.vc.GetConstants()).
+						WithVariableConfig(d.vc).
 						WithState(template.StateAccess{State: d.s, AccessKeys: component.StateAccess})
 					if err != nil {
 						return err

@@ -12,8 +12,11 @@ import (
 
 	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
+	"github.com/zarf-dev/zarf/src/internal/packager/kustomize"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"k8s.io/apimachinery/pkg/util/validation"
+	"sigs.k8s.io/kustomize/api/types"
+	"sigs.k8s.io/kustomize/kyaml/resid"
 )
 
 const (
@@ -53,6 +56,13 @@ const (
 	PkgValidateErrImageConflictingSources = "image %q has conflicting sources %q and %q"
 	PkgValidateErrMapKeyLength            = "%s key %q exceeds the maximum length of %d characters"
 	PkgValidateErrAnnotationsSize         = "metadata.annotations exceeds the maximum total size of %d bytes"
+	PkgValidateErrPostRenderStrategy      = "chart %q has unsupported postRenderStrategy %q (expected nohooks, combined, or separate)"
+	PkgValidateErrPostRendererKustomize   = "chart %q postRenderers[%d] must set kustomize"
+	PkgValidateErrKustomizeEmpty          = "chart %q postRenderers[%d].kustomize must include at least one patch or image"
+	PkgValidateErrKustomizePatchEmpty     = "chart %q postRenderers[%d].kustomize.patches[%d].patch must not be empty"
+	PkgValidateErrKustomizePatchInvalid   = "chart %q postRenderers[%d].kustomize.patches[%d] is not a valid Kustomize patch: %w"
+	PkgValidateErrKustomizeImageName      = "chart %q postRenderers[%d].kustomize.images[%d] must include a name"
+	PkgValidateErrKustomizeImageOverride  = "chart %q postRenderers[%d].kustomize.images[%d] (%q) must set at least one of newName, newTag, or digest"
 )
 
 // ValidationErrors contains all errors found during package validation.
@@ -401,7 +411,67 @@ func validateChart(chart v1beta1.Chart) ValidationErrors {
 		}
 	}
 
+	errs = append(errs, validatePostRenderers(chart)...)
+
 	return errs
+}
+
+// validatePostRenderers checks a chart's post-render strategy and post-renderers.
+func validatePostRenderers(chart v1beta1.Chart) ValidationErrors {
+	var errs ValidationErrors
+	if !api.PostRenderStrategy(chart.PostRenderStrategy).IsValid() {
+		errs = append(errs, fmt.Errorf(PkgValidateErrPostRenderStrategy, chart.Name, chart.PostRenderStrategy))
+	}
+	for i, renderer := range chart.PostRenderers {
+		if renderer.Kustomize == nil {
+			errs = append(errs, fmt.Errorf(PkgValidateErrPostRendererKustomize, chart.Name, i))
+			continue
+		}
+		errs = append(errs, validateKustomizePostRenderer(chart.Name, i, *renderer.Kustomize)...)
+	}
+	return errs
+}
+
+func validateKustomizePostRenderer(chartName string, index int, k v1beta1.KustomizePostRenderer) ValidationErrors {
+	var errs ValidationErrors
+	if len(k.Patches) == 0 && len(k.Images) == 0 {
+		errs = append(errs, fmt.Errorf(PkgValidateErrKustomizeEmpty, chartName, index))
+	}
+	for j, patch := range k.Patches {
+		if strings.TrimSpace(patch.Patch) == "" {
+			errs = append(errs, fmt.Errorf(PkgValidateErrKustomizePatchEmpty, chartName, index, j))
+			continue
+		}
+		// Templated patches may not be valid YAML until rendered at deploy time.
+		if k.EnableTemplating {
+			continue
+		}
+		if err := kustomize.ValidatePatch(patch.Patch, kustomizeSelector(patch.Target)); err != nil {
+			errs = append(errs, fmt.Errorf(PkgValidateErrKustomizePatchInvalid, chartName, index, j, err))
+		}
+	}
+	for j, image := range k.Images {
+		if strings.TrimSpace(image.Name) == "" {
+			errs = append(errs, fmt.Errorf(PkgValidateErrKustomizeImageName, chartName, index, j))
+			continue
+		}
+		if strings.TrimSpace(image.NewName) == "" && strings.TrimSpace(image.NewTag) == "" && strings.TrimSpace(image.Digest) == "" {
+			errs = append(errs, fmt.Errorf(PkgValidateErrKustomizeImageOverride, chartName, index, j, image.Name))
+		}
+	}
+	return errs
+}
+
+// kustomizeSelector converts a patch target to Kustomize's selector type.
+func kustomizeSelector(s *v1beta1.KustomizeSelector) *types.Selector {
+	if s == nil {
+		return nil
+	}
+	return &types.Selector{
+		ResId:              resid.NewResIdWithNamespace(resid.Gvk{Group: s.Group, Version: s.Version, Kind: s.Kind}, s.Name, s.Namespace),
+		LabelSelector:      s.LabelSelector,
+		AnnotationSelector: s.AnnotationSelector,
+	}
 }
 
 func validateGitURL(url string) error {

@@ -138,6 +138,33 @@ func TestConvertGenericRoundTrip(t *testing.T) {
 							ServerSideApply:      v1beta1.ServerSideApplyAuto,
 							HelmRepository:       &v1beta1.HelmRepositorySource{Name: "chart", URL: "https://charts.example.com", Version: "1.0.0"},
 							Values:               []v1beta1.ChartValue{{SourcePath: ".a", TargetPath: ".b"}},
+							PostRenderStrategy:   v1beta1.PostRenderStrategySeparate,
+							PostRenderers: []v1beta1.PostRenderer{
+								{
+									Kustomize: &v1beta1.KustomizePostRenderer{
+										EnableTemplating: true,
+										Patches: []v1beta1.KustomizePatch{
+											{
+												Patch: "- op: add\n  path: /metadata/labels/a\n  value: b\n",
+												Target: &v1beta1.KustomizeSelector{
+													Group:              "apps",
+													Version:            "v1",
+													Kind:               "Deployment",
+													Name:               "app",
+													Namespace:          "ns",
+													LabelSelector:      "app=web",
+													AnnotationSelector: "zarf.dev/patch=true",
+												},
+											},
+											{Patch: "apiVersion: v1\nkind: Service\nmetadata:\n  name: app\n"},
+										},
+										Images: []v1beta1.KustomizeImage{
+											{Name: "nginx", NewName: "registry.example.com/nginx", NewTag: "1.27", Digest: "sha256:abc"},
+										},
+									},
+								},
+								{Kustomize: &v1beta1.KustomizePostRenderer{Images: []v1beta1.KustomizeImage{{Name: "busybox", NewTag: "1.36"}}}},
+							},
 						},
 						{
 							Name: "git-chart",
@@ -406,6 +433,8 @@ func validV1beta1Repository(rng *rand.Rand) v1beta1.Repository {
 //   - image.id has no v1alpha1 equivalent
 //   - chart.valuesFiles is one ordered v1beta1 list. v1alpha1 separates plain and templated files,
 //     so their relative order is lost when the two kinds are interleaved.
+//   - chart.postRenderStrategy and chart.postRenderers have no v1alpha1 equivalent; the v1.1.0
+//     version requirement protects older CLIs from packages that use them.
 //   - actionSet.defaults is a pointer in v1beta1 but a value in v1alpha1, so nil and an explicitly
 //     empty defaults object cannot be distinguished.
 //   - action.wait.cluster.condition defaults from empty to "exists" in v1alpha1, while it defaults
@@ -417,7 +446,7 @@ func v1beta1V1alpha1RoundTripExclusions() cmp.Options {
 		cmpopts.IgnoreFields(v1beta1.ComponentSpec{}, "Import", "Service"),
 		cmpopts.IgnoreFields(v1beta1.Image{}, "ID", "Source"),
 		cmpopts.IgnoreFields(v1beta1.ArchiveImage{}, "ID"),
-		cmpopts.IgnoreFields(v1beta1.Chart{}, "ValuesFiles"),
+		cmpopts.IgnoreFields(v1beta1.Chart{}, "ValuesFiles", "PostRenderStrategy", "PostRenderers"),
 		cmpopts.IgnoreFields(v1beta1.ComponentActionSet{}, "Defaults"),
 		cmpopts.IgnoreFields(v1beta1.ComponentActionWaitCluster{}, "Condition"),
 	}

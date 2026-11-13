@@ -173,6 +173,8 @@ func chartToGeneric(ch v1beta1.Chart) api.Chart {
 		SkipSchemaValidation: ch.SkipSchemaValidation,
 		ServerSideApply:      api.ServerSideApplyMode(ch.ServerSideApply),
 		SkipWait:             ch.SkipWait,
+		PostRenderStrategy:   api.PostRenderStrategy(ch.PostRenderStrategy),
+		PostRenderers:        postRenderersToGeneric(ch.PostRenderers),
 	}
 
 	if ch.HelmRepository != nil {
@@ -507,6 +509,8 @@ func chartFromGeneric(ch api.Chart) v1beta1.Chart {
 		ServerSideApply:      v1beta1.ServerSideApplyMode(ch.ServerSideApply),
 		SkipWait:             ch.SkipWait,
 		Values:               chartValuesFromGeneric(ch.Values),
+		PostRenderStrategy:   v1beta1.PostRenderStrategy(ch.PostRenderStrategy),
+		PostRenderers:        postRenderersFromGeneric(ch.PostRenderers),
 	}
 
 	// The operational model has a single structured chart source.
@@ -533,6 +537,60 @@ func chartFromGeneric(ch api.Chart) v1beta1.Chart {
 	}
 
 	return bc
+}
+
+func postRenderersToGeneric(in []v1beta1.PostRenderer) []api.PostRenderer {
+	var out []api.PostRenderer
+	for _, pr := range in {
+		out = append(out, api.PostRenderer{Kustomize: kustomizePostRendererToGeneric(pr.Kustomize)})
+	}
+	return out
+}
+
+func kustomizePostRendererToGeneric(k *v1beta1.KustomizePostRenderer) *api.KustomizePostRenderer {
+	if k == nil {
+		return nil
+	}
+	out := &api.KustomizePostRenderer{EnableTemplating: k.EnableTemplating}
+	for _, p := range k.Patches {
+		patch := api.KustomizePatch{Patch: p.Patch}
+		if p.Target != nil {
+			target := api.KustomizeSelector(*p.Target)
+			patch.Target = &target
+		}
+		out.Patches = append(out.Patches, patch)
+	}
+	for _, img := range k.Images {
+		out.Images = append(out.Images, api.KustomizeImage(img))
+	}
+	return out
+}
+
+func postRenderersFromGeneric(in []api.PostRenderer) []v1beta1.PostRenderer {
+	var out []v1beta1.PostRenderer
+	for _, pr := range in {
+		out = append(out, v1beta1.PostRenderer{Kustomize: kustomizePostRendererFromGeneric(pr.Kustomize)})
+	}
+	return out
+}
+
+func kustomizePostRendererFromGeneric(k *api.KustomizePostRenderer) *v1beta1.KustomizePostRenderer {
+	if k == nil {
+		return nil
+	}
+	out := &v1beta1.KustomizePostRenderer{EnableTemplating: k.EnableTemplating}
+	for _, p := range k.Patches {
+		patch := v1beta1.KustomizePatch{Patch: p.Patch}
+		if p.Target != nil {
+			target := v1beta1.KustomizeSelector(*p.Target)
+			patch.Target = &target
+		}
+		out.Patches = append(out.Patches, patch)
+	}
+	for _, img := range k.Images {
+		out.Images = append(out.Images, v1beta1.KustomizeImage(img))
+	}
+	return out
 }
 
 func chartValuesFromGeneric(vals []api.ChartValue) []v1beta1.ChartValue {

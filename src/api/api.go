@@ -94,6 +94,14 @@ func (c Chart) GetServerSideApply() ServerSideApplyMode {
 	return c.ServerSideApply
 }
 
+// GetReleaseName returns the Helm release name, defaulting to the chart name.
+func (c Chart) GetReleaseName() string {
+	if c.ReleaseName == "" {
+		return c.Name
+	}
+	return c.ReleaseName
+}
+
 // SourceURL returns the chart source URL, if the chart is remotely sourced.
 func (c Chart) SourceURL() string {
 	switch {

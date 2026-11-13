@@ -20,6 +20,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
 	"github.com/zarf-dev/zarf/src/pkg/state"
+	tmpl "github.com/zarf-dev/zarf/src/pkg/template"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/value"
 )
@@ -99,12 +100,14 @@ func GenerateValuesSchema(ctx context.Context, source string, opts GenerateValue
 				return nil, fmt.Errorf("unable to package chart %q for schema generation: %w", chart.Name, err)
 			}
 
+			objs, err := chartTemplateObjects(chart, packageValues, pkg, variableConfig, tmpl.StateAccess{State: s, AccessKeys: component.StateAccess})
+			if err != nil {
+				return nil, fmt.Errorf("unable to template values files for chart %q: %w", chart.Name, err)
+			}
 			if err := templateValuesFiles(ctx, chart, chartPaths.ValuesDir, templateValuesFilesOpts{
 				variableConfig: variableConfig,
 				pkg:            pkg,
-				vals:           packageValues,
-				s:              s,
-				stateAccess:    component.StateAccess,
+				objs:           objs,
 			}); err != nil {
 				return nil, fmt.Errorf("unable to template values files for chart %q: %w", chart.Name, err)
 			}

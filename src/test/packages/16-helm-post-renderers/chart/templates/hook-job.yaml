@@ -1,0 +1,17 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: app-hook
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    # Keep the completed Job around so its post-rendered state can be inspected.
+    "helm.sh/hook-delete-policy": before-hook-creation
+spec:
+  backoffLimit: 0
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: hook
+          image: "{{ .Values.hook.image.repository }}:{{ .Values.hook.image.tag }}"
+          command: ["sh", "-c", "echo hook-ran"]

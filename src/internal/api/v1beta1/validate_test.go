@@ -452,6 +452,183 @@ func TestValidateChart(t *testing.T) {
 	}
 }
 
+func TestValidateChart_postRenderers(t *testing.T) {
+	t.Parallel()
+	const smp = "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: app\nspec:\n  replicas: 2\n"
+	const jsonPatch = "- op: add\n  path: /metadata/labels/team\n  value: platform\n"
+	image := func(name, newName, newTag, digest string) v1beta1.KustomizeImage {
+		return v1beta1.KustomizeImage{Name: name, NewName: newName, NewTag: newTag, Digest: digest}
+	}
+	kustomize := func(k v1beta1.KustomizePostRenderer) v1beta1.PostRenderer {
+		return v1beta1.PostRenderer{Kustomize: &k}
+	}
+	patches := func(texts ...string) []v1beta1.KustomizePatch {
+		var out []v1beta1.KustomizePatch
+		for _, text := range texts {
+			out = append(out, v1beta1.KustomizePatch{Patch: text})
+		}
+		return out
+	}
+
+	tests := []struct {
+		name         string
+		strategy     v1beta1.PostRenderStrategy
+		renderers    []v1beta1.PostRenderer
+		expectedErrs []string
+		partialMatch bool
+	}{
+		{name: "no post-renderers"},
+		{name: "strategy without post-renderers", strategy: v1beta1.PostRenderStrategyCombined},
+		{name: "nohooks strategy", strategy: v1beta1.PostRenderStrategyNoHooks, renderers: []v1beta1.PostRenderer{kustomize(v1beta1.KustomizePostRenderer{Patches: patches(smp)})}},
+		{name: "separate strategy", strategy: v1beta1.PostRenderStrategySeparate, renderers: []v1beta1.PostRenderer{kustomize(v1beta1.KustomizePostRenderer{Patches: patches(smp)})}},
+		{
+			name:         "unsupported strategy",
+			strategy:     "hooks",
+			expectedErrs: []string{fmt.Sprintf(PkgValidateErrPostRenderStrategy, "app", "hooks")},
+		},
+		{
+			name: "strategic merge, JSON 6902, and image overrides",
+			renderers: []v1beta1.PostRenderer{
+				kustomize(v1beta1.KustomizePostRenderer{
+					Patches: []v1beta1.KustomizePatch{
+						{Patch: smp},
+						{Patch: jsonPatch, Target: &v1beta1.KustomizeSelector{Kind: "Deployment"}},
+						{Patch: `[{"op": "remove", "path": "/spec/replicas"}]`, Target: &v1beta1.KustomizeSelector{Kind: "Deployment"}},
+						{Patch: smp + "---\n" + smp},
+					},
+				}),
+				kustomize(v1beta1.KustomizePostRenderer{Images: []v1beta1.KustomizeImage{
+					image("nginx", "registry.example.com/nginx", "", ""),
+					image("busybox", "", "1.36", ""),
+					image("alpine", "", "", "sha256:abc"),
+				}}),
+			},
+		},
+		{
+			name:         "no renderer kind",
+			renderers:    []v1beta1.PostRenderer{kustomize(v1beta1.KustomizePostRenderer{Patches: patches(smp)}), {}},
+			expectedErrs: []string{fmt.Sprintf(PkgValidateErrPostRendererKustomize, "app", 1)},
+		},
+		{
+			name:         "empty kustomize",
+			renderers:    []v1beta1.PostRenderer{kustomize(v1beta1.KustomizePostRenderer{EnableTemplating: true})},
+			expectedErrs: []string{fmt.Sprintf(PkgValidateErrKustomizeEmpty, "app", 0)},
+		},
+		{
+			name:         "blank patch",
+			renderers:    []v1beta1.PostRenderer{kustomize(v1beta1.KustomizePostRenderer{Patches: patches(smp, " \n")})},
+			expectedErrs: []string{fmt.Sprintf(PkgValidateErrKustomizePatchEmpty, "app", 0, 1)},
+		},
+		{
+			name:         "blank templated patch",
+			renderers:    []v1beta1.PostRenderer{kustomize(v1beta1.KustomizePostRenderer{EnableTemplating: true, Patches: patches("")})},
+			expectedErrs: []string{fmt.Sprintf(PkgValidateErrKustomizePatchEmpty, "app", 0, 0)},
+		},
+		{
+			name: "templated patch is not parsed",
+			renderers: []v1beta1.PostRenderer{kustomize(v1beta1.KustomizePostRenderer{
+				EnableTemplating: true,
+				Patches:          patches("{{ if .Values.enabled }}\n" + smp + "{{ end }}"),
+			})},
+		},
+		{
+			name: "image without name or override",
+			renderers: []v1beta1.PostRenderer{
+				kustomize(v1beta1.KustomizePostRenderer{Patches: patches(smp)}),
+				kustomize(v1beta1.KustomizePostRenderer{Images: []v1beta1.KustomizeImage{
+					image("nginx", "", "1.27", ""),
+					image("", "", "", ""),
+					image("busybox", "", "", ""),
+				}}),
+			},
+			expectedErrs: []string{
+				fmt.Sprintf(PkgValidateErrKustomizeImageName, "app", 1, 1),
+				fmt.Sprintf(PkgValidateErrKustomizeImageOverride, "app", 1, 2, "busybox"),
+			},
+		},
+		{
+			name: "whitespace-only image fields count as empty",
+			renderers: []v1beta1.PostRenderer{kustomize(v1beta1.KustomizePostRenderer{Images: []v1beta1.KustomizeImage{
+				image("  ", "registry.example.com/nginx", "", ""),
+				image("nginx", " ", "\t", "\n"),
+			}})},
+			expectedErrs: []string{
+				fmt.Sprintf(PkgValidateErrKustomizeImageName, "app", 0, 0),
+				fmt.Sprintf(PkgValidateErrKustomizeImageOverride, "app", 0, 1, "nginx"),
+			},
+		},
+		{
+			name:         "malformed YAML patch",
+			renderers:    []v1beta1.PostRenderer{kustomize(v1beta1.KustomizePostRenderer{Patches: patches("kind: [Deployment")})},
+			expectedErrs: []string{`chart "app" postRenderers[0].kustomize.patches[0] is not a valid Kustomize patch: unable to parse SM or JSON patch`},
+			partialMatch: true,
+		},
+		{
+			name:         "JSON 6902 patch without target",
+			renderers:    []v1beta1.PostRenderer{kustomize(v1beta1.KustomizePostRenderer{Patches: patches(smp, jsonPatch)})},
+			expectedErrs: []string{`chart "app" postRenderers[0].kustomize.patches[1] is not a valid Kustomize patch: must specify a target for JSON patch`},
+			partialMatch: true,
+		},
+		{
+			name: "targeted strategic merge patch without kind",
+			renderers: []v1beta1.PostRenderer{kustomize(v1beta1.KustomizePostRenderer{Patches: []v1beta1.KustomizePatch{
+				{Patch: "metadata:\n  name: app\n", Target: &v1beta1.KustomizeSelector{Kind: "Deployment"}},
+			}})},
+			expectedErrs: []string{`chart "app" postRenderers[0].kustomize.patches[0] is not a valid Kustomize patch: unable to parse SM or JSON patch`},
+			partialMatch: true,
+		},
+		{
+			name: "templated patch skips structural checks",
+			renderers: []v1beta1.PostRenderer{kustomize(v1beta1.KustomizePostRenderer{
+				EnableTemplating: true,
+				Patches:          patches(jsonPatch, "metadata:\n  name: app\n"),
+			})},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			chart := v1beta1.Chart{
+				Name:               "app",
+				Namespace:          "app",
+				Local:              &v1beta1.LocalSource{Path: "chart"},
+				PostRenderStrategy: tt.strategy,
+				PostRenderers:      tt.renderers,
+			}
+			errs := validateChart(chart)
+			if tt.expectedErrs == nil {
+				require.Empty(t, errs)
+				return
+			}
+			if tt.partialMatch {
+				require.Len(t, errs, len(tt.expectedErrs))
+				for _, expectedErr := range tt.expectedErrs {
+					require.Contains(t, strings.Join(validationErrorMessages(errs), "\n"), expectedErr)
+				}
+				return
+			}
+			require.ElementsMatch(t, tt.expectedErrs, validationErrorMessages(errs))
+		})
+	}
+}
+
+func TestValidatePackage_chartPostRendererErrorsIdentifyChart(t *testing.T) {
+	t.Parallel()
+	errs := ValidatePackage(v1beta1.Package{
+		Kind: v1beta1.ZarfPackageConfig,
+		Components: []v1beta1.Component{{
+			Name: "component",
+			ComponentSpec: v1beta1.ComponentSpec{Charts: []v1beta1.Chart{{
+				Name: "podinfo", Namespace: "podinfo", Local: &v1beta1.LocalSource{Path: "chart"},
+				PostRenderers: []v1beta1.PostRenderer{{}},
+			}}},
+		}},
+	})
+	require.Equal(t, []string{
+		fmt.Errorf(PkgValidateErrChart, fmt.Errorf(PkgValidateErrPostRendererKustomize, "podinfo", 0)).Error(),
+	}, validationErrorMessages(errs))
+}
+
 func TestValidateComponentRequiresResolvedChartSource(t *testing.T) {
 	t.Parallel()
 	for _, tc := range []struct {

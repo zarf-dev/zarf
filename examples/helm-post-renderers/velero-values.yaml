@@ -1,0 +1,38 @@
+# Values for the upstream Velero chart. Everything the chart exposes is hardened here; the
+# post-renderers in zarf.yaml cover the one workload it does not.
+
+# Configure a BackupStorageLocation, credentials, and an object storage plugin for your environment.
+# They are disabled here so the example deploys without external storage.
+backupsEnabled: false
+snapshotsEnabled: false
+
+# The chart applies these labels to its namespace with the velero-label-namespace hook Job, which runs
+# after every install, upgrade, and rollback. Once the namespace enforces "restricted", every later
+# pod in it, including that Job on the next upgrade, must comply.
+namespace:
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: latest
+    pod-security.kubernetes.io/warn: restricted
+    pod-security.kubernetes.io/warn-version: latest
+
+kubectl:
+  image:
+    # Without a tag, the chart derives one from the cluster's Kubernetes version at deploy time. That
+    # image would not be in the package, so pin it to the image listed in zarf.yaml.
+    tag: v1.36.6
+
+# Applied to the Velero Deployment and the velero-upgrade-crds hook Job.
+podSecurityContext:
+  runAsNonRoot: true
+  # The velero image runs as the non-numeric user "cnb" (UID 1002, GID 1000). The kubelet cannot verify
+  # runAsNonRoot for a non-numeric user, so set the UID explicitly.
+  runAsUser: 1002
+  runAsGroup: 1000
+  seccompProfile:
+    type: RuntimeDefault
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL

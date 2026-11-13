@@ -1,0 +1,35 @@
+apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: post-renderers
+components:
+  - name: baseline
+    charts:
+      - name: web
+        namespace: web
+        local:
+          path: chart
+        postRenderers:
+          - kustomize:
+              patches:
+                - patch: |
+                    apiVersion: apps/v1
+                    kind: Deployment
+                    metadata:
+                      name: web
+                    spec:
+                      replicas: 4
+              images:
+                - name: docker.io/library/nginx
+                  newName: registry.example.com/mirror/nginx
+                  newTag: 1.27.0
+          - kustomize:
+              enableTemplating: true
+              patches:
+                - patch: |
+                    - op: add
+                      path: /metadata/labels/team
+                      value: "{{ .Values.team }}"
+                  target:
+                    kind: Deployment
+                    name: web

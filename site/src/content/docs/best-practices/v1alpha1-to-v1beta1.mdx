@@ -222,6 +222,8 @@ valuesFiles:
 
 Package-value mappings in `charts[].values` keep their `sourcePath` and `targetPath` fields.
 
+v1beta1 charts can also use [post-renderers](/ref/components/#post-renderers) (`charts[].postRenderers` and `charts[].postRenderStrategy`) to patch rendered manifests that chart values can't reach. These fields have no v1alpha1 equivalent, and packages that use them require Zarf `v1.1.0` or later to deploy.
+
 ### Images
 
 The full image reference now lives under `name`. The optional `source` defaults to `registry`; `daemon` may be used for local Docker images. Registry pulls no longer fall back to the daemon. Consider `zarf dev template` if different builds require different sources.
