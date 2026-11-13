@@ -52,5 +52,10 @@ func readImageMetadata(img v1.Image) (Metadata, error) {
 		Config:    *config,
 		MediaType: mediaType,
 		RawConfig: rawConfig,
+		// the config is the authoritative source for what the image actually is. Providers may still
+		// override these with AdditionalMetadata, which is applied after this (see Image.Read).
+		OS:           config.OS,
+		Architecture: config.Architecture,
+		Variant:      config.Variant,
 	}, nil
 }

@@ -169,7 +169,7 @@ func createImageSBOMAtPath(ctx context.Context, cachePath, sbomPath string, img 
 	}
 
 	syftImage := image.New(img, file.NewTempDirGenerator("zarf"), imageCachePath, image.WithTags(identifier))
-	err := syftImage.Read()
+	err := syftImage.Read(ctx)
 	if err != nil {
 		return err
 	}

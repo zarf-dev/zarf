@@ -2,52 +2,44 @@ package tree
 
 import (
 	"fmt"
+	"maps"
 
 	"github.com/anchore/stereoscope/pkg/tree/node"
 )
 
 // Tree represents a simple Tree data structure.
+//
+// Nodes are shared between a Tree and its copies, so a node must never be mutated once it is in a Tree. To change
+// a node, Replace it with a new one.
 type Tree struct {
-	nodes    map[node.ID]node.Node             // {node-id: node}
-	children map[node.ID]map[node.ID]node.Node // {parent-id: {child-id: child-node}
-	parent   map[node.ID]node.Node             // {child-id: parent-node}
+	nodes    map[node.ID]entry                // {node-id: node + parent-id}
+	children map[node.ID]map[node.ID]struct{} // {parent-id: {child-id}} (absent or empty for nodes with no children)
+}
+
+// entry keeps the parent next to the node so a Tree costs one key per node, not two.
+type entry struct {
+	node      node.Node
+	parent    node.ID
+	hasParent bool
 }
 
 // NewTree returns an instance of a Tree.
 func NewTree() *Tree {
 	return &Tree{
-		nodes:    make(map[node.ID]node.Node),
-		children: make(map[node.ID]map[node.ID]node.Node),
-		parent:   make(map[node.ID]node.Node),
+		nodes:    make(map[node.ID]entry),
+		children: make(map[node.ID]map[node.ID]struct{}),
 	}
 }
 
+// Copy returns a structural copy of the Tree. Nodes are shared with the original (see Tree).
 func (t *Tree) Copy() *Tree {
-	ct := NewTree()
-	for k, v := range t.nodes {
-		if v == nil {
-			ct.nodes[k] = nil
-			continue
-		}
-		ct.nodes[k] = v.Copy()
+	ct := &Tree{
+		nodes:    maps.Clone(t.nodes),
+		children: make(map[node.ID]map[node.ID]struct{}, len(t.children)),
 	}
-	for k, v := range t.parent {
-		if v == nil {
-			ct.parent[k] = nil
-			continue
-		}
-		ct.parent[k] = v.Copy()
-	}
-	for from, lookup := range t.children {
-		if _, exists := ct.children[from]; !exists {
-			ct.children[from] = make(map[node.ID]node.Node)
-		}
-		for to, v := range lookup {
-			if v == nil {
-				ct.children[from][to] = nil
-				continue
-			}
-			ct.children[from][to] = v.Copy()
+	for from, set := range t.children {
+		if len(set) > 0 {
+			ct.children[from] = maps.Clone(set)
 		}
 	}
 	return ct
@@ -56,9 +48,9 @@ func (t *Tree) Copy() *Tree {
 // Roots is all of the nodes with no parents.
 func (t *Tree) Roots() node.Nodes {
 	nodes := make([]node.Node, 0)
-	for _, n := range t.nodes {
-		if parent := t.parent[n.ID()]; parent == nil {
-			nodes = append(nodes, n)
+	for _, e := range t.nodes {
+		if !e.hasParent {
+			nodes = append(nodes, e.node)
 		}
 	}
 	return nodes
@@ -66,15 +58,13 @@ func (t *Tree) Roots() node.Nodes {
 
 // HasNode indicates is the given node ID exists in the Tree.
 func (t *Tree) HasNode(id node.ID) bool {
-	if _, exists := t.nodes[id]; exists {
-		return true
-	}
-	return false
+	_, exists := t.nodes[id]
+	return exists
 }
 
 // Node returns a node object for the given ID.
 func (t *Tree) Node(id node.ID) node.Node {
-	return t.nodes[id]
+	return t.nodes[id].node
 }
 
 // Nodes returns all nodes in the Tree.
@@ -82,13 +72,10 @@ func (t *Tree) Nodes() node.Nodes {
 	if len(t.nodes) == 0 {
 		return nil
 	}
-	nodes := make([]node.Node, len(t.nodes))
-	i := 0
-	for _, n := range t.nodes {
-		nodes[i] = n
-		i++
+	nodes := make([]node.Node, 0, len(t.nodes))
+	for _, e := range t.nodes {
+		nodes = append(nodes, e.node)
 	}
-
 	return nodes
 }
 
@@ -97,54 +84,55 @@ func (t *Tree) addNode(n node.Node) error {
 	if _, exists := t.nodes[n.ID()]; exists {
 		return fmt.Errorf("node ID collision: %+v", n.ID())
 	}
-	t.nodes[n.ID()] = n
-	t.children[n.ID()] = make(map[node.ID]node.Node)
-	t.parent[n.ID()] = nil
+	t.nodes[n.ID()] = entry{node: n}
 	return nil
 }
 
 // Replace takes the given old node and replaces it with the given new one.
 func (t *Tree) Replace(old node.Node, newNode node.Node) error {
-	if !t.HasNode(old.ID()) {
+	oid, nid := old.ID(), newNode.ID()
+	oldEntry, ok := t.nodes[oid]
+	if !ok {
 		return fmt.Errorf("cannot replace node not in the Tree")
 	}
 
-	if old.ID() == newNode.ID() {
-		// the underlying objects may be different, but the ID's match. Simply track the new [already existing] node
-		// and keep all existing relationships.
-		t.nodes[newNode.ID()] = newNode
+	if oid == nid {
+		// the underlying objects may be different, but the ID's match. Simply track the new node and keep all
+		// existing relationships.
+		oldEntry.node = newNode
+		t.nodes[nid] = oldEntry
 		return nil
 	}
 
-	// add the new node
-	err := t.addNode(newNode)
-	if err != nil {
-		return err
+	if t.HasNode(nid) {
+		return fmt.Errorf("node ID collision: %+v", nid)
 	}
 
-	// set the new node parent to the old node parent
-	t.parent[newNode.ID()] = t.parent[old.ID()]
-
-	for cid := range t.children[old.ID()] {
-		// replace the parent entry for each child
-		t.parent[cid] = newNode
-
-		// add child entries to the new node
-		t.children[newNode.ID()][cid] = t.nodes[cid]
+	// take over the old node's place under its parent
+	t.nodes[nid] = entry{node: newNode, parent: oldEntry.parent, hasParent: oldEntry.hasParent}
+	if oldEntry.hasParent {
+		delete(t.children[oldEntry.parent], oid)
+		t.children[oldEntry.parent][nid] = struct{}{}
 	}
 
-	// replace the child entry for the old parents node
-	delete(t.children[t.parent[old.ID()].ID()], old.ID())
-	t.children[t.parent[old.ID()].ID()][newNode.ID()] = newNode
-
-	// remove the old node (if not already overwritten)
-	if old.ID() != newNode.ID() {
-		delete(t.children, old.ID())
-		delete(t.nodes, old.ID())
-		delete(t.parent, old.ID())
+	// take over the old node's children
+	if set, ok := t.children[oid]; ok {
+		for cid := range set {
+			t.setParent(cid, nid)
+		}
+		t.children[nid] = set
 	}
+
+	delete(t.children, oid)
+	delete(t.nodes, oid)
 
 	return nil
+}
+
+func (t *Tree) setParent(id, parent node.ID) {
+	e := t.nodes[id]
+	e.parent, e.hasParent = parent, true
+	t.nodes[id] = e
 }
 
 // AddRoot adds a node to the Tree (with no parent).
@@ -152,37 +140,46 @@ func (t *Tree) AddRoot(n node.Node) error {
 	return t.addNode(n)
 }
 
-// AddChild adds a node to the Tree under the given parent.
+// AddChild adds the child node (to) under the parent node (from), adding either to the Tree if missing (a missing
+// parent becomes a root). The stored objects for both nodes are replaced with the ones given. If the child already
+// has a different parent it is moved, along with its subtree, to the new parent. Every node has at most one parent,
+// and an edge that would create a cycle is rejected.
 func (t *Tree) AddChild(from, to node.Node) error {
 	var (
 		fid = from.ID()
 		tid = to.ID()
-		err error
 	)
 
 	if fid == tid {
 		return fmt.Errorf("should not add self edge")
 	}
 
-	if _, ok := t.nodes[fid]; !ok {
-		err = t.addNode(from)
-		if err != nil {
-			return err
+	// a node not yet in the tree has no descendants, so only an existing child can close a cycle
+	if t.HasNode(tid) {
+		for e := t.nodes[fid]; e.hasParent; e = t.nodes[e.parent] {
+			if e.parent == tid {
+				return fmt.Errorf("adding %+v under %+v would create a cycle", tid, fid)
+			}
 		}
-	} else {
-		t.nodes[fid] = from
-	}
-	if _, ok := t.nodes[tid]; !ok {
-		err = t.addNode(to)
-		if err != nil {
-			return err
-		}
-	} else {
-		t.nodes[tid] = to
 	}
 
-	t.children[fid][tid] = to
-	t.parent[tid] = from
+	fe := t.nodes[fid]
+	fe.node = from
+	t.nodes[fid] = fe
+
+	// reparenting an existing node must drop the edge from its old parent, otherwise removing the old parent
+	// would take this node (and its subtree) with it
+	if te := t.nodes[tid]; te.hasParent {
+		delete(t.children[te.parent], tid)
+	}
+	t.nodes[tid] = entry{node: to, parent: fid, hasParent: true}
+
+	set, ok := t.children[fid]
+	if !ok {
+		set = make(map[node.ID]struct{})
+		t.children[fid] = set
+	}
+	set[tid] = struct{}{}
 	return nil
 }
 
@@ -190,46 +187,43 @@ func (t *Tree) AddChild(from, to node.Node) error {
 func (t *Tree) RemoveNode(n node.Node) (node.Nodes, error) {
 	removedNodes := make([]node.Node, 0)
 	nid := n.ID()
-	if _, ok := t.nodes[nid]; !ok {
+	e, ok := t.nodes[nid]
+	if !ok {
 		return nil, fmt.Errorf("unable to remove node: %+v", nid)
 	}
-	for _, child := range t.children[nid] {
-		subNodes, err := t.RemoveNode(child)
-		for _, sn := range subNodes {
-			removedNodes = append(removedNodes, sn)
+	for cid := range t.children[nid] {
+		child, ok := t.nodes[cid]
+		if !ok {
+			// a stale edge to a node that is already gone (AddChild no longer leaves one, but keep the guard)
+			continue
 		}
+		subNodes, err := t.RemoveNode(child.node)
+		removedNodes = append(removedNodes, subNodes...)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	removedNodes = append(removedNodes, t.nodes[nid])
+	removedNodes = append(removedNodes, e.node)
 
 	delete(t.children, nid)
-	if t.parent[nid] != nil {
-		delete(t.children[t.parent[nid].ID()], nid)
+	if e.hasParent {
+		delete(t.children[e.parent], nid)
 	}
-	delete(t.parent, nid)
 	delete(t.nodes, nid)
 	return removedNodes, nil
 }
 
 // Children returns all children of the given node.
 func (t *Tree) Children(n node.Node) node.Nodes {
-	nid := n.ID()
-	if _, ok := t.children[nid]; !ok {
+	set := t.children[n.ID()]
+	if len(set) == 0 {
 		return nil
 	}
 
-	if len(t.children) == 0 {
-		return nil
-	}
-
-	from := make([]node.Node, len(t.children[nid]))
-	i := 0
-	for vid := range t.children[nid] {
-		from[i] = t.nodes[vid]
-		i++
+	from := make([]node.Node, 0, len(set))
+	for cid := range set {
+		from = append(from, t.nodes[cid].node)
 	}
 
 	return from
@@ -237,8 +231,8 @@ func (t *Tree) Children(n node.Node) node.Nodes {
 
 // Parent returns the parent of the given node (or nil if it is a root)
 func (t *Tree) Parent(n node.Node) node.Node {
-	if parent, ok := t.parent[n.ID()]; ok {
-		return parent
+	if e := t.nodes[n.ID()]; e.hasParent {
+		return t.nodes[e.parent].node
 	}
 	return nil
 }

@@ -14,6 +14,8 @@
 // limitations under the License.
 
 // Package fulcioroots fetches Fulcio root and intermediate certificates from TUF metadata
+//
+// Deprecated: Use https://pkg.go.dev/github.com/sigstore/sigstore-go@main/pkg/tuf
 package fulcioroots
 
 import (
@@ -25,7 +27,7 @@ import (
 	"sync"
 
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
-	"github.com/sigstore/sigstore/pkg/tuf"
+	"github.com/sigstore/sigstore/pkg/tuf" // nolint:staticcheck
 )
 
 var (
@@ -99,13 +101,13 @@ func GetIntermediatesWithCertPool(pool *x509.CertPool) error {
 }
 
 func initRoots() ([]*x509.Certificate, []*x509.Certificate, error) {
-	tufClient, err := tuf.NewFromEnv(context.Background())
+	tufClient, err := tuf.NewFromEnv(context.Background()) // nolint:staticcheck
 	if err != nil {
 		return nil, nil, fmt.Errorf("initializing tuf: %w", err)
 	}
 	// Retrieve from the embedded or cached TUF root. If expired, a network
 	// call is made to update the root.
-	targets, err := tufClient.GetTargetsByMeta(tuf.Fulcio, []string{fulcioTargetStr, fulcioV1TargetStr, fulcioV1IntermediateTargetStr})
+	targets, err := tufClient.GetTargetsByMeta(tuf.Fulcio, []string{fulcioTargetStr, fulcioV1TargetStr, fulcioV1IntermediateTargetStr}) // nolint:staticcheck
 	if err != nil {
 		return nil, nil, fmt.Errorf("error getting targets: %w", err)
 	}

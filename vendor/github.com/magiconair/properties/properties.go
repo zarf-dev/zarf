@@ -753,7 +753,7 @@ func (p *Properties) WriteComment(w io.Writer, prefix string, enc Encoding) (n i
 		if p.WriteSeparator != "" {
 			sep = p.WriteSeparator
 		}
-		x, err = fmt.Fprintf(w, "%s%s%s\n", encode(key, " :", enc), sep, encode(value, "", enc))
+		x, err = fmt.Fprintf(w, "%s%s%s\n", encode(key, " :=", enc), sep, encode(value, "", enc))
 		if err != nil {
 			return
 		}

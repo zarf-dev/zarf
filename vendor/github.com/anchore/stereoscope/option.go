@@ -13,6 +13,7 @@ type config struct {
 	Registry           image.RegistryOptions
 	AdditionalMetadata []image.AdditionalMetadata
 	Platform           *image.Platform
+	LazyLayerSquashes  bool
 }
 
 func applyOptions(cfg *config, options ...Option) error {

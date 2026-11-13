@@ -59,7 +59,47 @@ func ParseGGUFFilename(name string) *GGUFFilename {
 	if v := m["ShardTotal"]; v != "" {
 		gn.ShardTotal = ptr.To(parseInt(v))
 	}
+	separateQuantAndType(&gn)
 	return &gn
+}
+
+// Same tokens the filename encoding group accepts.
+var ggufEncodingToken = regexp.MustCompile(`(?i)^(BF16|F32|F16|[KI]?Q[0-9][A-Z0-9_]*)$`)
+
+// separateQuantAndType moves a quant, or a LoRA type, out of the fine-tune field.
+// A quant that ends in two letters matches the fine-tune pattern, which is tried
+// first, so the encoding came back empty. LoRA was stored as the fine-tune too.
+func separateQuantAndType(gn *GGUFFilename) {
+	if gn.Encoding != "" || gn.FineTune == "" {
+		return
+	}
+	if gn.Type == "" {
+		switch {
+		case gn.FineTune == "LoRA":
+			gn.Type = "LoRA"
+			gn.FineTune = ""
+		case strings.HasSuffix(gn.FineTune, "-LoRA"):
+			gn.Type = "LoRA"
+			gn.FineTune = strings.TrimSuffix(gn.FineTune, "-LoRA")
+		}
+	}
+	if gn.FineTune == "" {
+		return
+	}
+	if ggufEncodingToken.MatchString(gn.FineTune) {
+		gn.Encoding = gn.FineTune
+		gn.FineTune = ""
+		return
+	}
+	i := strings.LastIndex(gn.FineTune, "-")
+	if i <= 0 {
+		return
+	}
+	tail := gn.FineTune[i+1:]
+	if ggufEncodingToken.MatchString(tail) {
+		gn.Encoding = tail
+		gn.FineTune = gn.FineTune[:i]
+	}
 }
 
 func (gn GGUFFilename) String() string {

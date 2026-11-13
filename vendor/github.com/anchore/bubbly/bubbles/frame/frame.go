@@ -2,7 +2,6 @@ package frame
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 	"strings"
 
@@ -117,38 +116,41 @@ func (f *Frame) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (f Frame) View() string {
-	// all UI elements
-	var strs []string
+	// all UI elements and log events are collected as rows and joined once, so every row (including the first
+	// footer row) starts on its own line and the row count matches what the renderer draws
+	var lines []string
 	for _, p := range f.models {
 		if p.hidden {
 			continue
 		}
 		rendered := p.model.View()
 		if len(rendered) > 0 {
-			strs = append(strs, rendered)
+			lines = append(lines, strings.Split(rendered, "\n")...)
 		}
 	}
-
-	str := strings.Join(strs, "\n")
 
 	// log events
 	if f.showFooter {
-		contents := f.footer.String()
-		if f.truncateFooter {
-			logLines := strings.Split(contents, "\n")
-			logMax := f.windowSize.Height - strings.Count(str, "\n")
-			trimLog := len(logLines) - logMax
-			if trimLog > 0 && len(logLines) >= trimLog {
-				logLines = logLines[trimLog:]
+		var logLines []string
+		for _, line := range strings.Split(f.footer.String(), "\n") {
+			if len(line) > 0 {
+				logLines = append(logLines, line)
 			}
-			for _, line := range logLines {
-				if len(line) > 0 {
-					str += fmt.Sprintf("%s\n", line)
-				}
-			}
-		} else {
-			str += contents
 		}
+		if f.truncateFooter {
+			// keep only the most recent log lines that fit below the models (and the trailing blank row). Before the
+			// first WindowSizeMsg the height is 0, so nothing is shown.
+			logMax := max(0, f.windowSize.Height-len(lines)-1)
+			if len(logLines) > logMax {
+				logLines = logLines[len(logLines)-logMax:]
+			}
+		}
+		lines = append(lines, logLines...)
 	}
-	return str
+	if len(lines) == 0 {
+		return ""
+	}
+	// every row is newline terminated so the renderer's last row is blank. On exit, bubbletea erases the row the
+	// cursor is on, which would otherwise wipe out the last model or log line.
+	return strings.Join(lines, "\n") + "\n"
 }
