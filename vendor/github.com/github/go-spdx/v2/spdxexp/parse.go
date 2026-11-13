@@ -99,6 +99,11 @@ func (t *tokenStream) parseParenthesizedExpression() *node {
 		// paren not found
 		return nil
 	}
+	if !t.hasMore() {
+		// catch the case where there are no tokens after an open parenthesis
+		t.err = errors.New("open parenthesis does not have a matching close parenthesis")
+		return nil
+	}
 
 	expr := t.parseExpression()
 	if t.err != nil {
@@ -106,13 +111,14 @@ func (t *tokenStream) parseParenthesizedExpression() *node {
 	}
 
 	if !t.hasMore() {
-		// no more tokens, so missing closing paren
+		// catch the case where there are no tokens after processing expression starting with an open parenthesis
 		t.err = errors.New("open parenthesis does not have a matching close parenthesis")
 		return nil
 	}
 
 	closeParen := t.parseOperator(")")
 	if closeParen == nil {
+		// catch the case where the next token is not the expected close parenthesis
 		t.err = errors.New("open parenthesis does not have a matching close parenthesis")
 		return nil
 	}
@@ -281,6 +287,9 @@ func (t *tokenStream) parseLicenseRef() *node {
 	ref := referenceNodePartial{documentRef: "", hasDocumentRef: false, licenseRef: ""}
 
 	token := t.peek()
+	if token == nil {
+		return nil
+	}
 	if token.role == documentRefToken {
 		ref.documentRef = token.value
 		ref.hasDocumentRef = true
@@ -294,6 +303,12 @@ func (t *tokenStream) parseLicenseRef() *node {
 	}
 
 	token = t.peek()
+	if token == nil {
+		if ref.hasDocumentRef {
+			t.err = errors.New("expected 'LicenseRef-...' after 'DocumentRef-...'")
+		}
+		return nil
+	}
 	if token.role != licenseRefToken && ref.hasDocumentRef {
 		t.err = errors.New("expected 'LicenseRef-...' after 'DocumentRef-...'")
 		return nil
@@ -315,6 +330,9 @@ func (t *tokenStream) parseLicenseRef() *node {
 // an error is returned.  Advances the index if a valid license is found.
 func (t *tokenStream) parseLicense() *node {
 	token := t.peek()
+	if token == nil {
+		return nil
+	}
 	if token.role != licenseToken {
 		return nil
 	}
@@ -361,6 +379,9 @@ func (t *tokenStream) parseLicense() *node {
 // Advances the index if the operator is found.
 func (t *tokenStream) parseOperator(operator string) *string {
 	token := t.peek()
+	if token == nil {
+		return nil
+	}
 	if token.role == operatorToken && token.value == operator {
 		t.next()
 		return &(token.value)

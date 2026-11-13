@@ -9,7 +9,7 @@ tools:
   # greater than maximum supported version 2"). v2.13.1 is the first release built with go1.27.
   - name: golangci-lint
     version:
-      want: v2.13.1
+      want: v2.15.0
     method: github-release
     with:
       repo: golangci/golangci-lint

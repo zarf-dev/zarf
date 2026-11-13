@@ -65,8 +65,7 @@ func readCodeLengthTable20(br *rarBitReader, table []byte) error {
 			if i == 0 {
 				return ErrInvalidLengthTable
 			}
-			var n int
-			n, err = br.readBits(2)
+			n, err := br.readBits(2)
 			if err != nil {
 				return err
 			}

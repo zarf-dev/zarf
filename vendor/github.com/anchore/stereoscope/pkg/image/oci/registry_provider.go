@@ -13,8 +13,10 @@ import (
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	containerregistryV1Types "github.com/google/go-containerregistry/pkg/v1/types"
 
+	async "github.com/anchore/go-sync"
 	"github.com/anchore/stereoscope/internal/log"
 	"github.com/anchore/stereoscope/pkg/file"
 	"github.com/anchore/stereoscope/pkg/image"
@@ -162,8 +164,16 @@ func (p *registryImageProvider) Provide(ctx context.Context) (*image.Image, erro
 		)
 	}
 
+	// registry layers arrive over the network: download them one at a time, since a second stream
+	// only splits a link a single stream already saturates, while already-fetched layers are
+	// indexed in parallel at the default bound. A caller that installed its own fetch executor
+	// knows better than we do, so leave theirs alone.
+	if !async.HasContextExecutor(ctx, image.LayerFetchExecutor) {
+		ctx = async.SetContextExecutor(ctx, image.LayerFetchExecutor, async.NewExecutor(1))
+	}
+
 	out := image.New(img, p.tmpDirGen, imageTempDir, metadata...)
-	err = out.Read()
+	err = out.Read(ctx)
 	if err != nil {
 		cleanErr := out.Cleanup()
 		return nil, errors.Join(err, cleanErr)
@@ -201,7 +211,8 @@ func prepareRemoteOptions(ctx context.Context, ref name.Reference, registryOptio
 
 	// Set the user agent to indicate what binary is making the request
 	// (e.g. syft, grype)
-	options = append(options, remote.WithUserAgent(os.Args[0]))
+	userAgent := os.Args[0]
+	options = append(options, remote.WithUserAgent(userAgent))
 
 	if p != nil {
 		options = append(options, remote.WithPlatform(*toContainerRegistryPlatform(p)))
@@ -213,42 +224,121 @@ func prepareRemoteOptions(ctx context.Context, ref name.Reference, registryOptio
 	// If no explicit authenticator can be found, check if explicit Keychain has been provided, and if not, then
 	// fallback to the default keychain. With the authenticator also comes the option to configure TLS transport.
 	authenticator := registryOptions.Authenticator(registryName)
+	keychain := registryOptions.Keychain
 
 	switch {
 	case authenticator != nil:
 		options = append(options, remote.WithAuth(authenticator))
-	case registryOptions.Keychain != nil:
-		options = append(options, remote.WithAuthFromKeychain(registryOptions.Keychain))
+	case keychain != nil:
+		options = append(options, remote.WithAuthFromKeychain(keychain))
 	default:
 		// use the Keychain specified from a docker config file.
 		log.Debugf("no registry credentials configured for %q, using the default keychain", registryName)
-		options = append(options, remote.WithAuthFromKeychain(authn.DefaultKeychain))
+		keychain = authn.DefaultKeychain
+		options = append(options, remote.WithAuthFromKeychain(keychain))
 	}
 
 	tlsConfig, err := registryOptions.TLSConfig(registryName)
 	if err != nil {
-		log.Warn("unable to configure TLS transport: %w", err)
+		log.Warnf("unable to configure TLS transport: %v", err)
+	}
+
+	// one base transport, so the pull and any resume share a connection pool
+	baseTransport := getTransport(tlsConfig)
+
+	// a resumed blob is reissued through its own client, authenticated the same way as the pull
+	var reopen reopenClientFunc
+	if !registryOptions.DisableBlobResume {
+		reopen = reopenClient(ref, baseTransport, userAgent, func(ctx context.Context) (authn.Authenticator, error) {
+			if authenticator != nil {
+				return authenticator, nil
+			}
+			return authn.Resolve(ctx, keychain, ref.Context())
+		})
 	}
 
 	// Use our custom transport that captures effective URLs after redirects
-	transport := getTransportWithEffectiveURL(tlsConfig, effectiveTransport)
-	options = append(options, remote.WithTransport(transport))
+	rt := getTransportWithEffectiveURL(baseTransport, effectiveTransport, reopen)
+	options = append(options, remote.WithTransport(rt))
 
 	return options
 }
 
-func getTransport(tlsConfig *tls.Config) *http.Transport {
-	// use the default transport to inherit existing default options (including proxy options)
-	transport := http.DefaultTransport.(*http.Transport).Clone()
-	transport.TLSClientConfig = tlsConfig
-	return transport
+// reopenClient lazily builds the client a resumed blob request is reissued through. it authenticates
+// against the registry the way go-containerregistry does, so a resume gets a fresh token and a freshly
+// signed redirect rather than ones that lapsed during a long transfer. unlike go-containerregistry's
+// client it has no retry transport, since the resume's own stall budget already retries.
+func reopenClient(ref name.Reference, base http.RoundTripper, userAgent string, auth func(context.Context) (authn.Authenticator, error)) reopenClientFunc {
+	// one slot held across the registry ping, so concurrent first resumes wait on a single build. a
+	// channel rather than a mutex, so a resume closed or cancelled meanwhile stops waiting
+	slot := make(chan struct{}, 1)
+	var (
+		client *http.Client
+		// a refusal is settled once for the whole pull. it will not mend, and every blob that drops
+		// would otherwise repeat the ping and token exchange to be told the same thing
+		refused error
+	)
+
+	return func(ctx context.Context) (*http.Client, error) {
+		select {
+		case slot <- struct{}{}:
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		}
+		defer func() { <-slot }()
+
+		if client != nil || refused != nil {
+			return client, refused
+		}
+
+		// only the registry rejecting our credentials is settled for the pull. anything else spends a
+		// stall and is tried again, and is quoted by resume when it does. the pull already resolved
+		// credentials once, so a helper failing now is most likely the same network trouble that dropped
+		// the blob. a refusal is quoted here, since this is where text the registry chose crosses into
+		// ours, and go-containerregistry puts up to 64 KiB of an error response body into its message
+		authenticator, err := auth(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("unable to resolve credentials: %w", err)
+		}
+
+		repo := ref.Context()
+		rt, err := transport.NewWithContext(ctx, repo.Registry, authenticator, transport.NewUserAgent(base, userAgent),
+			[]string{repo.Scope(transport.PullScope)})
+		// matched on status rather than Temporary: a registry pinged over both https and http reports
+		// both failures, and a transient one on the scheme that works can sit beside a permanent-looking
+		// one (a TLS port answering plain http with 400) on the scheme that does not
+		var regErr *transport.Error
+		if errors.As(err, &regErr) && (regErr.StatusCode == http.StatusUnauthorized || regErr.StatusCode == http.StatusForbidden) {
+			refused = fmt.Errorf("%w: unable to authenticate: %w", errResumeRefused, quoted(err))
+			return nil, refused
+		}
+		if err != nil {
+			return nil, err
+		}
+
+		client = &http.Client{Transport: rt, CheckRedirect: checkRedirect}
+
+		return client, nil
+	}
 }
 
-func getTransportWithEffectiveURL(tlsConfig *tls.Config, effectiveTransport *effectiveURLTransport) http.RoundTripper {
-	// create base transport with TLS config
-	baseTransport := getTransport(tlsConfig)
+func getTransport(tlsConfig *tls.Config) *http.Transport {
+	// use the default transport to inherit existing default options (including proxy options)
+	rt := http.DefaultTransport.(*http.Transport).Clone()
+	rt.TLSClientConfig = tlsConfig
+	return rt
+}
+
+func getTransportWithEffectiveURL(baseTransport *http.Transport, effectiveTransport *effectiveURLTransport, reopen reopenClientFunc) http.RoundTripper {
+	// resume large blob downloads that the registry drops mid-stream. this must sit closest to
+	// the base transport so that it wraps the real response body, and below go-containerregistry's
+	// digest verification so that a reassembled layer is still verified end to end
+	var base http.RoundTripper = baseTransport
+	if reopen != nil {
+		base = newResumableTransport(baseTransport, reopen)
+	}
 
 	// wrap it with our effective URL capturing transport
-	effectiveTransport.base = baseTransport
+	effectiveTransport.base = base
 	return effectiveTransport
 }

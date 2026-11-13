@@ -68,6 +68,8 @@ test:
 
 	go test -v -failfast -race -cover -timeout=30m $(SRCDIR)/...
 
+	cd $(SRCDIR)/cmd/gguf-parser && go test -v -failfast -race -cover -timeout=30m ./...
+
 	@echo "--- $@ ---"
 
 benchmark:

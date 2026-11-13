@@ -89,11 +89,17 @@ const NDB_DBVersion = 0
 
 var ErrorInvalidNDB = fmt.Errorf("invalid or unsupported NDB format")
 
-func Open(path string) (*RpmNDB, error) {
+func Open(path string) (_ *RpmNDB, err error) {
 	file, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
+	defer func() {
+		// the caller only gets a handle to close on success (and probing the wrong format is expected to fail)
+		if err != nil {
+			_ = file.Close()
+		}
+	}()
 
 	err = syscallFlock(int(file.Fd()), syscallLOCK_SH)
 	if err != nil {

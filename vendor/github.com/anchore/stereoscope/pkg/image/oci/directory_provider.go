@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"runtime"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/layout"
@@ -21,7 +22,10 @@ func NewDirectoryProvider(tmpDirGen *file.TempDirGenerator, path string) image.P
 }
 
 // NewDirectoryProviderWithPlatform creates a new provider instance for the specific image already at the given path,
-// with the given platform information to use when loading a multiplatform image.
+// with the given platform used to select an image from a multiplatform layout. The platform is also enforced for
+// single-platform layouts: Provide returns an *image.ErrPlatformMismatch if the image does not match it. A nil
+// platform selects the only image in a single-platform layout, or the host platform in a multiplatform one.
+// The platform should come from image.NewPlatform so that OS and architecture aliases are normalized.
 func NewDirectoryProviderWithPlatform(tmpDirGen *file.TempDirGenerator, path string, platform *image.Platform) image.Provider {
 	return &directoryImageProvider{
 		tmpDirGen: tmpDirGen,
@@ -42,7 +46,7 @@ func (p *directoryImageProvider) Name() string {
 }
 
 // Provide an image object that represents the OCI image as a directory.
-func (p *directoryImageProvider) Provide(_ context.Context) (*image.Image, error) {
+func (p *directoryImageProvider) Provide(ctx context.Context) (*image.Image, error) {
 	if _, err := layout.FromPath(p.path); err != nil {
 		return nil, fmt.Errorf("unable to read image from OCI directory path %q: %w", p.path, err)
 	}
@@ -69,20 +73,33 @@ func (p *directoryImageProvider) Provide(_ context.Context) (*image.Image, error
 
 	var selectedImage v1.Image
 	if len(allImages) == 1 {
-		// if there is only one image, use it regardless of platform
-		for _, image := range allImages {
-			selectedImage = image.image
+		// a single-image layout has no ambiguity to resolve, so don't narrow by platform here: the index
+		// descriptor platform is optional and is frequently absent (e.g. `skopeo copy ... oci:<dir>`).
+		// the image config is checked below, which is the authoritative source.
+		for _, img := range allImages {
+			selectedImage = img.image
 		}
 	} else {
-		platform := toContainerRegistryPlatform(defaultPlatformIfNil(p.platform))
-		if platform == nil {
-			return nil, fmt.Errorf("error converting platform: %v", p.platform)
+		platform := defaultPlatformIfNil(p.platform)
+		ggcrPlatform := toContainerRegistryPlatform(platform)
+		if ggcrPlatform == nil {
+			return nil, fmt.Errorf("unable to determine a platform to select (host architecture %q is not supported)", runtime.GOARCH)
 		}
-		matchedImages := imagesForPlatform(allImages, *platform)
+		matchedImages := imagesForPlatform(allImages, *ggcrPlatform)
 		if len(matchedImages) != 1 {
-			return nil, fmt.Errorf("unexpected number of images matching platform %q in OCI directory (expected 1, found %d)", platform.String(), len(matchedImages))
+			return nil, fmt.Errorf("unexpected number of images matching platform %q in OCI directory (expected 1, found %d)", ggcrPlatform, len(matchedImages))
 		}
 		selectedImage = matchedImages[0]
+	}
+
+	// the index descriptor is advisory; confirm the selection against the image config and report what the
+	// image actually is (Image.Read populates OS/architecture/variant from the same config).
+	selectedConfig, err := selectedImage.ConfigFile()
+	if err != nil {
+		return nil, fmt.Errorf("unable to get config for selected image: %w", err)
+	}
+	if err := validatePlatform(p.platform, selectedConfig.OS, selectedConfig.Architecture, selectedConfig.Variant); err != nil {
+		return nil, err
 	}
 
 	selectedImageDigest, err := selectedImage.Digest()
@@ -108,7 +125,7 @@ func (p *directoryImageProvider) Provide(_ context.Context) (*image.Image, error
 	}
 
 	out := image.New(selectedImage, p.tmpDirGen, contentTempDir, metadata...)
-	err = out.Read()
+	err = out.Read(ctx)
 	if err != nil {
 		cleanErr := out.Cleanup()
 		return nil, errors.Join(err, cleanErr)
@@ -123,10 +140,13 @@ type imageReference struct {
 
 func imagesForPlatform(images map[v1.Hash]imageReference, desiredPlatform v1.Platform) []v1.Image {
 	var matches []v1.Image
-	for _, image := range images {
-		for _, platform := range image.platforms {
+	for _, img := range images {
+		for _, platform := range img.platforms {
 			if matchesPlatform(platform, desiredPlatform) {
-				matches = append(matches, image.image)
+				// an image may be referenced by several index entries (e.g. multiple tags), so only
+				// count it once
+				matches = append(matches, img.image)
+				break
 			}
 		}
 	}
@@ -161,6 +181,15 @@ func findAllImages(index v1.ImageIndex) (map[v1.Hash]imageReference, error) {
 	return images, nil
 }
 
+// isAttestationManifest indicates the descriptor references build attestation data rather than a runnable
+// image. Buildx marks these with an "unknown/unknown" platform and a reference-type annotation.
+func isAttestationManifest(desc v1.Descriptor) bool {
+	if desc.Annotations["vnd.docker.reference.type"] == "attestation-manifest" {
+		return true
+	}
+	return desc.Platform != nil && desc.Platform.OS == "unknown" && desc.Platform.Architecture == "unknown"
+}
+
 func platformToString(p *v1.Platform) string {
 	if p == nil {
 		return "<nil>"
@@ -191,11 +220,16 @@ func walkImages(index v1.ImageIndex, fn func(v1.Image, *v1.Platform) error) erro
 				return err
 			}
 		case manifest.MediaType.IsImage():
-			image, err := index.Image(manifest.Digest)
+			if isAttestationManifest(manifest) {
+				// buildx writes provenance/SBOM attestations as image manifests; they are never a valid
+				// selection target and would otherwise be counted as images
+				continue
+			}
+			img, err := index.Image(manifest.Digest)
 			if err != nil {
 				return fmt.Errorf("unable to parse reference %s from OCI directory as an image: %w", manifest.Digest, err)
 			}
-			err = fn(image, manifest.Platform)
+			err = fn(img, manifest.Platform)
 			if err != nil {
 				return err
 			}

@@ -9,14 +9,10 @@ import (
 	"fmt"
 	"maps"
 	"net/url"
-	"runtime"
 	"slices"
 	"strings"
-	"sync"
-	"weak"
 
 	"github.com/open-policy-agent/opa/internal/deepcopy"
-	astJSON "github.com/open-policy-agent/opa/v1/ast/json"
 	"github.com/open-policy-agent/opa/v1/util"
 )
 
@@ -43,8 +39,8 @@ type (
 		Labels           map[string]any               `json:"labels,omitempty"`
 		Location         *Location                    `json:"location,omitempty"`
 
-		comments []*Comment
-		node     Node
+		endLoc *Location
+		node   Node
 	}
 
 	// SchemaAnnotation contains a schema declaration for the document identified by the path.
@@ -70,11 +66,10 @@ type (
 	}
 
 	AnnotationSet struct {
-		byRule       map[*Rule][]*Annotations
-		byPackage    map[int]*Annotations
-		byPath       *annotationTreeNode
-		modules      []*Module // Modules this set was constructed from
-		mergedLabels sync.Map  // map[weak.Pointer[Rule]]*ruleLabelsEntry; lazily populated, entries cleaned up via runtime.AddCleanup when rules are GC'd
+		byRule    map[*Rule][]*Annotations
+		byPackage map[int]*Annotations
+		byPath    *annotationTreeNode
+		modules   []*Module // Modules this set was constructed from
 	}
 
 	annotationTreeNode struct {
@@ -112,11 +107,10 @@ func (a *Annotations) SetLoc(l *Location) {
 
 // EndLoc returns the location of this annotation's last comment line.
 func (a *Annotations) EndLoc() *Location {
-	count := len(a.comments)
-	if count == 0 {
+	if a.endLoc == nil {
 		return a.Location
 	}
-	return a.comments[count-1].Location
+	return a.endLoc
 }
 
 // Compare returns an integer indicating if a is less than, equal to, or greater
@@ -197,60 +191,6 @@ func (a *Annotations) GetTargetPath() Ref {
 	}
 }
 
-func (a *Annotations) MarshalJSON() ([]byte, error) {
-	if a == nil {
-		return []byte(`{"scope":""}`), nil
-	}
-
-	data := map[string]any{
-		"scope": a.Scope,
-	}
-
-	if a.Title != "" {
-		data["title"] = a.Title
-	}
-
-	if a.Description != "" {
-		data["description"] = a.Description
-	}
-
-	if a.Entrypoint {
-		data["entrypoint"] = a.Entrypoint
-	}
-
-	if len(a.Organizations) > 0 {
-		data["organizations"] = a.Organizations
-	}
-
-	if len(a.RelatedResources) > 0 {
-		data["related_resources"] = a.RelatedResources
-	}
-
-	if len(a.Authors) > 0 {
-		data["authors"] = a.Authors
-	}
-
-	if len(a.Schemas) > 0 {
-		data["schemas"] = a.Schemas
-	}
-
-	if len(a.Custom) > 0 {
-		data["custom"] = a.Custom
-	}
-
-	if len(a.Labels) > 0 {
-		data["labels"] = a.Labels
-	}
-
-	if astJSON.GetOptions().MarshalOptions.IncludeLocation.Annotations {
-		if a.Location != nil {
-			data["location"] = a.Location
-		}
-	}
-
-	return json.Marshal(data)
-}
-
 func NewAnnotationsRef(a *Annotations) *AnnotationsRef {
 	var loc *Location
 	if a.node != nil {
@@ -283,34 +223,6 @@ func (ar *AnnotationsRef) GetRule() *Rule {
 	default:
 		return nil
 	}
-}
-
-func (ar *AnnotationsRef) MarshalJSON() ([]byte, error) {
-	data := map[string]any{
-		"path": ar.Path,
-	}
-
-	if ar.Annotations != nil {
-		data["annotations"] = ar.Annotations
-	}
-
-	if astJSON.GetOptions().MarshalOptions.IncludeLocation.AnnotationsRef {
-		if ar.Location != nil {
-			data["location"] = ar.Location
-		}
-
-		// The location set for the schema ref terms is wrong (always set to
-		// row 1) and not really useful anyway.. so strip it out before marshalling
-		for _, schema := range ar.Annotations.Schemas {
-			if schema.Path != nil {
-				for _, term := range schema.Path {
-					term.Location = nil
-				}
-			}
-		}
-	}
-
-	return json.Marshal(data)
 }
 
 func scopeCompare(s1, s2 string) int {
@@ -698,18 +610,6 @@ func (rr *RelatedResourceAnnotation) String() string {
 	return string(bs)
 }
 
-func (rr *RelatedResourceAnnotation) MarshalJSON() ([]byte, error) {
-	d := map[string]any{
-		"ref": rr.Ref.String(),
-	}
-
-	if len(rr.Description) > 0 {
-		d["description"] = rr.Description
-	}
-
-	return json.Marshal(d)
-}
-
 // Copy returns a deep copy of s.
 func (s *SchemaAnnotation) Copy() *SchemaAnnotation {
 	cpy := *s
@@ -960,42 +860,19 @@ func (as *AnnotationSet) Chain(rule *Rule) AnnotationsRefSet {
 	return refs
 }
 
-// ruleLabelsEntry caches the merged labels and dedup key for a single rule.
-type ruleLabelsEntry struct {
-	labels map[string]any
-	key    string
-}
-
 // MergedLabels returns the inner-scope-wins merged labels for the given rule
-// along with a stable string suitable for content-based deduplication. The
-// result is computed once per rule and cached on the AnnotationSet; the cache
-// entry is dropped automatically when the rule is garbage-collected.
-//
-// labels is nil when the rule has no labels anywhere in its annotation chain;
-// in that case key is the empty string.
+// along with a stable JSON string suitable for content-based deduplication.
+// labels is nil when the rule has no labels anywhere in its annotation chain.
 func (as *AnnotationSet) MergedLabels(rule *Rule) (labels map[string]any, key string) {
 	if as == nil {
 		return nil, ""
 	}
-	k := weak.Make(rule)
-	if v, ok := as.mergedLabels.Load(k); ok {
-		e := v.(*ruleLabelsEntry)
-		return e.labels, e.key
+	labels = mergeChainLabels(as.Chain(rule))
+	if len(labels) > 0 {
+		b, _ := json.Marshal(labels)
+		key = string(b)
 	}
-	merged := mergeChainLabels(as.Chain(rule))
-	e := &ruleLabelsEntry{labels: merged}
-	if len(merged) > 0 {
-		b, _ := json.Marshal(merged)
-		e.key = string(b)
-	}
-	actual, loaded := as.mergedLabels.LoadOrStore(k, e)
-	if !loaded {
-		// k is a weak.Pointer (value type) — it does not keep rule alive, so
-		// the cleanup will fire once the rule becomes unreachable elsewhere.
-		runtime.AddCleanup(rule, func(k weak.Pointer[Rule]) { as.mergedLabels.Delete(k) }, k)
-	}
-	e = actual.(*ruleLabelsEntry)
-	return e.labels, e.key
+	return labels, key
 }
 
 // mergeChainLabels folds labels from a rule's annotation chain with inner-wins

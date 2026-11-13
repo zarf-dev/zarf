@@ -30,8 +30,10 @@ func Collect[From, To any](ctx *context.Context, executorName string, iterator i
 		}
 		wg.Add(1)
 		executor.Go(func() {
+			// registered first so it runs last: a panic must be recorded in errs before the
+			// waiter is released, or the Join below can miss it entirely
+			defer wg.Done()
 			defer func() {
-				wg.Done()
 				if err := recover(); err != nil {
 					lock.Lock()
 					defer lock.Unlock()
@@ -64,6 +66,11 @@ func Collect[From, To any](ctx *context.Context, executorName string, iterator i
 	case <-(*ctx).Done():
 	case <-done:
 	}
+
+	// a cancelled context returns while queued work may still be running and appending, so this
+	// read needs the lock regardless of the ordering fix above
+	lock.Lock()
+	defer lock.Unlock()
 
 	return errors.Join(errs...)
 }

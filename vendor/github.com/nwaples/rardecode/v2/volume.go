@@ -23,6 +23,7 @@ var (
 
 const (
 	DefaultMaxDictionarySize = 4 << 30 // default max dictionary size of 4GB
+	DefaultMaxReadFileSize   = 4 << 30 // default max file size readable by fs.ReadFile() of 4GB
 )
 
 type osFS struct{}
@@ -32,12 +33,13 @@ func (fs osFS) Open(name string) (fs.File, error) {
 }
 
 type options struct {
-	bsize       int     // size to be use for bufio.Reader
-	maxDictSize int64   // max dictionary size
-	fs          fs.FS   // filesystem to use to open files
-	pass        *string // password for encrypted volumes
-	skipCheck   bool
-	openCheck   bool
+	bsize           int     // size to be use for bufio.Reader
+	maxDictSize     int64   // max dictionary size
+	maxReadFileSize int64   // max file size readable by ReadFile()
+	fs              fs.FS   // filesystem to use to open files
+	pass            *string // password for encrypted volumes
+	skipCheck       bool
+	openCheck       bool
 }
 
 // An Option is used for optional archive extraction settings.
@@ -54,6 +56,14 @@ func BufferSize(size int) Option {
 // Any size above 64GB will be ignored. Any size below 256kB will prevent any file from being decoded.
 func MaxDictionarySize(size int64) Option {
 	return func(o *options) { o.maxDictSize = size }
+}
+
+// MaxReadFileSize sets the maximum size of a file that can be read by RarFS.ReadFile().
+// Any attempt to read a file with a larger size will return an error.
+// The default size if not set is DefaultMaxReadFileSize.
+// Setting it to <= 0 will ignore the file size limits.
+func MaxReadFileSize(size int64) Option {
+	return func(o *options) { o.maxReadFileSize = size }
 }
 
 // FileSystem sets the fs.FS to be used for opening archive volumes.
@@ -74,8 +84,9 @@ func OpenFSCheck(o *options) { o.openCheck = true }
 
 func getOptions(opts []Option) *options {
 	opt := &options{
-		fs:          defaultFS,
-		maxDictSize: DefaultMaxDictionarySize,
+		fs:              defaultFS,
+		maxDictSize:     DefaultMaxDictionarySize,
+		maxReadFileSize: DefaultMaxReadFileSize,
 	}
 	for _, f := range opts {
 		f(opt)
@@ -93,6 +104,7 @@ func getOptions(opts []Option) *options {
 
 type volume interface {
 	byteReader
+	writeToAtMost(w io.Writer, n int64) (int64, error)
 	nextBlock() (*fileBlockHeader, error)
 	openBlock(volnum int, offset, size int64) error
 	canSeek() bool
@@ -187,6 +199,20 @@ func (v *readerVolume) ReadByte() (byte, error) {
 	return b, err
 }
 
+func (v *readerVolume) writeToAtMost(w io.Writer, n int64) (int64, error) {
+	if n == 0 {
+		return 0, nil
+	}
+	if n > 0 {
+		n = min(n, v.n)
+	} else {
+		n = v.n
+	}
+	l, err := v.br.writeToN(w, n)
+	v.n -= l
+	return l, err
+}
+
 func (v *readerVolume) canSeek() bool {
 	return v.br.canSeek()
 }
@@ -256,12 +282,13 @@ func (v *fileVolume) nextBlock() (*fileBlockHeader, error) {
 		if err == nil {
 			return h, nil
 		}
-		if err == ErrMultiVolume {
+		switch err {
+		case ErrMultiVolume:
 			err = v.openNext()
 			if err != nil {
 				return nil, err
 			}
-		} else if err == errVolumeOrArchiveEnd {
+		case errVolumeOrArchiveEnd:
 			err = v.openNext()
 			if err != nil {
 				// new volume doesnt exist, assume end of archive
@@ -270,7 +297,7 @@ func (v *fileVolume) nextBlock() (*fileBlockHeader, error) {
 				}
 				return nil, err
 			}
-		} else {
+		default:
 			return nil, err
 		}
 	}
@@ -409,12 +436,11 @@ func (vm *volumeManager) openVolumeFile(volnum int) (fs.File, error) {
 	vm.mu.Lock()
 	defer vm.mu.Unlock()
 
-	var file string
 	// check for cached volume name
 	if volnum < len(vm.files) {
 		return vm.opt.fs.Open(vm.dir + vm.files[volnum])
 	}
-	file = vm.files[len(vm.files)-1]
+	file := vm.files[len(vm.files)-1]
 	if len(vm.files) == 1 {
 		file = fixFileExtension(file)
 		if !vm.old && hasDigits(file) {

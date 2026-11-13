@@ -17,6 +17,7 @@ go.work.*
 *.local.json
 
 # Dirs
+/.claude
 /.idea
 /.vscode
 /.kube

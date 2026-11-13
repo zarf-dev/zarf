@@ -28,13 +28,12 @@ type UICollection struct {
 	uis          []UI
 	active       UI
 	subscription partybus.Unsubscribable
-	lock         *sync.Mutex
+	lock         sync.Mutex
 }
 
 func NewUICollection(uis ...UI) *UICollection {
 	return &UICollection{
-		uis:  uis,
-		lock: &sync.Mutex{},
+		uis: uis,
 	}
 }
 
@@ -60,7 +59,9 @@ func (u *UICollection) setup(subscription partybus.Unsubscribable) error {
 	return setupErr
 }
 
-func (u UICollection) Handle(event partybus.Event) error {
+// handle only reads collection state, mutation is owned by Setup, Teardown and Replace. It still takes a pointer
+// receiver since a value receiver would copy the fields before the lock is held.
+func (u *UICollection) Handle(event partybus.Event) error {
 	u.lock.Lock()
 	defer u.lock.Unlock()
 	if u.active == nil {

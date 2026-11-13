@@ -1,0 +1,2 @@
+# keep fixtures byte-identical across platforms (windows runners otherwise check out with crlf)
+* text=auto eol=lf

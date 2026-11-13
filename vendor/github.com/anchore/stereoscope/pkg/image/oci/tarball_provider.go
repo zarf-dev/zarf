@@ -19,7 +19,10 @@ func NewArchiveProvider(tmpDirGen *file.TempDirGenerator, path string) image.Pro
 }
 
 // NewArchiveProviderWithPlatform creates a new provider instance for the specific image tarball already at the given path,
-// with the given platform information to use when loading a multiplatform image.
+// with the given platform used to select an image from a multiplatform layout. The platform is also enforced for
+// single-platform layouts: Provide returns an *image.ErrPlatformMismatch if the image does not match it. A nil
+// platform selects the only image in a single-platform layout, or the host platform in a multiplatform one.
+// The platform should come from image.NewPlatform so that OS and architecture aliases are normalized.
 func NewArchiveProviderWithPlatform(tmpDirGen *file.TempDirGenerator, path string, platform *image.Platform) image.Provider {
 	return &tarballImageProvider{
 		tmpDirGen: tmpDirGen,

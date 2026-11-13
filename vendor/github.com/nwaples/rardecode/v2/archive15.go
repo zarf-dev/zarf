@@ -125,13 +125,13 @@ func parseDosTime(t uint32) time.Time {
 
 // decodeName decodes a non-unicode filename from a file header.
 func decodeName(buf []byte) string {
-	i := bytes.IndexByte(buf, 0)
-	if i < 0 {
+	before, after, ok := bytes.Cut(buf, []byte{0})
+	if !ok {
 		return string(buf) // filename is UTF-8
 	}
 
-	name := buf[:i]
-	encName := readBuf(buf[i+1:])
+	name := before
+	encName := readBuf(after)
 	if len(encName) < 2 {
 		return "" // invalid encoding
 	}

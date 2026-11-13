@@ -584,12 +584,10 @@ func decodeArg(br *rarBitReader, byteMode bool) (operand, error) {
 	if n == 0 { // Immediate
 		if byteMode {
 			n, err = br.readBits(8)
-		} else {
-			var m uint32
-			m, err = br.readUint32()
-			return opI(m), err
+			return opI(n), err
 		}
-		return opI(n), err
+		m, err := br.readUint32()
+		return opI(m), err
 	}
 	n, err = br.readBits(1)
 	if err != nil {
@@ -610,8 +608,7 @@ func decodeArg(br *rarBitReader, byteMode bool) (operand, error) {
 		if err != nil {
 			return nil, err
 		}
-		var i uint32
-		i, err = br.readUint32()
+		i, err := br.readUint32()
 		return opBI{r: uint32(n), i: i}, err
 	}
 	// Direct addressing
@@ -646,8 +643,7 @@ func readCommands(br *rarBitReader) ([]command, error) {
 			return cmds, err
 		}
 		if code&0x08 > 0 {
-			var n int
-			n, err = br.readBits(2)
+			n, err := br.readBits(2)
 			if err != nil {
 				return cmds, err
 			}
@@ -662,8 +658,7 @@ func readCommands(br *rarBitReader) ([]command, error) {
 		var com command
 
 		if ins.byteMode {
-			var n int
-			n, err = br.readBits(1)
+			n, err := br.readBits(1)
 			if err != nil {
 				return cmds, err
 			}
