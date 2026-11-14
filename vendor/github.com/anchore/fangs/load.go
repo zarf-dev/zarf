@@ -479,7 +479,7 @@ func getFlagRef(flag *pflag.Flag) uintptr {
 		if isStruct(vt) {
 			if _, ok := vt.FieldByName("value"); ok {
 				vf = vf.FieldByName("value")
-				if vf.IsValid() {
+				if vf.IsValid() && isPtr(vf.Type()) {
 					v = vf
 				}
 			}
@@ -496,7 +496,7 @@ func upperFirst(p string) string {
 }
 
 func isPtr(typ reflect.Type) bool {
-	return typ.Kind() == reflect.Ptr
+	return typ.Kind() == reflect.Pointer
 }
 
 func isStruct(typ reflect.Type) bool {
