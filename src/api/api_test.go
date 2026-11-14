@@ -190,6 +190,13 @@ func TestChartAccessors(t *testing.T) {
 	}
 }
 
+func TestChartGetReleaseName(t *testing.T) {
+	t.Parallel()
+
+	require.Equal(t, "app", api.Chart{Name: "app"}.GetReleaseName())
+	require.Equal(t, "release", api.Chart{Name: "app", ReleaseName: "release"}.GetReleaseName())
+}
+
 func TestManifestGetServerSideApply(t *testing.T) {
 	t.Parallel()
 

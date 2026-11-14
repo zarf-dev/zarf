@@ -254,6 +254,10 @@ type Chart struct {
 	SkipSchemaValidation bool
 	ServerSideApply      ServerSideApplyMode
 	SkipWait             bool
+	// PostRenderStrategy selects which rendered documents PostRenderers receive. Empty means PostRenderStrategyNoHooks.
+	PostRenderStrategy PostRenderStrategy
+	// PostRenderers transform rendered chart manifests, in order, before Zarf's own post-rendering.
+	PostRenderers []PostRenderer
 
 	HelmRepository *HelmRepositorySource
 	Git            *GitSource
@@ -264,6 +268,65 @@ type Chart struct {
 	//
 	// Deprecated: Only supported by deprecated v1alpha1 packages.
 	Variables []ZarfChartVariable
+}
+
+// PostRenderStrategy controls how Helm hooks are handled by chart post-renderers.
+type PostRenderStrategy string
+
+const (
+	// PostRenderStrategyNoHooks post-renders regular resources only; hooks pass through unchanged.
+	PostRenderStrategyNoHooks PostRenderStrategy = "nohooks"
+	// PostRenderStrategyCombined post-renders hooks and regular resources together in a single pass.
+	PostRenderStrategyCombined PostRenderStrategy = "combined"
+	// PostRenderStrategySeparate post-renders hooks and regular resources in independent passes.
+	PostRenderStrategySeparate PostRenderStrategy = "separate"
+)
+
+// IsValid reports whether s is a supported strategy. Empty is valid and means PostRenderStrategyNoHooks.
+func (s PostRenderStrategy) IsValid() bool {
+	switch s {
+	case "", PostRenderStrategyNoHooks, PostRenderStrategyCombined, PostRenderStrategySeparate:
+		return true
+	}
+	return false
+}
+
+// PostRenderer is a single post-rendering step applied to rendered chart manifests.
+type PostRenderer struct {
+	Kustomize *KustomizePostRenderer
+}
+
+// KustomizePostRenderer applies Kustomize patches and image overrides to rendered chart manifests.
+type KustomizePostRenderer struct {
+	// EnableTemplating renders Patches and Images with Zarf Go templating at deploy time before Kustomize runs.
+	EnableTemplating bool
+	Patches          []KustomizePatch
+	Images           []KustomizeImage
+}
+
+// KustomizePatch is an inline strategic merge or JSON 6902 patch with an optional target selector.
+type KustomizePatch struct {
+	Patch  string
+	Target *KustomizeSelector
+}
+
+// KustomizeSelector selects the resources a Kustomize patch applies to.
+type KustomizeSelector struct {
+	Group              string
+	Version            string
+	Kind               string
+	Name               string
+	Namespace          string
+	LabelSelector      string
+	AnnotationSelector string
+}
+
+// KustomizeImage overrides the name, tag, or digest of matching container images.
+type KustomizeImage struct {
+	Name    string
+	NewName string
+	NewTag  string
+	Digest  string
 }
 
 // ValuesFile is a values file merged into a Helm chart, optionally rendered with Zarf templating.

@@ -234,6 +234,8 @@ build-examples: ## Build all of the example packages
 
 	@test -s ./build/zarf-package-values-templating-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/values-templating -o build -a $(ARCH)
 
+	@test -s ./build/zarf-package-helm-post-renderers-$(ARCH)-0.0.1.tar.zst || $(ZARF_BIN) package create examples/helm-post-renderers -o build -a $(ARCH)
+
 ## NOTE: Requires an existing cluster or the env var APPLIANCE_MODE=true
 .PHONY: test-e2e
 test-e2e: test-e2e-without-cluster test-e2e-with-cluster  ## Run all of the core Zarf CLI E2E tests (builds any deps that aren't present)

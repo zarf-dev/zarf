@@ -14,15 +14,26 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/api"
+	"github.com/zarf-dev/zarf/src/internal/packager/postrender"
+	"github.com/zarf-dev/zarf/src/internal/packager/template"
+	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/pki"
 	"github.com/zarf-dev/zarf/src/pkg/state"
+	tmpl "github.com/zarf-dev/zarf/src/pkg/template"
+	"github.com/zarf-dev/zarf/src/pkg/utils"
+	"github.com/zarf-dev/zarf/src/pkg/value"
 	"github.com/zarf-dev/zarf/src/test/testutil"
+	"helm.sh/helm/v4/pkg/action"
+	"helm.sh/helm/v4/pkg/chart/common"
 	releaseutil "helm.sh/helm/v4/pkg/release/v1/util"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilyaml "k8s.io/apimachinery/pkg/util/yaml"
+	"k8s.io/client-go/kubernetes/fake"
 	"sigs.k8s.io/yaml"
 )
 
@@ -1295,4 +1306,109 @@ func renderManifest(t *testing.T, r *renderer, manifest string) []*unstructured.
 		docs = append(docs, doc)
 	}
 	return docs
+}
+
+func TestRendererRun_postRenderersBeforeZarfProcessing(t *testing.T) {
+	t.Parallel()
+	ctx := testutil.TestContext(t)
+
+	chart := api.Chart{
+		Name:      "podinfo",
+		Namespace: "podinfo",
+		PostRenderers: []api.PostRenderer{{Kustomize: &api.KustomizePostRenderer{
+			EnableTemplating: true,
+			Patches: []api.KustomizePatch{
+				{
+					// Moving a resource into a new namespace must still get the namespace created by Zarf.
+					Patch:  `[{"op": "add", "path": "/metadata/namespace", "value": "{{ .Values.extraNamespace }}"}]`,
+					Target: &api.KustomizeSelector{Kind: "ConfigMap", Name: "settings"},
+				},
+				{
+					// A connect label added by a patch must still be collected as a connect string.
+					Patch: `apiVersion: v1
+kind: Service
+metadata:
+  name: podinfo
+  labels:
+    zarf.dev/connect-name: podinfo
+  annotations:
+    zarf.dev/connect-description: patched in
+`,
+				},
+			},
+		}}},
+	}
+	c := &cluster.Cluster{Clientset: fake.NewClientset()}
+	actionConfig := &action.Configuration{Capabilities: common.DefaultCapabilities}
+	user, err := postrender.New(ctx, chart, tmpl.NewObjects(value.Values{"extraNamespace": "extra"}))
+	require.NoError(t, err)
+	r, err := newRenderer(ctx, chart, false, c, false, &state.State{}, actionConfig,
+		template.GetZarfVariableConfig(ctx, false), user, "test-pkg", "")
+	require.NoError(t, err)
+
+	rendered := `---
+# Source: podinfo/templates/configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: settings
+  annotations:
+    postrenderer.helm.sh/postrender-filename: podinfo/templates/configmap.yaml
+data:
+  key: value
+---
+# Source: podinfo/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: podinfo
+  annotations:
+    postrenderer.helm.sh/postrender-filename: podinfo/templates/service.yaml
+spec:
+  ports:
+    - port: 80
+`
+	out, err := r.Run(bytes.NewBufferString(rendered))
+	require.NoError(t, err)
+
+	docs, err := utils.SplitYAML(out.Bytes())
+	require.NoError(t, err)
+	require.Len(t, docs, 2)
+	for _, doc := range docs {
+		// Zarf processing ran over the post-rendered output.
+		require.Equal(t, "test-pkg", doc.GetLabels()[cluster.PackageLabel])
+		require.NotEmpty(t, doc.GetAnnotations()["postrenderer.helm.sh/postrender-filename"])
+		if doc.GetKind() == "ConfigMap" {
+			require.Equal(t, "extra", doc.GetNamespace())
+		}
+	}
+	require.Equal(t, state.ConnectStrings{"podinfo": {Description: "patched in"}}, r.connectStrings)
+	for _, ns := range []string{"podinfo", "extra"} {
+		created, err := c.Clientset.CoreV1().Namespaces().Get(ctx, ns, metav1.GetOptions{})
+		require.NoError(t, err)
+		require.Equal(t, "zarf", created.Labels["app.kubernetes.io/managed-by"])
+	}
+}
+
+func TestRendererRun_postRendererErrorIncludesChartName(t *testing.T) {
+	t.Parallel()
+	ctx := testutil.TestContext(t)
+
+	user, err := postrender.New(ctx, api.Chart{
+		Name: "podinfo",
+		PostRenderers: []api.PostRenderer{{Kustomize: &api.KustomizePostRenderer{
+			Patches: []api.KustomizePatch{{Patch: `apiVersion: v1
+kind: Secret
+metadata:
+  name: does-not-exist
+`}},
+		}}},
+	}, nil)
+	require.NoError(t, err)
+	r := newTestRenderer()
+	r.user = user
+	r.actionConfig = &action.Configuration{Capabilities: common.DefaultCapabilities}
+	r.variableConfig = template.GetZarfVariableConfig(ctx, false)
+	_, err = r.Run(bytes.NewBufferString("apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: settings\n"))
+	require.ErrorContains(t, err, `chart "podinfo": post-renderer at index 0`)
 }

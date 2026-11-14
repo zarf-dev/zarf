@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app
+  labels:
+    app: post-render-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: post-render-app
+  template:
+    metadata:
+      labels:
+        app: post-render-app
+    spec:
+      terminationGracePeriodSeconds: 1
+      containers:
+        - name: app
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          command: ["sh", "-c", "sleep 86400"]

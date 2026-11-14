@@ -1,0 +1,5 @@
+apiVersion: v2
+name: post-render-chart
+description: Chart used to exercise user post-renderers
+type: application
+version: 1.0.0

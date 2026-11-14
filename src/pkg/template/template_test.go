@@ -266,6 +266,22 @@ func TestObjects_WithVariables(t *testing.T) {
 	}
 }
 
+func TestObjects_WithVariableConfig(t *testing.T) {
+	vc := variables.New("zarf", nil, nil)
+	vc.SetVariable("DB_HOST", "localhost", false, false, "")
+	vc.SetConstants([]api.Constant{{Name: "VERSION", Value: "1.2.3"}})
+
+	result := make(Objects).WithVariableConfig(vc)
+	require.Equal(t, map[string]string{"DB_HOST": "localhost"}, result[objectKeyVariables])
+	require.Equal(t, map[string]string{"VERSION": "1.2.3"}, result[objectKeyConstants])
+}
+
+func TestObjects_WithVariableConfig_nil(t *testing.T) {
+	result := make(Objects).WithVariableConfig(nil)
+	require.Equal(t, map[string]string{}, result[objectKeyVariables])
+	require.Equal(t, map[string]string{}, result[objectKeyConstants])
+}
+
 func TestApply(t *testing.T) {
 	tests := []struct {
 		name     string

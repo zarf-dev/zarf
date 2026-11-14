@@ -44,6 +44,29 @@ func TestPackageValidateVersionFields(t *testing.T) {
 			wantErr: "components[0].import (multiple sources)",
 		},
 		{
+			name: "v1alpha1 rejects chart post-renderers",
+			pkg: api.Package{APIVersion: v1alpha1.APIVersion, Components: []api.Component{{
+				Charts: []api.Chart{{PostRenderers: []api.PostRenderer{{Kustomize: &api.KustomizePostRenderer{}}}}},
+			}}},
+			wantErr: "components[0].charts[0].postRenderers is not supported in " + v1alpha1.APIVersion,
+		},
+		{
+			name: "v1alpha1 rejects chart post-render strategy",
+			pkg: api.Package{APIVersion: v1alpha1.APIVersion, Components: []api.Component{{
+				Charts: []api.Chart{{PostRenderStrategy: api.PostRenderStrategyCombined}},
+			}}},
+			wantErr: "components[0].charts[0].postRenderStrategy is not supported in " + v1alpha1.APIVersion,
+		},
+		{
+			name: "v1beta1 accepts chart post-renderers",
+			pkg: api.Package{APIVersion: v1beta1.APIVersion, Components: []api.Component{{
+				Charts: []api.Chart{{
+					PostRenderStrategy: api.PostRenderStrategySeparate,
+					PostRenderers:      []api.PostRenderer{{Kustomize: &api.KustomizePostRenderer{}}},
+				}},
+			}}},
+		},
+		{
 			name: "v1beta1 accepts image source and annotations",
 			pkg: api.Package{APIVersion: v1beta1.APIVersion, Metadata: api.PackageMetadata{
 				Annotations: map[string]string{"url": "https://example.com", "other": "value"},

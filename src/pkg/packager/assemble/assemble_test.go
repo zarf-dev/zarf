@@ -545,6 +545,71 @@ func TestCollectVersionRequirementsV1Beta1Charts(t *testing.T) {
 	}
 }
 
+func TestCollectVersionRequirements_chartPostRenderers(t *testing.T) {
+	t.Parallel()
+
+	requirement := api.VersionRequirement{
+		Version: "v1.1.0",
+		Reason:  "This package uses Helm chart post-renderers, which require v1.1.0+",
+	}
+	postRenderers := []api.PostRenderer{{Kustomize: &api.KustomizePostRenderer{
+		Images: []api.KustomizeImage{{Name: "nginx", NewTag: "1.27"}},
+	}}}
+	chart := func(name string, renderers []api.PostRenderer, strategy api.PostRenderStrategy) api.Chart {
+		return api.Chart{Name: name, Local: &api.LocalSource{Path: name}, PostRenderers: renderers, PostRenderStrategy: strategy}
+	}
+
+	for _, tt := range []struct {
+		name       string
+		apiVersion string
+		components []api.Component
+		want       int
+	}{
+		{
+			name:       "v1beta1 chart with post-renderers",
+			apiVersion: v1beta1.APIVersion,
+			components: []api.Component{{Charts: []api.Chart{chart("a", nil, ""), chart("b", postRenderers, "")}}},
+			want:       1,
+		},
+		{
+			name:       "requirement is emitted once across components",
+			apiVersion: v1beta1.APIVersion,
+			components: []api.Component{
+				{Charts: []api.Chart{chart("a", postRenderers, "")}},
+				{Charts: []api.Chart{chart("b", postRenderers, api.PostRenderStrategyCombined)}},
+			},
+			want: 1,
+		},
+		{
+			name:       "strategy without post-renderers",
+			apiVersion: v1beta1.APIVersion,
+			components: []api.Component{{Charts: []api.Chart{chart("a", nil, api.PostRenderStrategySeparate)}}},
+		},
+		{
+			name:       "v1beta1 chart without post-renderers",
+			apiVersion: v1beta1.APIVersion,
+			components: []api.Component{{Charts: []api.Chart{chart("a", nil, "")}}},
+		},
+		{
+			name:       "v1alpha1 package",
+			apiVersion: v1alpha1.APIVersion,
+			components: []api.Component{{Charts: []api.Chart{chart("a", postRenderers, "")}}},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			reqs := collectVersionRequirements(api.Package{APIVersion: tt.apiVersion, Components: tt.components}, false)
+			count := 0
+			for _, req := range reqs {
+				if req == requirement {
+					count++
+				}
+			}
+			require.Equal(t, tt.want, count)
+		})
+	}
+}
+
 func TestImageLayoutHasIndex(t *testing.T) {
 	t.Parallel()
 

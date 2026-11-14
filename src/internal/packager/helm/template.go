@@ -14,6 +14,7 @@ import (
 
 	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/internal/packager/postrender"
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
 	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -29,9 +30,9 @@ import (
 	releaseutil "helm.sh/helm/v4/pkg/release/v1/util"
 )
 
-// TemplateChart generates a helm template from a given chart.
+// TemplateChart generates a helm template from a given chart. postRenderer is the chart's post-renderers and may be nil.
 func TemplateChart(ctx context.Context, zarfChart api.Chart, chart *chartv2.Chart, values common.Values,
-	kubeVersion string, variableConfig *variables.VariableConfig, isInteractive bool, remoteOptions types.RemoteOptions) (string, error) {
+	kubeVersion string, variableConfig *variables.VariableConfig, postRenderer *postrender.Renderer, isInteractive bool, remoteOptions types.RemoteOptions) (string, error) {
 	if variableConfig == nil {
 		variableConfig = template.GetZarfVariableConfig(ctx, isInteractive)
 	}
@@ -63,21 +64,21 @@ func TemplateChart(ctx context.Context, zarfChart api.Chart, chart *chartv2.Char
 		}
 		client.KubeVersion = parsedKubeVersion
 	}
-	client.ReleaseName = zarfChart.ReleaseName
-
-	// If no release name is specified, use the chart name.
-	if client.ReleaseName == "" {
-		client.ReleaseName = zarfChart.Name
-	}
+	client.ReleaseName = zarfChart.GetReleaseName()
 
 	// Namespace must be specified.
 	client.Namespace = zarfChart.Namespace
 
 	if len(variableConfig.GetAllTemplates()) > 0 {
-		client.PostRenderer, err = newTemplateRenderer(actionCfg, variableConfig)
+		client.PostRenderer, err = newTemplateRenderer(actionCfg, variableConfig, postRenderer)
 		if err != nil {
 			return "", fmt.Errorf("unable to create helm renderer: %w", err)
 		}
+	} else if postRenderer != nil {
+		// Running the user's post-renderers directly lets Helm keep each manifest's real source path; Zarf's template
+		// renderer re-sorts its output under a single placeholder path. Guarded so a nil *Renderer never becomes a
+		// non-nil interface.
+		client.PostRenderer = postRenderer
 	}
 
 	// Perform the loadedChart installation.
@@ -107,18 +108,25 @@ func TemplateChart(ctx context.Context, zarfChart api.Chart, chart *chartv2.Char
 type templateRenderer struct {
 	actionConfig   *action.Configuration
 	variableConfig *variables.VariableConfig
+	user           *postrender.Renderer
 }
 
-func newTemplateRenderer(actionConfig *action.Configuration, vc *variables.VariableConfig) (*templateRenderer, error) {
+func newTemplateRenderer(actionConfig *action.Configuration, vc *variables.VariableConfig, user *postrender.Renderer) (*templateRenderer, error) {
 	rend := &templateRenderer{
 		actionConfig:   actionConfig,
 		variableConfig: vc,
+		user:           user,
 	}
 	return rend, nil
 }
 
-// Run satisfies the Helm post-renderer interface and templates the Zarf vars in the rendered manifests.
+// Run satisfies the Helm post-renderer interface. It applies the chart's user post-renderers, then templates the Zarf
+// vars in the rendered manifests.
 func (tr *templateRenderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
+	renderedManifests, err := tr.user.Run(renderedManifests)
+	if err != nil {
+		return nil, err
+	}
 	hooks, resources, err := getTemplatedManifests(renderedManifests, tr.variableConfig, tr.actionConfig)
 	if err != nil {
 		return nil, err
