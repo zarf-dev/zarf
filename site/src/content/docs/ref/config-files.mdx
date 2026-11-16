@@ -15,12 +15,25 @@ To use a custom config filename, set the `ZARF_CONFIG` environment variable to t
 
 Additionally, you can set any supported config parameter via an environment variable using the `ZARF_` prefix. Note that the `ZARF_` environment variable takes precedence over a config file.
 
-While config files set default values, these values can still be overwritten by command line flags. For example, if the config file sets the log level to `info` and the command line flag is set to `debug`, the log level will be set to `debug`. The order of precedence for command line configuration is as follows:
+### Environment Variable Name Mapping
 
-1. Command line flags
-2. Environment variables
-3. Config file
-4. Default values
+Zarf binds environment variables using Viper with a `ZARF_` prefix and converts key delimiters (such as `.` in nested config paths) to underscores (`_`), matching in uppercase:
+
+- **Single-level keys**: `architecture` -> `ZARF_ARCHITECTURE`, `log_level` -> `ZARF_LOG_LEVEL`, `tmp_dir` -> `ZARF_TMP_DIR`.
+- **Nested keys**: `package.deploy.timeout` -> `ZARF_PACKAGE_DEPLOY_TIMEOUT`, `init.git.url` -> `ZARF_INIT_GIT_URL`.
+- **Hyphenated flags & parameters**: Command-line flags and parameters (such as `--oci-concurrency` or `package.oci_concurrency`) map to underscore-separated uppercase environment variables (e.g., `ZARF_PACKAGE_OCI_CONCURRENCY`).
+
+### Configuration Precedence
+
+Configuration sources are evaluated in the following order of precedence (highest to lowest):
+
+1. **Command line flags** (e.g., `--log-level debug`)
+2. **Environment variables** (e.g., `ZARF_LOG_LEVEL=debug`)
+3. **Custom config file** (specified via `ZARF_CONFIG` path or `.env`)
+4. **Default config file** (`./zarf-config.yaml` or `~/.zarf/zarf-config.yaml`)
+5. **Built-in default values** (e.g., log level default `info`)
+
+For example, if a config file sets `log_level: info`, the environment variable `ZARF_LOG_LEVEL=warn` will override it, and passing `--log-level debug` on the CLI will take highest precedence and set the log level to `debug`.
 
 ## Config File Location
 
