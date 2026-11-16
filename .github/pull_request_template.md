@@ -3,7 +3,7 @@
 ...
 
 ## Related Issue
-<!-- Every PR must link to an issue with a "Ready" status that you are assigned to otherwise the PR will be closed -->
+<!-- Every PR must link to an issue with a "Ready" status that you are assigned to. Otherwise the PR will be closed -->
 
 Fixes #
 <!-- or -->
