@@ -177,8 +177,9 @@ func listRegistryTags(ctx context.Context, out io.Writer, conn registryConnectio
 	}
 
 	repo := &orasRemote.Repository{
-		Reference: ref,
-		Client:    conn.client,
+		Reference:       ref,
+		Client:          conn.client,
+		TagListPageSize: 1000,
 	}
 
 	switch {
