@@ -814,3 +814,68 @@ func TestDeployLegacyBuiltinsByAPIVersion(t *testing.T) {
 		})
 	}
 }
+
+func TestInitConfigurationValues(t *testing.T) {
+	t.Parallel()
+	ctx := testutil.TestContext(t)
+	pkg := api.Package{
+		APIVersion: v1beta1.APIVersion,
+		Kind:       api.ZarfInitConfig,
+		Metadata:   api.PackageMetadata{Name: "init"},
+		Components: []api.Component{},
+	}
+	dir := t.TempDir()
+	pkgLayout, err := assemble.AssemblePackage(ctx, &load.ResolvedPackage{Definition: pkg, Resources: load.NewResourceSet(dir)}, assemble.AssembleOptions{SkipSBOM: true})
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, pkgLayout.Cleanup()) })
+
+	opts := DeployOptions{
+		Values: value.Values{
+			"registry": map[string]any{
+				"nodePort": 31998,
+				"injector": map[string]any{
+					"port":  31888,
+					"image": "custom-injector:latest",
+				},
+			},
+		},
+	}
+	res, err := Deploy(ctx, pkgLayout, opts)
+	require.NoError(t, err)
+
+	extractedNodePort, err := res.Values.Extract(value.Path(".registry.nodePort"))
+	require.NoError(t, err)
+	require.Equal(t, int64(31998), extractedNodePort)
+
+	extractedInjectorPort, err := res.Values.Extract(value.Path(".registry.injector.port"))
+	require.NoError(t, err)
+	require.Equal(t, int64(31888), extractedInjectorPort)
+
+	extractedInjectorImage, err := res.Values.Extract(value.Path(".registry.injector.image"))
+	require.NoError(t, err)
+	require.Equal(t, "custom-injector:latest", extractedInjectorImage)
+
+	// Test fallback from SetVariables (e.g. legacy --set REGISTRY_NODEPORT=31777)
+	optsVariables := DeployOptions{
+		SetVariables: map[string]string{
+			"REGISTRY_NODEPORT": "31777",
+			"INJECTOR_PORT":     "31666",
+			"INJECTOR_IMAGE":    "legacy-injector:v1",
+		},
+	}
+	resVar, err := Deploy(ctx, pkgLayout, optsVariables)
+	require.NoError(t, err)
+
+	extractedVarNodePort, err := resVar.Values.Extract(value.Path(".registry.nodePort"))
+	require.NoError(t, err)
+	require.Equal(t, 31777, extractedVarNodePort)
+
+	extractedVarInjectorPort, err := resVar.Values.Extract(value.Path(".registry.injector.port"))
+	require.NoError(t, err)
+	require.Equal(t, 31666, extractedVarInjectorPort)
+
+	extractedVarInjectorImage, err := resVar.Values.Extract(value.Path(".registry.injector.image"))
+	require.NoError(t, err)
+	require.Equal(t, "legacy-injector:v1", extractedVarInjectorImage)
+}
+

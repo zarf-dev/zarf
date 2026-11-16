@@ -38,6 +38,9 @@ Declared deploy-time variables from the v1alpha1 init components map as follows:
 | `REGISTRY_AFFINITY_CUSTOM` | `registry.affinity.custom` |
 | `REGISTRY_TOLERATIONS` | `registry.tolerations` |
 | `REGISTRY_NODE_SELECTOR` | `registry.nodeSelector` |
+| `REGISTRY_NODEPORT` | `registry.nodePort` |
+| `INJECTOR_PORT` | `registry.injector.port` |
+| `INJECTOR_IMAGE` | `registry.injector.image` |
 | `PROXY_TOLERATIONS` | `registry.proxy.tolerations` |
 | `REGISTRY_HPA_AUTO_SIZE` | `registry.autoscaling.mapReplicasToNodes` |
 | `REGISTRY_HPA_TARGET_CPU` | `registry.autoscaling.targetCPUUtilizationPercentage` |

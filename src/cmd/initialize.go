@@ -15,6 +15,7 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 
@@ -205,6 +206,39 @@ func (o *initOptions) run(cmd *cobra.Command, args []string) error {
 	o.setVariables = helpers.TransformAndMergeMap(
 		v.GetStringMapString(VPkgDeploySet), o.setVariables, strings.ToUpper)
 	o.setValues = mergeMap(v.GetStringMapString(VPkgDeploySetValues), o.setValues)
+	if o.setValues == nil {
+		o.setValues = make(map[string]string)
+	}
+	if (optionIsExplicitlySet(cmd, v, "registry-port", VInitRegistryPort) || v.IsSet(VInitRegistryNodeport)) && o.registryInfo.Port > 0 {
+		if _, ok := o.setValues["registry.nodePort"]; !ok {
+			o.setValues["registry.nodePort"] = strconv.Itoa(o.registryInfo.Port)
+		}
+	}
+	if optionIsExplicitlySet(cmd, v, "injector-port", VInitInjectorPort) && o.injectorPort > 0 {
+		if _, ok := o.setValues["registry.injector.port"]; !ok {
+			o.setValues["registry.injector.port"] = strconv.Itoa(o.injectorPort)
+		}
+	}
+	if optionIsExplicitlySet(cmd, v, "injector-image", VInitInjectorImage) && o.injectorImage != "" {
+		if _, ok := o.setValues["registry.injector.image"]; !ok {
+			o.setValues["registry.injector.image"] = o.injectorImage
+		}
+	}
+	if port, ok := o.setVariables["REGISTRY_NODEPORT"]; ok && port != "" {
+		if _, exists := o.setValues["registry.nodePort"]; !exists {
+			o.setValues["registry.nodePort"] = port
+		}
+	}
+	if port, ok := o.setVariables["INJECTOR_PORT"]; ok && port != "" {
+		if _, exists := o.setValues["registry.injector.port"]; !exists {
+			o.setValues["registry.injector.port"] = port
+		}
+	}
+	if img, ok := o.setVariables["INJECTOR_IMAGE"]; ok && img != "" {
+		if _, exists := o.setValues["registry.injector.image"]; !exists {
+			o.setValues["registry.injector.image"] = img
+		}
+	}
 	values, err := parseValues(ctx, o.valuesFiles, o.setValues)
 	if err != nil {
 		return err
