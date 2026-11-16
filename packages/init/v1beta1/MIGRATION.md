@@ -6,7 +6,7 @@ are not translated automatically. Settings you omit use the package defaults.
 
 ## Variable replacements
 
-All 49 declared deploy-time variables from the v1alpha1 init components map as follows:
+Declared deploy-time variables from the v1alpha1 init components map as follows:
 
 | v1alpha1 variable | v1beta1 value |
 | --- | --- |
@@ -17,6 +17,7 @@ All 49 declared deploy-time variables from the v1alpha1 init components map as f
 | `AGENT_WEBHOOK_ANNOTATIONS` | `agent.webhookAnnotations` |
 | `AGENT_MUTATION_EXCLUSIONS` | `agent.mutationExclusions` |
 | `REGISTRY_EXISTING_PVC` | `registry.persistence.existingClaim` |
+| `REGISTRY_STORAGE_CLASS` | `registry.persistence.storageClass` |
 | `REGISTRY_PVC_ENABLED` | `registry.persistence.enabled` |
 | `REGISTRY_PVC_SIZE` | `registry.persistence.size` |
 | `REGISTRY_PVC_ACCESS_MODE` | `registry.persistence.accessMode` |
@@ -45,6 +46,7 @@ All 49 declared deploy-time variables from the v1alpha1 init components map as f
 | `REGISTRY_SECURITY_CONTEXT_FS_GROUP` | `registry.securityContext.fsGroup` |
 | `REGISTRY_SECURITY_CONTEXT_RUN_AS_GROUP` | `registry.securityContext.runAsGroup` |
 | `GIT_SERVER_EXISTING_PVC` | `gitServer.persistence.claimName` |
+| `GIT_SERVER_STORAGE_CLASS` | `gitServer.persistence.storageClass` |
 | `GIT_SERVER_PVC_SIZE` | `gitServer.persistence.size` |
 | `GIT_SERVER_PVC_ACCESS_MODE` | `gitServer.persistence.accessModes` (array) |
 | `GIT_SERVER_CPU_REQ` | `gitServer.resources.requests.cpu` |
@@ -97,3 +99,8 @@ or credential variable.
 `GIT_SERVER_CREATE_PVC` remains action-managed as `gitServer.persistence.create`.
 The pre-deploy action overwrites any supplied value based on whether the PVC
 exists. Set `gitServer.persistence.claimName` to choose the PVC.
+
+Both storage-class values default to empty, allowing Kubernetes to select its
+default StorageClass for new claims. Set them to select a non-default class for a
+new claim. Existing registry claims retain their storage class when unset, and
+existing Gitea claims are reused.

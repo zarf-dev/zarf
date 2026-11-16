@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 )
@@ -50,13 +51,39 @@ func TestCombine(t *testing.T) {
 	require.Equal(t, convert.PackageFromV1alpha1(v1alpha1.ZarfPackage{Components: expected}).Components, components)
 
 	// Test error propagation
-	combo = Combine(f1, f2, ForDeploy("group with no default", false))
+	combo = Combine(f1, f2, ForDeploy("group with no default"))
 	pkg.Components = append(pkg.Components, v1alpha1.ZarfComponent{
 		Name:            "group with no default",
 		DeprecatedGroup: "g1",
 	})
 	_, err = combo.Apply(convert.PackageFromV1alpha1(pkg))
 	require.Error(t, err)
+}
+
+func TestBySelectStateRespectsSelectorOrder(t *testing.T) {
+	t.Parallel()
+
+	pkg := convert.PackageFromV1alpha1(v1alpha1.ZarfPackage{Components: []v1alpha1.ZarfComponent{
+		{Name: "one"}, {Name: "two"},
+	}})
+	for _, tt := range []struct {
+		selectors string
+		want      []string
+	}{
+		{"-*,two", []string{"two"}},
+		{"two,-*", []string{}},
+		{"two,-*,two", []string{"two"}},
+	} {
+		t.Run(tt.selectors, func(t *testing.T) {
+			components, err := BySelectState(tt.selectors).Apply(pkg)
+			require.NoError(t, err)
+			names := make([]string, 0, len(components))
+			for _, component := range components {
+				names = append(names, component.Name)
+			}
+			require.Equal(t, tt.want, names)
+		})
+	}
 }
 
 func TestApply(t *testing.T) {
@@ -72,4 +99,72 @@ func TestApply(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, definition.Components, 2)
 	require.Equal(t, []string{"keep"}, []string{filtered.Components[0].Name})
+}
+
+func TestApplyRecordsDeploymentSelection(t *testing.T) {
+	t.Parallel()
+
+	pkg := api.Package{Components: []api.Component{
+		{Name: "required"},
+		{Name: "one", Optional: true, Default: true},
+		{Name: "two", Optional: true, Default: true},
+	}}
+	for _, tt := range []struct {
+		name       string
+		selectors  string
+		want       []string
+		components []api.Component
+	}{
+		{"defaults", " , ", nil, pkg.Components},
+		{"explicit choices", " , ONE, , -TWO, ONE ", []string{"one", "-two", "one"}, pkg.Components[:2]},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			filtered, err := Apply(pkg, Combine(
+				ByLocalOS("linux"),
+				Combine(ForDeploy(tt.selectors), Empty()),
+			))
+			require.NoError(t, err)
+			require.Equal(t, tt.components, filtered.Components)
+			selectors, applied := filtered.ComponentSelectors()
+			require.True(t, applied)
+			require.Equal(t, tt.want, selectors)
+
+			filtered, err = Apply(filtered, ByLocalOS("linux"))
+			require.NoError(t, err)
+			selectors, applied = filtered.ComponentSelectors()
+			require.True(t, applied)
+			require.Equal(t, tt.want, selectors)
+			_, applied = pkg.ComponentSelectors()
+			require.False(t, applied)
+		})
+	}
+}
+
+func TestApplyDoesNotRecordFailedSelection(t *testing.T) {
+	t.Parallel()
+
+	pkg := api.Package{Components: []api.Component{{Name: "one", Optional: true}}}
+	for _, filter := range []ComponentFilterStrategy{
+		ForDeploy("missing"),
+		Combine(ForDeploy("one"), ByLocalOS("")),
+	} {
+		_, err := Apply(pkg, filter)
+		require.Error(t, err)
+		_, applied := pkg.ComponentSelectors()
+		require.False(t, applied)
+	}
+}
+
+func TestApplyRejectsRepeatedDeploymentSelection(t *testing.T) {
+	t.Parallel()
+
+	pkg := api.Package{Components: []api.Component{{Name: "one", Optional: true}}}
+	filtered, err := Apply(pkg, ForDeploy("one"))
+	require.NoError(t, err)
+	for _, selectors := range []string{"one", "", "missing"} {
+		_, err := Apply(filtered, ForDeploy(selectors))
+		require.ErrorContains(t, err, "deployment component selection has already been applied")
+	}
+	_, err = Apply(pkg, Combine(ForDeploy("one"), Combine(Empty(), ForDeploy(""))))
+	require.ErrorContains(t, err, "deployment component selection has already been applied")
 }

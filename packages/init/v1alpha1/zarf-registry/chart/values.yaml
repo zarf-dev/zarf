@@ -10,6 +10,7 @@ image:
 
 proxy:
   enabled: false
+  hostNetwork: false
   injectorHostPort: 5001
   tolerations: []
   registry:
@@ -46,6 +47,7 @@ securityContext:
   runAsGroup: 2000
 
 persistence:
+  existingClaim: ""
   accessMode: "ReadWriteOnce"
   enabled: true
   size: 20Gi

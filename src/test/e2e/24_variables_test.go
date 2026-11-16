@@ -59,7 +59,7 @@ func TestVariables(t *testing.T) {
 	require.Contains(t, stdErr, "", expectedOutString)
 
 	// Deploy nginx
-	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", path, "--confirm", "--set-variables", "SITE_NAME=Lula Web", "--set-variables", "SECRET=cool-place", "-l", "trace")
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", path, "--confirm", "--set-variables", "SITE_NAME=Lula Web", "--set-variables", "SECRET=cool-place", "-l", "debug")
 	require.NoError(t, err, stdOut, stdErr)
 	// Verify that the variables were shown to the user in the formats we expect
 	require.Contains(t, stdOut, "currently set to 'Defense Unicorns' (default)")

@@ -103,7 +103,6 @@ func TestInit(t *testing.T) {
 	require.NoError(t, err)
 
 	existingState := state.State{
-		Distro: DistroIsK3d,
 		RegistryInfo: state.RegistryInfo{
 			PushUsername: "push-user",
 			PullUsername: "pull-user",
@@ -124,10 +123,6 @@ func TestInit(t *testing.T) {
 		secrets     []corev1.Secret
 		expectedErr string
 	}{
-		{
-			name:        "no nodes in cluster",
-			expectedErr: "cannot init Zarf state in empty cluster",
-		},
 		{
 			name:     "no namespaces exist",
 			initOpts: InitStateOptions{},
@@ -506,9 +501,7 @@ func TestInitStateRegistryModeSwitch(t *testing.T) {
 				Watcher:   healthchecks.NewImmediateWatcher(status.CurrentStatus),
 			}
 
-			// Seed the fake cluster with the minimum objects InitState expects:
-			// a node, the zarf namespace, the state secret, and the IP family service.
-			tt.current.Distro = DistroIsK3d
+			// Seed the fake cluster with the state secret and the IP family service.
 			tt.current.RegistryInfo.PushUsername = "push-user"
 			tt.current.RegistryInfo.PullUsername = "pull-user"
 			tt.current.RegistryInfo.Secret = "secret"
@@ -547,7 +540,6 @@ func TestInitStateRegistryModeSwitch(t *testing.T) {
 			require.Equal(t, tt.expected.RegistryInfo.MTLSStrategy, result.RegistryInfo.MTLSStrategy)
 			if tt.expected.RegistryInfo.Port != 0 {
 				require.Equal(t, tt.expected.RegistryInfo.Port, result.RegistryInfo.Port)
-				require.Equal(t, tt.expected.RegistryInfo.Port, result.RegistryInfo.NodePort) //nolint:staticcheck // verify backwards compat sync
 			}
 		})
 	}
@@ -589,6 +581,26 @@ func newFakeInitStateCluster(ctx context.Context, t *testing.T, existing *state.
 		require.NoError(t, err)
 	}
 	return c
+}
+
+func TestInitStateApplianceMode(t *testing.T) {
+	t.Parallel()
+	ctx := t.Context()
+	c := newFakeInitStateCluster(ctx, t, nil)
+
+	s, err := c.InitState(ctx, InitStateOptions{ApplianceMode: true})
+	require.NoError(t, err)
+	require.True(t, s.ZarfAppliance)
+}
+
+func TestInitStatePreservesApplianceMode(t *testing.T) {
+	t.Parallel()
+	ctx := t.Context()
+	c := newFakeInitStateCluster(ctx, t, &state.State{ZarfAppliance: true})
+
+	s, err := c.InitState(ctx, InitStateOptions{})
+	require.NoError(t, err)
+	require.True(t, s.ZarfAppliance)
 }
 
 func TestInitStateServicesGating(t *testing.T) {
@@ -635,7 +647,6 @@ func TestInitStateServicesGating(t *testing.T) {
 	t.Run("re-init adds a missing git service without overwriting existing registry", func(t *testing.T) {
 		ctx := context.Background()
 		existing := &state.State{
-			Distro: DistroIsK3d,
 			RegistryInfo: state.RegistryInfo{
 				Address:      "127.0.0.1:31999",
 				Port:         31999,
@@ -658,7 +669,6 @@ func TestInitStateServicesGating(t *testing.T) {
 	t.Run("re-init adds missing agent and ignores existing namespaces", func(t *testing.T) {
 		ctx := context.Background()
 		existing := &state.State{
-			Distro: DistroIsK3d,
 			RegistryInfo: state.RegistryInfo{
 				Address:      "127.0.0.1:31999",
 				Port:         31999,
@@ -688,7 +698,7 @@ func TestInitStateServicesGating(t *testing.T) {
 
 	t.Run("re-init uses provided agent TLS when adding missing agent", func(t *testing.T) {
 		ctx := context.Background()
-		existing := &state.State{Distro: DistroIsK3d}
+		existing := &state.State{}
 		c := newFakeInitStateCluster(ctx, t, existing)
 		agentTLS := pki.GeneratedPKI{
 			CA:   []byte("ca"),
@@ -725,7 +735,6 @@ func TestInitStateServicesGating(t *testing.T) {
 	t.Run("re-init does not wipe services not listed", func(t *testing.T) {
 		ctx := context.Background()
 		existing := &state.State{
-			Distro: DistroIsK3d,
 			GitServer: state.GitServerInfo{
 				Address:      state.ZarfInClusterGitServiceURL,
 				PushUsername: "zarf-git-user",
@@ -751,7 +760,6 @@ func TestInitStateServicesGating(t *testing.T) {
 	t.Run("re-init propagates RegistryMode when registry is not in InternalServices", func(t *testing.T) {
 		ctx := context.Background()
 		existing := &state.State{
-			Distro: DistroIsK3d,
 			RegistryInfo: state.RegistryInfo{
 				Address:      "127.0.0.1:31999",
 				Port:         31999,
@@ -776,47 +784,243 @@ func TestInitStateServicesGating(t *testing.T) {
 	})
 }
 
-func TestStateAgentInfoCompatibility(t *testing.T) {
+func TestInitStateBackfillsGitServerMode(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
-	c := &Cluster{Clientset: fake.NewClientset()}
-	legacy := struct {
-		AgentTLS             pki.GeneratedPKI     `json:"agentTLS"`
-		AgentTLSUserProvided bool                 `json:"agentTLSUserProvided"`
-		AgentMutationPolicy  state.MutationPolicy `json:"agentMutationPolicy"`
+	for _, tt := range []struct {
+		name string
+		git  state.GitServerInfo
+		mode state.GitServerMode
 	}{
-		AgentTLS: pki.GeneratedPKI{
+		{
+			name: "internal server without mode",
+			git: state.GitServerInfo{
+				Address:      state.ZarfInClusterGitServiceURL,
+				PushUsername: "push-user",
+				PushPassword: "push-password",
+				PullUsername: "pull-user",
+				PullPassword: "pull-password",
+			},
+			mode: state.GitServerModeInternal,
+		},
+		{
+			name: "external server without mode",
+			git: state.GitServerInfo{
+				Address:      "https://git.example.com",
+				PushUsername: "push-user",
+				PushPassword: "push-password",
+				PullUsername: "pull-user",
+				PullPassword: "pull-password",
+			},
+			mode: state.GitServerModeExternal,
+		},
+		{
+			name: "backfill does not generate credentials",
+			git:  state.GitServerInfo{Address: state.ZarfInClusterGitServiceURL},
+			mode: state.GitServerModeInternal,
+		},
+		{
+			name: "explicit external mode is preserved",
+			git: state.GitServerInfo{
+				Address:       state.ZarfInClusterGitServiceURL,
+				GitServerMode: state.GitServerModeExternal,
+			},
+			mode: state.GitServerModeExternal,
+		},
+		{
+			name: "explicit internal mode is preserved",
+			git: state.GitServerInfo{
+				Address:       "https://git.example.com",
+				GitServerMode: state.GitServerModeInternal,
+			},
+			mode: state.GitServerModeInternal,
+		},
+		{name: "unconfigured server stays unconfigured"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			ctx := t.Context()
+			c := newFakeInitStateCluster(ctx, t, &state.State{GitServer: tt.git})
+			expected := tt.git
+			expected.GitServerMode = tt.mode
+
+			loaded, err := c.LoadState(ctx)
+			require.NoError(t, err)
+			require.Equal(t, expected, loaded.GitServer)
+
+			initialized, err := c.InitState(ctx, InitStateOptions{})
+			require.NoError(t, err)
+			require.Equal(t, expected, initialized.GitServer)
+
+			secret, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Get(ctx, state.ZarfStateSecretName, metav1.GetOptions{})
+			require.NoError(t, err)
+			var persisted state.State
+			require.NoError(t, json.Unmarshal(secret.Data[state.ZarfStateDataKey], &persisted))
+			require.Equal(t, expected, persisted.GitServer)
+		})
+	}
+}
+
+func TestStateRegistryPortPersistence(t *testing.T) {
+	t.Parallel()
+
+	for _, tt := range []struct {
+		name     string
+		registry string
+		wantPort int
+	}{
+		{name: "port round trip", registry: `{"port":31999}`, wantPort: 31999},
+		{name: "zero port is preserved", registry: `{"port":0}`},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctx := t.Context()
+			c := &Cluster{Clientset: fake.NewClientset()}
+			data := []byte(`{"registryInfo":` + tt.registry + `}`)
+			_, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Create(ctx, &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{Namespace: state.ZarfNamespaceName, Name: state.ZarfStateSecretName},
+				Data:       map[string][]byte{state.ZarfStateDataKey: data},
+			}, metav1.CreateOptions{})
+			require.NoError(t, err)
+
+			loaded, err := c.LoadState(ctx)
+			require.NoError(t, err)
+			require.Equal(t, tt.wantPort, loaded.RegistryInfo.Port)
+
+			require.NoError(t, c.SaveState(ctx, loaded))
+			persisted, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Get(ctx, state.ZarfStateSecretName, metav1.GetOptions{})
+			require.NoError(t, err)
+			var raw struct {
+				RegistryInfo map[string]json.RawMessage `json:"registryInfo"`
+			}
+			require.NoError(t, json.Unmarshal(persisted.Data[state.ZarfStateDataKey], &raw))
+			var port int
+			require.NoError(t, json.Unmarshal(raw.RegistryInfo["port"], &port))
+			require.Equal(t, tt.wantPort, port)
+		})
+	}
+}
+
+func TestLoadStateLegacyAgentInfo(t *testing.T) {
+	t.Parallel()
+
+	legacyAgent := state.AgentInfo{
+		TLS:             pki.GeneratedPKI{CA: []byte("old-ca"), Cert: []byte("old-cert"), Key: []byte("old-key")},
+		TLSUserProvided: true,
+		MutationPolicy:  state.MutationPolicyLabeled,
+	}
+	currentAgent := state.AgentInfo{
+		TLS:            pki.GeneratedPKI{CA: []byte("ca"), Cert: []byte("cert"), Key: []byte("key")},
+		MutationPolicy: state.MutationPolicyAll,
+	}
+	for _, tt := range []struct {
+		name      string
+		agentInfo *state.AgentInfo
+		expected  state.AgentInfo
+	}{
+		{name: "migrates legacy agent", expected: legacyAgent},
+		{name: "current agent takes precedence", agentInfo: &currentAgent, expected: currentAgent},
+		{name: "explicitly unconfigured agent takes precedence", agentInfo: &state.AgentInfo{}},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			ctx := t.Context()
+			stored := map[string]any{
+				"agentTLS":             legacyAgent.TLS,
+				"agentTLSUserProvided": legacyAgent.TLSUserProvided,
+				"agentMutationPolicy":  legacyAgent.MutationPolicy,
+			}
+			if tt.agentInfo != nil {
+				stored["agentInfo"] = tt.agentInfo
+			}
+			data, err := json.Marshal(stored)
+			require.NoError(t, err)
+			c := &Cluster{Clientset: fake.NewClientset(&corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{Namespace: state.ZarfNamespaceName, Name: state.ZarfStateSecretName},
+				Data:       map[string][]byte{state.ZarfStateDataKey: data},
+			})}
+
+			loaded, err := c.LoadState(ctx)
+			require.NoError(t, err)
+			require.Equal(t, tt.expected, loaded.AgentInfo)
+
+			require.NoError(t, c.SaveState(ctx, loaded))
+			secret, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Get(ctx, state.ZarfStateSecretName, metav1.GetOptions{})
+			require.NoError(t, err)
+			var persisted state.State
+			require.NoError(t, json.Unmarshal(secret.Data[state.ZarfStateDataKey], &persisted))
+			require.Equal(t, tt.expected, persisted.AgentInfo)
+		})
+	}
+}
+
+func TestInitStatePreservesLegacyAgent(t *testing.T) {
+	t.Parallel()
+	ctx := t.Context()
+	c := newFakeInitStateCluster(ctx, t, &state.State{})
+	secret, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Get(ctx, state.ZarfStateSecretName, metav1.GetOptions{})
+	require.NoError(t, err)
+	secret.Data[state.ZarfStateDataKey] = []byte(`{"agentTLS":{"ca":"Y2E=","cert":"Y2VydA==","key":"a2V5"},"agentTLSUserProvided":true,"agentMutationPolicy":"labeled"}`)
+	_, err = c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Update(ctx, secret, metav1.UpdateOptions{})
+	require.NoError(t, err)
+	_, err = c.Clientset.CoreV1().Namespaces().Create(ctx, &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{Name: "app", Labels: map[string]string{AgentLabel: "mutate"}},
+	}, metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	initialized, err := c.InitState(ctx, InitStateOptions{InternalServices: state.NewServiceSet(state.AgentKey)})
+	require.NoError(t, err)
+	expected := state.AgentInfo{
+		TLS:             pki.GeneratedPKI{CA: []byte("ca"), Cert: []byte("cert"), Key: []byte("key")},
+		TLSUserProvided: true,
+		MutationPolicy:  state.MutationPolicyLabeled,
+	}
+	require.Equal(t, expected, initialized.AgentInfo)
+	app, err := c.Clientset.CoreV1().Namespaces().Get(ctx, "app", metav1.GetOptions{})
+	require.NoError(t, err)
+	require.Equal(t, "mutate", app.Labels[AgentLabel])
+
+	secret, err = c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Get(ctx, state.ZarfStateSecretName, metav1.GetOptions{})
+	require.NoError(t, err)
+	var persisted state.State
+	require.NoError(t, json.Unmarshal(secret.Data[state.ZarfStateDataKey], &persisted))
+	require.Equal(t, expected, persisted.AgentInfo)
+}
+
+func TestStateAgentInfoPersistence(t *testing.T) {
+	t.Parallel()
+
+	ctx := t.Context()
+	c := &Cluster{Clientset: fake.NewClientset()}
+	agentInfo := state.AgentInfo{
+		TLS: pki.GeneratedPKI{
 			CA:   []byte("ca"),
 			Cert: []byte("cert"),
 			Key:  []byte("key"),
 		},
-		AgentTLSUserProvided: true,
-		AgentMutationPolicy:  state.MutationPolicyLabeled,
+		TLSUserProvided: true,
+		MutationPolicy:  state.MutationPolicyLabeled,
 	}
-	legacyData, err := json.Marshal(legacy)
+
+	data, err := json.Marshal(state.State{AgentInfo: agentInfo})
 	require.NoError(t, err)
 	_, err = c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Create(ctx, &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{Namespace: state.ZarfNamespaceName, Name: state.ZarfStateSecretName},
-		Data:       map[string][]byte{state.ZarfStateDataKey: legacyData},
+		Data:       map[string][]byte{state.ZarfStateDataKey: data},
 	}, metav1.CreateOptions{})
 	require.NoError(t, err)
 
 	loaded, err := c.LoadState(ctx)
 	require.NoError(t, err)
-	require.Equal(t, legacy.AgentTLS, loaded.AgentInfo.TLS)
-	require.True(t, loaded.AgentInfo.TLSUserProvided)
-	require.Equal(t, state.MutationPolicyLabeled, loaded.AgentInfo.MutationPolicy)
+	require.Equal(t, agentInfo, loaded.AgentInfo)
 
 	require.NoError(t, c.SaveState(ctx, loaded))
 	persisted, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Get(ctx, state.ZarfStateSecretName, metav1.GetOptions{})
 	require.NoError(t, err)
-	var raw map[string]json.RawMessage
-	require.NoError(t, json.Unmarshal(persisted.Data[state.ZarfStateDataKey], &raw))
-	require.Contains(t, raw, "agentInfo")
-	require.Contains(t, raw, "agentTLS")
-	require.Contains(t, raw, "agentTLSUserProvided")
-	require.Contains(t, raw, "agentMutationPolicy")
+	var stored state.State
+	require.NoError(t, json.Unmarshal(persisted.Data[state.ZarfStateDataKey], &stored))
+	require.Equal(t, agentInfo, stored.AgentInfo)
 }
 
 func TestIgnoreExistingNamespacesForAgent(t *testing.T) {
@@ -883,4 +1087,38 @@ func TestIgnoreExistingNamespacesForAgent(t *testing.T) {
 
 		require.ErrorContains(t, c.ignoreExistingNamespacesForAgent(ctx), "unable to mark the namespace app as ignored by Zarf Agent")
 	})
+}
+
+func TestInitStateAgentMutationPolicy(t *testing.T) {
+	t.Parallel()
+	for _, tt := range []struct {
+		name     string
+		existing state.MutationPolicy
+		option   state.MutationPolicy
+		want     state.MutationPolicy
+	}{
+		{"new agent defaults to all", "", "", state.MutationPolicyAll},
+		{"explicit labeled", "", state.MutationPolicyLabeled, state.MutationPolicyLabeled},
+		{"existing agent without policy defaults to all", "", "", state.MutationPolicyAll},
+		{"preserve labeled", state.MutationPolicyLabeled, "", state.MutationPolicyLabeled},
+		{"explicit all overrides labeled", state.MutationPolicyLabeled, state.MutationPolicyAll, state.MutationPolicyAll},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			existing := &state.State{AgentInfo: state.AgentInfo{MutationPolicy: tt.existing}}
+			if tt.name == "new agent defaults to all" || tt.name == "explicit labeled" {
+				existing = nil
+			} else {
+				certs, err := pki.GeneratePKI(state.ZarfAgentHost)
+				require.NoError(t, err)
+				existing.AgentInfo.TLS = certs
+			}
+			c := newFakeInitStateCluster(t.Context(), t, existing)
+			got, err := c.InitState(t.Context(), InitStateOptions{
+				InternalServices:    state.NewServiceSet(state.AgentKey),
+				AgentMutationPolicy: tt.option,
+			})
+			require.NoError(t, err)
+			require.Equal(t, tt.want, got.AgentInfo.MutationPolicy)
+		})
+	}
 }

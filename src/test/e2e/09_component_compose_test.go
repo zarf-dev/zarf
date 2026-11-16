@@ -26,54 +26,35 @@ func TestComposabilityExample(t *testing.T) {
 	}
 
 	tmpDir := t.TempDir()
-	composeExample := filepath.Join("examples", "composable-packages")
-	_, _, err := e2e.Zarf(t, "package", "create", composeExample, "-o", tmpDir, "--no-color", "--confirm", "--cache", tmpDir)
+	composeTest := filepath.Join("src", "test", "packages", "09-composable-v1beta1")
+	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", composeTest, "-o", tmpDir, "--no-color", "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
+
+	tarPath := filepath.Join(tmpDir, fmt.Sprintf("zarf-package-test-compose-v1beta1-%s.tar.zst", e2e.Arch))
+	pkgLayout, err := layout.LoadFromTar(t.Context(), tarPath, layout.PackageLayoutOptions{})
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, pkgLayout.Cleanup()) })
+
+	components := convert.PackageToV1beta1(pkgLayout.Definition()).Components
+	require.Len(t, components, 2)
+	b, err := goyaml.Marshal(components)
 	require.NoError(t, err)
 
-	tarPath := filepath.Join(tmpDir, fmt.Sprintf("zarf-package-composable-packages-%s.tar.zst", e2e.Arch))
-	pkgLayout, err := layout.LoadFromTar(context.Background(), tarPath, layout.PackageLayoutOptions{})
-	require.NoError(t, err)
-
-	require.Len(t, pkgLayout.Definition().Components, 2)
-	b, err := goyaml.Marshal(convert.PackageToV1alpha1(pkgLayout.Definition()).Components)
-	require.NoError(t, err)
-
-	absComposeExample, err := filepath.Abs(composeExample)
-	require.NoError(t, err)
-
-	rel, err := filepath.Rel(absComposeExample, tmpDir)
-	require.NoError(t, err)
-
-	expectedYaml := fmt.Sprintf(`- name: local-games-path
-  description: Example of a local composed package with a unique description for this component
-  required: true
+	expectedYaml := `- name: local-import
+  description: Import and customize a component
   manifests:
-  - name: multi-games
-    namespace: dos-games
-    template: false
+  - name: config
+    namespace: overridden
     files:
-    - ../dos-games/manifests/deployment.yaml
-    - ../dos-games/manifests/service.yaml
-    - quake-service.yaml
-  images:
-  - ghcr.io/zarf-dev/doom-game:0.0.1
-- name: oci-games-url
-  required: false
+    - components/config.yaml
+    - extra.yaml
+- name: second-import
   manifests:
-  - name: multi-games
-    namespace: dos-games
-    template: false
+  - name: config
+    namespace: original
     files:
-    - %s/oci/dirs/f1ca184d563e3ad29355ce14797e3ac68b7ef31e22461e494a27510c449949cf/manifests/multi-games-0.yaml
-    - %s/oci/dirs/f1ca184d563e3ad29355ce14797e3ac68b7ef31e22461e494a27510c449949cf/manifests/multi-games-1.yaml
-  images:
-  - ghcr.io/zarf-dev/doom-game:0.0.1
-  actions:
-    onDeploy:
-      before:
-      - cmd: ./zarf tools kubectl get -n dos-games deployment -o jsonpath={.items[0].metadata.creationTimestamp}
-        template: false
-`, rel, rel)
+    - components/config.yaml
+`
 	require.YAMLEq(t, expectedYaml, string(b))
 }
 

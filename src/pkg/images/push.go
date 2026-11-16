@@ -18,7 +18,6 @@ import (
 	orasRemote "oras.land/oras-go/v2/registry/remote"
 	"oras.land/oras-go/v2/registry/remote/auth"
 
-	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -71,11 +70,6 @@ func Push(ctx context.Context, imageList []transform.Image, sourceDirectory stri
 		toPush[img.Reference] = struct{}{}
 	}
 	l := logger.From(ctx)
-
-	err := addRefNameAnnotationToImages(sourceDirectory)
-	if err != nil {
-		return err
-	}
 
 	src, err := oci.NewWithContext(ctx, sourceDirectory)
 	if err != nil {
@@ -243,28 +237,6 @@ func Push(ctx context.Context, imageList []transform.Image, sourceDirectory stri
 		return err
 	}
 	l.Info("done pushing images", "count", len(imageList), "duration", time.Since(start).Round(time.Millisecond*100))
-	return nil
-}
-
-func addRefNameAnnotationToImages(ociLayoutDirectory string) error {
-	idx, err := getIndexFromOCILayout(ociLayoutDirectory)
-	if err != nil {
-		return err
-	}
-	// Crane sets ocispec.AnnotationBaseImageName instead of ocispec.AnnotationRefName
-	// which ORAS uses to find images. We do this to be backwards compatible with packages built with Crane.
-	var correctedManifests []ocispec.Descriptor
-	for _, manifest := range idx.Manifests {
-		if manifest.Annotations[ocispec.AnnotationRefName] == "" && manifest.Annotations[ocispec.AnnotationBaseImageName] != "" {
-			manifest.Annotations[ocispec.AnnotationRefName] = manifest.Annotations[ocispec.AnnotationBaseImageName]
-		}
-		correctedManifests = append(correctedManifests, manifest)
-	}
-	idx.Manifests = correctedManifests
-	err = saveIndexToOCILayout(ociLayoutDirectory, idx)
-	if err != nil {
-		return err
-	}
 	return nil
 }
 

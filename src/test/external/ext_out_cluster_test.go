@@ -216,7 +216,7 @@ func (suite *ExtOutClusterTestSuite) Test_3_AuthToPrivateHelmChart() {
 	}()
 
 	packagePath := filepath.Join("..", "packages", "external-helm-auth")
-	findImageArgs := []string{"dev", "find-images", packagePath}
+	findImageArgs := []string{"dev", "find-images", packagePath, "--skip-cosign"}
 	err = exec.CmdWithPrint(zarfBinPath, findImageArgs...)
 	suite.Error(err, "Since auth has not been setup, this should fail")
 

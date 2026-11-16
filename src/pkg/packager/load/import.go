@@ -118,7 +118,7 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 				return v1alpha1.ZarfPackage{}, nil, err
 			}
 		} else if component.Import.URL != "" {
-			remote, err := zoci.NewRemoteWithOptions(ctx, component.Import.URL, zoci.PlatformForSkeleton(), zoci.RemoteClientOptions{
+			remote, err := zoci.NewRemote(ctx, component.Import.URL, zoci.PlatformForSkeleton(), zoci.RemoteClientOptions{
 				CachePath:     cachePath,
 				RemoteOptions: remoteOptions,
 			})
@@ -300,7 +300,7 @@ func fetchOCISkeleton(ctx context.Context, component v1alpha1.ZarfComponent, pac
 	}
 
 	// Get the descriptor for the component.
-	remote, err := zoci.NewRemoteWithOptions(ctx, component.Import.URL, zoci.PlatformForSkeleton(), zoci.RemoteClientOptions{
+	remote, err := zoci.NewRemote(ctx, component.Import.URL, zoci.PlatformForSkeleton(), zoci.RemoteClientOptions{
 		RemoteOptions: remoteOptions,
 	})
 	if err != nil {
