@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"fmt"
 	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 
@@ -80,6 +81,37 @@ func TestListRegistryTags(t *testing.T) {
 			require.Equal(t, tt.want, got)
 		})
 	}
+}
+
+func TestListRegistryTagsPagination(t *testing.T) {
+	t.Parallel()
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var tag string
+		switch r.URL.RawQuery {
+		case "n=1000":
+			tag = "first"
+			w.Header().Set("Link", `</v2/test-repo/tags/list?last=first>; rel="next"`)
+		case "last=first&n=1000":
+			tag = "second"
+		default:
+			http.Error(w, "expected paginated tag request", http.StatusBadRequest)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		if _, err := fmt.Fprintf(w, `{"name":"test-repo","tags":["%s"]}`, tag); err != nil {
+			t.Errorf("writing tags: %v", err)
+		}
+	}))
+	defer server.Close()
+
+	conn := registryConnection{
+		ref:    strings.TrimPrefix(server.URL, "http://") + "/test-repo",
+		client: &auth.Client{Client: server.Client()},
+	}
+	var buf bytes.Buffer
+	err := listRegistryTags(testutil.TestContext(t), &buf, conn, true, false, false, false)
+	require.NoError(t, err)
+	require.Equal(t, "first\nsecond\n", buf.String())
 }
 
 func TestNormalizeRepoRef(t *testing.T) {
