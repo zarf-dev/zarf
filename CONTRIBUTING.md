@@ -67,8 +67,8 @@ Zarf maintainers will require one (1) core team review before merge. See the (co
 
 :key: == Required by automation
 
-1. Create an issue or find a relevant unassigned issue. An issue must be assigned and have `Ready` status in the project board before it can be worked.
-  - For non-ready issues, comment to propose solutions to ambiguous or uncertain behavior and ask to be assigned.
+1. Create an issue or find a relevant unassigned issue. Before starting implementation, the issue must be assigned to you and its status on the project board must be Ready
+  - If the issue isn't Ready, comment to propose expected behavior, resolve open questions, and ask to be assigned.
   - If you have any questions as you work through the code, reach out in the [Zarf OpenSSF Slack Channel](https://openssf.slack.com/archives/C07AKUMBDMJ).
 1. :key: Set up your Git config to GPG sign all commits. [Here's some documentation on how to set it up](https://docs.github.com/en/authentication/managing-commit-signature-verification/signing-commits). You won't be able to merge your PR if you have any unverified commits.
 1. In addition to signing your commits, you will also need to sign-off on commits stating you agree to the contribution terms.
