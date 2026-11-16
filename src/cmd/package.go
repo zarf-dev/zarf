@@ -877,6 +877,7 @@ func newPackageInspectCommand(v *viper.Viper, architecture *architectureOptions)
 	cmd.AddCommand(newPackageInspectValuesFilesCommand(v, architecture))
 	cmd.AddCommand(newPackageInspectDocumentationCommand(v, architecture))
 	cmd.AddCommand(newPackageInspectDigestCommand(v, architecture))
+	cmd.AddCommand(newPackageInspectSignatureCommand(v, architecture))
 	return cmd
 }
 
@@ -931,6 +932,87 @@ func (o *packageInspectDigestOptions) run(ctx context.Context, args []string) er
 
 	fmt.Fprintln(OutputWriter, digest)
 	return nil
+}
+
+type packageInspectSignatureOptions struct {
+	*architectureOptions
+	raw            bool
+	ociConcurrency int
+}
+
+func newPackageInspectSignatureOptions() *packageInspectSignatureOptions {
+	return &packageInspectSignatureOptions{}
+}
+
+func newPackageInspectSignatureCommand(v *viper.Viper, architecture *architectureOptions) *cobra.Command {
+	o := newPackageInspectSignatureOptions()
+	o.architectureOptions = architecture
+	cmd := &cobra.Command{
+		Use:     "signature [ PACKAGE_SOURCE ]",
+		Short:   lang.CmdPackageInspectSignatureShort,
+		Long:    lang.CmdPackageInspectSignatureLong,
+		Example: lang.CmdPackageInspectSignatureExample,
+		Args:    cobra.MaximumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return o.run(cmd.Context(), args)
+		},
+	}
+
+	cmd.Flags().BoolVar(&o.raw, "raw", false, lang.CmdPackageInspectSignatureFlagRaw)
+	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
+	return cmd
+}
+
+func (o *packageInspectSignatureOptions) run(ctx context.Context, args []string) error {
+	src, err := choosePackage(ctx, args)
+	if err != nil {
+		return err
+	}
+
+	if state.DeployedPackageNameRegex(src) {
+		return fmt.Errorf("inspect signature is not supported for cluster sources; inspect the original package tarball or OCI reference instead")
+	}
+
+	cachePath, err := getCachePath(ctx)
+	if err != nil {
+		return err
+	}
+
+	loadOpts := packager.LoadOptions{
+		Architecture:         o.selectedArchitecture(),
+		VerificationStrategy: layout.VerifyNever,
+		LayerSelection:       &zoci.LayerSelection{},
+		Filter:               filters.Empty(),
+		OCIConcurrency:       o.ociConcurrency,
+		RemoteOptions:        defaultRemoteOptions(),
+		CachePath:            cachePath,
+	}
+	pkgLayout, err := packager.LoadPackage(ctx, src, loadOpts)
+	if err != nil {
+		return fmt.Errorf("unable to load package: %w", err)
+	}
+	defer func() {
+		err = errors.Join(err, pkgLayout.Cleanup())
+	}()
+
+	if o.raw {
+		raw, err := pkgLayout.RawSignature()
+		if err != nil {
+			return err
+		}
+		fmt.Fprint(OutputWriter, string(raw))
+		if len(raw) > 0 && raw[len(raw)-1] != '\n' {
+			fmt.Fprintln(OutputWriter)
+		}
+		return nil
+	}
+
+	info, err := pkgLayout.SignatureInfo()
+	if err != nil {
+		return err
+	}
+
+	return utils.ColorPrintYAML(info, nil, false)
 }
 
 type packageInspectValuesFilesOptions struct {
