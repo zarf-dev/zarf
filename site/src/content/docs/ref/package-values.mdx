@@ -352,6 +352,17 @@ The `.Pkg` object gives access to the package definition. See this used in the [
 - `(.Pkg.GetComponent "<component name>").GetImageByID "<image id>"` returns an object with `.Reference`, `.Repository`, `.Tag`, and `.Digest`. Absent tags/digests are empty, and missing/empty image IDs cause a template error. (v1beta1 only)
   - For `ghcr.io/zarf-dev/agent:1.2.3@sha256:abc…` the `.Reference` is the full input, `.Repository` is `zarf-dev/agent`, `.Tag` is `1.2.3`, and `.Digest` is `sha256:abc…`.
 
+### Component Object (`.Component`)
+
+The `.Component` object gives direct access to the component currently being processed in manifests, files, and actions without needing to look it up by name via `.Pkg.GetComponent`.
+
+#### Component Functions and Fields
+
+- `.Component.Name` returns the name of the current component.
+- `.Component.GetImages` returns the component's image references, including those from image archives.
+- `.Component.GetImageByID "<image id>"` returns an object with `.Reference`, `.Repository`, `.Tag`, and `.Digest`. Absent tags/digests are empty, and missing/empty image IDs cause a template error. (v1beta1 only)
+  - For `ghcr.io/zarf-dev/agent:1.2.3@sha256:abc…` the `.Reference` is the full input, `.Repository` is `zarf-dev/agent`, `.Tag` is `1.2.3`, and `.Digest` is `sha256:abc…`.
+
 ### Functions
 
 [sprig functions](https://masterminds.github.io/sprig/) except for `getHostByName`, `env`, and `expandenv` are included.

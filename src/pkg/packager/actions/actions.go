@@ -35,6 +35,8 @@ type RunOptions struct {
 	VariableConfig *variables.VariableConfig
 	Values         value.Values
 	StateAccess    template.StateAccess
+	Package        api.Package
+	Component      api.Component
 }
 
 // Run runs all provided actions.
@@ -44,7 +46,7 @@ func Run(ctx context.Context, basePath string, actions []api.Action, opts RunOpt
 	}
 
 	for _, a := range actions {
-		if err := runAction(ctx, basePath, opts.DefaultConfig, a, opts.VariableConfig, opts.Values, opts.StateAccess); err != nil {
+		if err := runAction(ctx, basePath, a, opts); err != nil {
 			return err
 		}
 	}
@@ -52,23 +54,29 @@ func Run(ctx context.Context, basePath string, actions []api.Action, opts RunOpt
 }
 
 // Run commands that a component has provided.
-func runAction(ctx context.Context, basePath string, defaultCfg api.ActionDefaults, action api.Action, variableConfig *variables.VariableConfig, values value.Values, stateAccess template.StateAccess) error {
+func runAction(ctx context.Context, basePath string, action api.Action, opts RunOptions) error {
 	var cmdEscaped string
 	var err error
 	cmd := action.Cmd
 	l := logger.From(ctx)
 	start := time.Now()
 
-	tmplObjs, err := template.NewObjects(values).
-		WithConstants(variableConfig.GetConstants()).
-		WithVariables(variableConfig.GetSetVariableMap()).
-		WithState(stateAccess)
+	tmplObjs, err := template.NewObjects(opts.Values).
+		WithConstants(opts.VariableConfig.GetConstants()).
+		WithVariables(opts.VariableConfig.GetSetVariableMap()).
+		WithState(opts.StateAccess)
 	if err != nil {
 		return err
 	}
+	if opts.Package.GetAPIVersion() != "" {
+		tmplObjs = tmplObjs.WithPackage(opts.Package)
+		if opts.Component.Name != "" {
+			tmplObjs = tmplObjs.WithComponent(opts.Component, opts.Package)
+		}
+	}
 
 	if action.Wait != nil {
-		err := runWaitAction(ctx, action, variableConfig, tmplObjs)
+		err := runWaitAction(ctx, action, opts.VariableConfig, tmplObjs)
 		if err != nil {
 			return err
 		}
@@ -92,7 +100,7 @@ func runAction(ctx context.Context, basePath string, defaultCfg api.ActionDefaul
 
 	l.Info("running command", "cmd", cmdEscaped)
 
-	actionDefaults := actionGetCfg(ctx, defaultCfg, action, variableConfig.GetAllTemplates())
+	actionDefaults := actionGetCfg(ctx, opts.DefaultConfig, action, opts.VariableConfig.GetAllTemplates())
 	actionDefaults.Dir = filepath.Join(basePath, actionDefaults.Dir)
 
 	if cmd, err = actionCmdMutation(ctx, cmd, actionDefaults.Shell, runtime.GOOS); err != nil {
@@ -119,15 +127,15 @@ retryCmd:
 
 			// If an output variable is defined, set it.
 			for _, v := range action.SetVariables {
-				variableConfig.SetVariable(v.Name, outTrimmed, v.Sensitive, v.AutoIndent, v.Type)
-				if err := variableConfig.CheckVariablePattern(v.Name, v.Pattern); err != nil {
+				opts.VariableConfig.SetVariable(v.Name, outTrimmed, v.Sensitive, v.AutoIndent, v.Type)
+				if err := opts.VariableConfig.CheckVariablePattern(v.Name, v.Pattern); err != nil {
 					return err
 				}
 			}
 
 			// If an output value is defined, parse the result and set it to values map.
 			for _, v := range action.SetValues {
-				if err := parseAndSetValue(outTrimmed, v, values); err != nil {
+				if err := parseAndSetValue(outTrimmed, v, opts.Values); err != nil {
 					return err
 				}
 			}

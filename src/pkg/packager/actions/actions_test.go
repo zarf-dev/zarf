@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/zarf-dev/zarf/src/api"
+	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/value"
 	"github.com/zarf-dev/zarf/src/pkg/variables"
@@ -331,4 +332,22 @@ func Test_parseAndSetValue_Errors(t *testing.T) {
 			require.Contains(t, err.Error(), tt.errSubstr)
 		})
 	}
+}
+
+func Test_runAction_ComponentTemplating(t *testing.T) {
+	t.Parallel()
+	action := api.Action{
+		Cmd:              "echo {{ .Component.Name }}",
+		EnableTemplating: true,
+	}
+	opts := RunOptions{
+		Package: api.Package{
+			APIVersion: v1beta1.APIVersion,
+		},
+		Component: api.Component{
+			Name: "my-cool-comp",
+		},
+	}
+	err := Run(context.Background(), t.TempDir(), []api.Action{action}, opts)
+	require.NoError(t, err)
 }

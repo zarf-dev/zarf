@@ -452,6 +452,8 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 				VariableConfig: d.vc,
 				Values:         d.vals,
 				StateAccess:    template.StateAccess{State: d.s, AccessKeys: component.StateAccess},
+				Package:        pkg,
+				Component:      component,
 			}); err != nil {
 				return fmt.Errorf("unable to run component success action: %w", err)
 			}
@@ -467,6 +469,8 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 				VariableConfig: d.vc,
 				Values:         d.vals,
 				StateAccess:    template.StateAccess{State: d.s, AccessKeys: component.StateAccess},
+				Package:        pkg,
+				Component:      component,
 			}); err != nil {
 				l.Debug("unable to run component failure action", "error", err.Error())
 			}
@@ -675,7 +679,8 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 		}
 	}
 
-	applicationTemplates, err := ptmpl.GetZarfTemplates(ctx, pkgLayout.Definition().GetAPIVersion(), component.Service.Name, d.s)
+	pkg := pkgLayout.Definition()
+	applicationTemplates, err := ptmpl.GetZarfTemplates(ctx, pkg.GetAPIVersion(), component.Service.Name, d.s)
 	if err != nil {
 		return nil, err
 	}
@@ -687,6 +692,8 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 		VariableConfig: d.vc,
 		Values:         d.vals,
 		StateAccess:    template.StateAccess{State: d.s, AccessKeys: component.StateAccess},
+		Package:        pkg,
+		Component:      component,
 	}); err != nil {
 		return nil, fmt.Errorf("unable to run component before action: %w", err)
 	}
@@ -767,6 +774,8 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 		VariableConfig: d.vc,
 		Values:         d.vals,
 		StateAccess:    template.StateAccess{State: d.s, AccessKeys: component.StateAccess},
+		Package:        pkg,
+		Component:      component,
 	}); err != nil {
 		return charts, fmt.Errorf("unable to run component after action: %w", err)
 	}
@@ -818,6 +827,7 @@ func (d *deployer) installCharts(ctx context.Context, pkgLayout *layout.PackageL
 		if err := templateValuesFiles(ctx, chart, valuesDir, templateValuesFilesOpts{
 			variableConfig: d.vc,
 			pkg:            pkg,
+			component:      component,
 			vals:           d.vals,
 			s:              d.s,
 			stateAccess:    component.StateAccess,
@@ -897,6 +907,7 @@ func (d *deployer) installManifests(ctx context.Context, pkgLayout *layout.Packa
 				l.Debug("start manifest template", "manifest", manifest.Name, "path", path)
 				objs, err := template.NewObjects(d.vals).
 					WithPackage(pkg).
+					WithComponent(component, pkg).
 					WithVariables(d.vc.GetSetVariableMap()).
 					WithConstants(d.vc.GetConstants()).
 					WithState(template.StateAccess{State: d.s, AccessKeys: component.StateAccess})
@@ -1128,6 +1139,7 @@ func (d *deployer) processComponentFiles(ctx context.Context, pkgLayout *layout.
 					l.Debug("templates enabled, processing file", "name", file.Destination)
 					objs, err := template.NewObjects(d.vals).
 						WithPackage(pkg).
+						WithComponent(component, pkg).
 						WithVariables(d.vc.GetSetVariableMap()).
 						WithConstants(d.vc.GetConstants()).
 						WithState(template.StateAccess{State: d.s, AccessKeys: component.StateAccess})
