@@ -87,6 +87,12 @@ func TestZarfInit(t *testing.T) {
 	require.NoError(t, err)
 	require.Contains(t, stdOut, "Min")
 
+	// Capture the initial registry PVC storage class and volume name before upgrade.
+	initialStorageClass, _, err := e2e.Kubectl(t, "get", "pvc", "-n", "zarf", "zarf-docker-registry", "-o=jsonpath='{.spec.storageClassName}'")
+	require.NoError(t, err)
+	initialVolumeName, _, err := e2e.Kubectl(t, "get", "pvc", "-n", "zarf", "zarf-docker-registry", "-o=jsonpath='{.spec.volumeName}'")
+	require.NoError(t, err)
+
 	verifyZarfNamespaceLabels(t)
 	verifyZarfSecretLabels(t)
 	verifyZarfPodLabels(t)
@@ -102,6 +108,15 @@ func TestZarfInit(t *testing.T) {
 	v1BetaInitArgs := []string{"init", initPackageV1beta1, "--components=" + initComponents, "--features=v1beta1=true,values=true", "--confirm"}
 	stdOut, stdErr, err := e2e.Zarf(t, v1BetaInitArgs...)
 	require.NoError(t, err, stdOut, stdErr)
+
+	// Verify that the upgrade preserves the registry PVC storage class and bound persistent volume.
+	upgradedStorageClass, _, err := e2e.Kubectl(t, "get", "pvc", "-n", "zarf", "zarf-docker-registry", "-o=jsonpath='{.spec.storageClassName}'")
+	require.NoError(t, err)
+	require.Equal(t, initialStorageClass, upgradedStorageClass, "upgraded init package must preserve existing registry PVC storage class")
+	upgradedVolumeName, _, err := e2e.Kubectl(t, "get", "pvc", "-n", "zarf", "zarf-docker-registry", "-o=jsonpath='{.spec.volumeName}'")
+	require.NoError(t, err)
+	require.Equal(t, initialVolumeName, upgradedVolumeName, "upgraded init package must remain bound to the same persistent volume")
+
 	verifyZarfNamespaceLabels(t)
 	verifyZarfSecretLabels(t)
 	verifyZarfPodLabels(t)
