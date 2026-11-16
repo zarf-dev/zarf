@@ -2,6 +2,7 @@ registry:
   persistence:
     enabled: true
     size: 20Gi
+    storageClass: ""
     existingClaim: ""
     accessMode: ReadWriteOnce
   resources:

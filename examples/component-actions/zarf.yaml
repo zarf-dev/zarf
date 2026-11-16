@@ -1,3 +1,4 @@
+apiVersion: zarf.dev/v1beta1
 kind: ZarfPackageConfig
 metadata:
   name: component-actions
@@ -10,6 +11,7 @@ values:
 # See the example README.md in this folder or /adrs/0010-scripts-actions.md for more info.
 components:
   - name: on-create
+    optional: true
     actions:
       # runs during "zarf package create"
       onCreate:
@@ -17,9 +19,9 @@ components:
         defaults:
           dir: ""
           env: []
-          maxRetries: 0
+          retries: 0
           maxTotalSeconds: 300
-          mute: false
+          silent: false
           shell:
             darwin: sh
             linux: sh
@@ -35,17 +37,17 @@ components:
             # env sets environment variables for this action only
             env:
               - thing=stuff
-            # maxRetries is the number of times to retry the action if it fails
-            maxRetries: 0
+            # retries is the number of times to retry the action if it fails
+            retries: 0
             # maxTotalSeconds is the maximum amount of times the action can run before it is killed, over all retries
             maxTotalSeconds: 30
-            # mute determine if actions output should be printed to the console
-            mute: false
+            # silent determine if actions output should be printed to the console
+            silent: false
             # shell sets the preferred shell across operating systems, in this case "pwsh" instead of "powershell" on Windows
             shell:
               windows: pwsh
         # runs after the component is created
-        after:
+        onSuccess:
           # actions in a list run in order
           - cmd: touch test-create-after.txt
           - cmd: sleep 0.5
@@ -63,6 +65,7 @@ components:
               sleep 0.5
 
   - name: on-deploy-and-remove
+    optional: true
     actions:
       # runs during "zarf package deploy"
       onDeploy:
@@ -70,7 +73,7 @@ components:
         before:
           - cmd: touch test-deploy-before.txt
         # runs after the component is deployed
-        after:
+        onSuccess:
           - cmd: touch test-deploy-after.txt
       # runs during "zarf package remove"
       onRemove:
@@ -78,19 +81,21 @@ components:
         before:
           - cmd: rm test-deploy-before.txt
         # runs after everything else from the component is removed
-        after:
+        onSuccess:
           - cmd: rm test-deploy-after.txt
 
   - name: on-deploy-with-value
+    optional: true
     actions:
       # runs during "zarf package deploy"
       onDeploy:
         # runs before the component is deployed
         before:
           - cmd: echo "the dog says {{ .Values.sounds.dog }}"
-            template: true
+            enableTemplating: true
 
   - name: on-deploy-with-dynamic-value
+    optional: true
     actions:
       # runs during "zarf package deploy"
       onDeploy:
@@ -103,9 +108,10 @@ components:
               - key: .sounds.cat
           # this action will have access to the value set in the previous action
           - cmd: echo "the cat says {{ .Values.sounds.cat }}"
-            template: true
+            enableTemplating: true
 
   - name: on-deploy-with-multiple-values
+    optional: true
     actions:
       # runs during "zarf package deploy"
       onDeploy:
@@ -121,24 +127,26 @@ components:
         onSuccess:
           # this action will print the cat sound value that was set in a previous component
           - cmd: echo "the cat says {{ .Values.sounds.cat }}"
-            template: true
+            enableTemplating: true
           # this action will print the dog sound value set in values.yaml
           - cmd: echo "the dog says {{ .Values.sounds.dog }}"
-            template: true
+            enableTemplating: true
           # this action will print the snake sound value set within this component
           - cmd: echo "the snake says {{ .Values.sounds.snake }}"
-            template: true
+            enableTemplating: true
 
   - name: on-deploy-with-template-use-of-value
+    optional: true
     files:
       # this file will be copied to the target location and the cat, dog, and snake sounds will be replaced with their values
       # requires the on-deploy-with-dynamic-value and on-deploy-with-multiple-values components
       - source: test.txt
-        target: test-templated.txt
-        shasum: d84fa3f5071b5cee0ffb09989c95b0078f4265ed485b314492a19bab2e3f69f3
-        template: true
+        destination: test-templated.txt
+        checksum: sha256:d84fa3f5071b5cee0ffb09989c95b0078f4265ed485b314492a19bab2e3f69f3
+        enableTemplating: true
 
   - name: on-deploy-with-timeout
+    optional: true
     description: This component will fail after 1 second
     actions:
       # runs during "zarf package deploy"
@@ -154,6 +162,7 @@ components:
           - cmd: echo "😭😭😭 this action failed because it took too long to run 😭😭😭"
 
   - name: on-remove
+    optional: true
     # A manifest that we expect to be removed by Zarf
     manifests:
       - name: test-configmap
@@ -165,13 +174,14 @@ components:
         before:
           # because this runs before the manifest is removed this should return our manifest
           - cmd: ./zarf tools kubectl get configmap -n zarf remove-test-configmap || echo "Not Found"
-        after:
+        onSuccess:
           # because this runs after the manifest is removed this should no longer be found
           - cmd: ./zarf tools kubectl get configmap -n zarf remove-test-configmap || echo "Not Found"
 
   - name: on-deploy-with-env-var
-    only:
-      localOS: linux
+    optional: true
+    target:
+      os: linux
     actions:
       onDeploy:
         before:
@@ -181,10 +191,11 @@ components:
               - TEST_FILENAME=test-filename-from-env.txt
 
   - name: on-create-with-network-wait-action
+    optional: true
     description: This component will wait for 15 seconds for a network resource to be available
     actions:
       onCreate:
-        after:
+        onSuccess:
           - description: Github.com to be available
             maxTotalSeconds: 15
             wait:
@@ -195,6 +206,7 @@ components:
                 code: 200
 
   - name: on-deploy-with-wait-action
+    optional: true
     description: This component will wait for 5 seconds for the test-configmap to be exist
     manifests:
       - name: test-configmap
@@ -202,7 +214,7 @@ components:
           - test-configmap.yaml
     actions:
       onDeploy:
-        after:
+        onSuccess:
           - description: The simple-configmap to exist
             maxTotalSeconds: 5
             wait:
@@ -211,16 +223,18 @@ components:
                 kind: configmap
                 name: simple-configmap
                 namespace: zarf
+                condition: exists
 
   - name: on-deploy-immediate-failure
+    optional: true
     description: This component will fail on the first error instead of continuing execution
    # the default for multi-line commands is set -e
     actions:
       onDeploy:
-        after:
+        onSuccess:
           - cmd: |
               bad_cmd
               echo "this text shouldn't be printed"
 
-documentation:
+attachments:
   readme: readme.md

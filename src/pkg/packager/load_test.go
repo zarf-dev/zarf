@@ -9,11 +9,13 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	"k8s.io/client-go/kubernetes/fake"
+	"oras.land/oras-go/v2/registry"
 
 	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
@@ -23,6 +25,82 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/signing"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
+
+func TestOCIOperationsArchitecturePrecedence(t *testing.T) {
+	target := "arm64"
+	if runtime.GOARCH == target {
+		target = "amd64"
+	}
+	ctx := testutil.TestContext(t)
+	reg := createRegistry(ctx, t)
+	source := t.TempDir()
+	definition := `kind: ZarfPackageConfig
+metadata:
+  name: architecture
+  version: 0.0.1
+components:
+  - name: empty
+`
+	require.NoError(t, os.WriteFile(filepath.Join(source, layout.ZarfYAML), []byte(definition), 0o600))
+	var ref string
+	for _, arch := range []string{"amd64", "arm64"} {
+		var err error
+		ref, err = Create(ctx, source, "oci://"+reg.String(), CreateOptions{Architecture: arch, CachePath: t.TempDir(), SkipSBOM: true, RemoteOptions: defaultTestRemoteOptions()})
+		require.NoError(t, err)
+	}
+	for _, tt := range []struct{ name, option, want string }{
+		{"explicit overrides host", target, target},
+		{"empty uses host", "", runtime.GOARCH},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Run("load", func(t *testing.T) {
+				pkgLayout, err := LoadPackage(ctx, "oci://"+ref, LoadOptions{Architecture: tt.option, CachePath: t.TempDir(), RemoteOptions: defaultTestRemoteOptions()})
+				require.NoError(t, err)
+				t.Cleanup(func() { require.NoError(t, pkgLayout.Cleanup()) })
+				require.Equal(t, tt.want, pkgLayout.Definition().Metadata.Architecture)
+			})
+			t.Run("pull", func(t *testing.T) {
+				archive, err := Pull(ctx, "oci://"+ref, t.TempDir(), PullOptions{Architecture: tt.option, CachePath: t.TempDir(), RemoteOptions: defaultTestRemoteOptions()})
+				require.NoError(t, err)
+				pulled, err := layout.LoadFromTar(ctx, archive, layout.PackageLayoutOptions{})
+				require.NoError(t, err)
+				t.Cleanup(func() { require.NoError(t, pulled.Cleanup()) })
+				require.Equal(t, tt.want, pulled.Definition().Metadata.Architecture)
+			})
+			t.Run("digest", func(t *testing.T) {
+				// Obtain a verified baseline without depending on the pull subtest.
+				archive, err := Pull(ctx, "oci://"+ref, t.TempDir(), PullOptions{Architecture: tt.want, CachePath: t.TempDir(), RemoteOptions: defaultTestRemoteOptions()})
+				require.NoError(t, err)
+				baseline, err := layout.LoadFromTar(ctx, archive, layout.PackageLayoutOptions{})
+				require.NoError(t, err)
+				t.Cleanup(func() { require.NoError(t, baseline.Cleanup()) })
+				require.Equal(t, tt.want, baseline.Definition().Metadata.Architecture)
+				wantDigest, err := PackageDigest(ctx, archive, PackageDigestOptions{})
+				require.NoError(t, err)
+				digest, err := PackageDigest(ctx, "oci://"+ref, PackageDigestOptions{Architecture: tt.option, RemoteOptions: defaultTestRemoteOptions()})
+				require.NoError(t, err)
+				require.Equal(t, wantDigest, digest)
+			})
+			t.Run("copy", func(t *testing.T) {
+				src, err := registry.ParseReference(ref)
+				require.NoError(t, err)
+				dst := src
+				dst.Reference = "copy-" + tt.want
+				require.NoError(t, PublishFromOCI(ctx, src, dst, PublishFromOCIOptions{Architecture: tt.option, RemoteOptions: defaultTestRemoteOptions()}))
+				copied, err := LoadPackage(ctx, "oci://"+dst.String(), LoadOptions{Architecture: tt.want, CachePath: t.TempDir(), RemoteOptions: defaultTestRemoteOptions()})
+				require.NoError(t, err)
+				t.Cleanup(func() { require.NoError(t, copied.Cleanup()) })
+				require.Equal(t, tt.want, copied.Definition().Metadata.Architecture)
+				other := target
+				if tt.want == target {
+					other = runtime.GOARCH
+				}
+				_, err = LoadPackage(ctx, "oci://"+dst.String(), LoadOptions{Architecture: other, CachePath: t.TempDir(), RemoteOptions: defaultTestRemoteOptions()})
+				require.Error(t, err, "copy must select one platform rather than the entire index")
+			})
+		})
+	}
+}
 
 func TestLoadPackage(t *testing.T) {
 	t.Parallel()
@@ -114,6 +192,16 @@ func TestLoadPackage(t *testing.T) {
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "signature verification failed")
 	})
+}
+func TestLoadPackageAppliesFilter(t *testing.T) {
+	t.Parallel()
+
+	ctx := testutil.TestContext(t)
+	tarPath := filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst")
+	pkgLayout, err := LoadPackage(ctx, tarPath, LoadOptions{Filter: filters.BySelectState("not-present")})
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, pkgLayout.Cleanup()) })
+	require.Empty(t, pkgLayout.Definition().Components)
 }
 
 func TestLoadSplitPackage(t *testing.T) {
@@ -248,4 +336,67 @@ func TestPackageFromSourceOrCluster(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, v1beta1.APIVersion, pkg.APIVersion)
 	require.Equal(t, "beta-test", pkg.Metadata.Name)
+}
+
+func TestLoadPackageCarriesDeploymentSelection(t *testing.T) {
+	t.Parallel()
+
+	for _, transport := range []string{"tar", "oci"} {
+		t.Run(transport, func(t *testing.T) {
+			t.Parallel()
+			ctx := testutil.TestContext(t)
+			sourceDir := t.TempDir()
+			targetDir := t.TempDir()
+			one := filepath.Join(targetDir, "one")
+			two := filepath.Join(targetDir, "two")
+			require.NoError(t, os.WriteFile(filepath.Join(sourceDir, "one.txt"), []byte("selected"), 0o600))
+			require.NoError(t, os.WriteFile(filepath.Join(sourceDir, "two.txt"), []byte("excluded"), 0o600))
+			definition := fmt.Sprintf(`apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: selection-provenance
+  version: 1.0.0
+components:
+  - name: one
+    optional: true
+    files:
+      - source: one.txt
+        destination: %q
+  - name: two
+    optional: true
+    files:
+      - source: two.txt
+        destination: %q
+`, one, two)
+			require.NoError(t, os.WriteFile(filepath.Join(sourceDir, layout.ZarfYAML), []byte(definition), 0o600))
+			output := t.TempDir()
+			if transport == "oci" {
+				output = "oci://" + createRegistry(ctx, t).String()
+			}
+			source, err := Create(ctx, sourceDir, output, CreateOptions{
+				SkipSBOM:      true,
+				CachePath:     t.TempDir(),
+				RemoteOptions: defaultTestRemoteOptions(),
+			})
+			require.NoError(t, err)
+			pkgLayout, err := LoadPackage(ctx, source, LoadOptions{
+				Filter:        filters.Combine(filters.Empty(), filters.ForDeploy(" , ONE, -TWO, ")),
+				CachePath:     t.TempDir(),
+				RemoteOptions: defaultTestRemoteOptions(),
+			})
+			require.NoError(t, err)
+			t.Cleanup(func() { require.NoError(t, pkgLayout.Cleanup()) })
+			selectors, applied := pkgLayout.Definition().ComponentSelectors()
+			require.True(t, applied)
+			require.Equal(t, []string{"one", "-two"}, selectors)
+
+			result, err := Deploy(ctx, pkgLayout, DeployOptions{})
+			require.NoError(t, err)
+			require.Equal(t, "one", result.DeployedComponents[0].Name)
+			content, err := os.ReadFile(one)
+			require.NoError(t, err)
+			require.Equal(t, "selected", string(content))
+			require.NoFileExists(t, two)
+		})
+	}
 }

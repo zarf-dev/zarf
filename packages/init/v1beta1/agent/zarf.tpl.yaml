@@ -27,5 +27,13 @@ component:
         - path: agent-state-values.yaml
           enableTemplating: true
       values:
-        - sourcePath: .agent
-          targetPath: .
+        - sourcePath: .agent.affinity
+          targetPath: .affinity
+        - sourcePath: .agent.tolerations
+          targetPath: .tolerations
+        - sourcePath: .agent.nodeSelector
+          targetPath: .nodeSelector
+        - sourcePath: .agent.webhookAnnotations
+          targetPath: .webhookAnnotations
+        - sourcePath: .agent.mutationExclusions
+          targetPath: .mutationExclusions

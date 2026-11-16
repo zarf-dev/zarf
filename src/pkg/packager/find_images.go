@@ -21,6 +21,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/config"
+	internalv1alpha1 "github.com/zarf-dev/zarf/src/internal/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/internal/git"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
@@ -48,6 +49,8 @@ var (
 
 // FindImagesOptions declares the parameters to find images.
 type FindImagesOptions struct {
+	// Architecture overrides package metadata; standalone components use their declared variant.
+	Architecture string
 	// EnableKustomizePlugins allows plugins enabled in the package definition to execute arbitrary commands.
 	EnableKustomizePlugins bool
 	// RepoHelmChartPath specifies the path to helm charts in git repos defined in the zarf.yaml
@@ -127,6 +130,7 @@ func FindDefinitionImages(ctx context.Context, packagePath string, opts FindImag
 	}
 	loadOpts := load.PackageOptions{
 		DefinitionOptions: load.DefinitionOptions{
+			Architecture:     opts.Architecture,
 			Flavor:           opts.Flavor,
 			SetVariables:     opts.CreateSetVariables,
 			CachePath:        cachePath,
@@ -160,6 +164,7 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 
 	loadOpts := load.PackageOptions{
 		DefinitionOptions: load.DefinitionOptions{
+			Architecture:     opts.Architecture,
 			Flavor:           opts.Flavor,
 			SetVariables:     opts.CreateSetVariables,
 			CachePath:        opts.CachePath,
@@ -288,6 +293,7 @@ func filterImagesFoundInArchives(ctx context.Context, pkg api.Package, resources
 }
 
 func findImages(ctx context.Context, pkg api.Package, resourceSet *load.ResourceSet, packageValues value.Values, opts FindImagesOptions) (_ []ComponentImageScan, err error) {
+	internalv1alpha1.WarnAuthorIfDeprecated(ctx, pkg)
 	l := logger.From(ctx)
 	s, err := state.Default()
 	if err != nil {

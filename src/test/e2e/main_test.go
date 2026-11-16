@@ -8,9 +8,9 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
-	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/test"
 )
 
@@ -33,7 +33,7 @@ func TestMain(m *testing.M) {
 		log.Fatal(err)
 	}
 
-	e2e.Arch = config.GetArch()
+	e2e.Arch = runtime.GOARCH
 	zarfBinPath, err := filepath.Abs(filepath.Join("build", test.GetCLIName()))
 	if err != nil {
 		log.Fatal(err)

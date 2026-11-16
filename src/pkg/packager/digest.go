@@ -10,8 +10,10 @@ import (
 	"path/filepath"
 
 	"github.com/zarf-dev/zarf/src/config"
+	internalv1alpha1 "github.com/zarf-dev/zarf/src/internal/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/internal/split"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
+	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/oci"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
@@ -54,14 +56,17 @@ func PackageDigest(ctx context.Context, source string, opts PackageDigestOptions
 		if err != nil {
 			return "", fmt.Errorf("unable to get deployed package %q from cluster: %w", source, err)
 		}
+		if definition, err := depPkg.Definition(); err == nil {
+			internalv1alpha1.WarnIfDeprecated(ctx, definition)
+		}
 		if depPkg.Digest == "" {
 			return "", fmt.Errorf("deployed package %q does not have a stored OCI manifest digest; it may have been deployed before this feature was added", source)
 		}
 		return depPkg.Digest, nil
 
 	case "oci":
-		platform := oci.PlatformForArch(config.GetArch(opts.Architecture))
-		remote, err := zoci.NewRemoteWithOptions(ctx, source, platform, zoci.RemoteClientOptions{
+		platform := oci.PlatformForArch(helpers.ResolveArch(opts.Architecture))
+		remote, err := zoci.NewRemote(ctx, source, platform, zoci.RemoteClientOptions{
 			RemoteOptions: opts.RemoteOptions,
 		})
 		if err != nil {
@@ -102,6 +107,7 @@ func PackageDigest(ctx context.Context, source string, opts PackageDigestOptions
 				logger.From(ctx).Warn("failed to cleanup package layout", "error", err)
 			}
 		}()
+		internalv1alpha1.WarnIfDeprecated(ctx, pkgLayout.Definition())
 		if pkgLayout.Digest() == "" {
 			return "", fmt.Errorf("unable to compute OCI manifest digest for package")
 		}

@@ -15,16 +15,16 @@ func TestGHCRDeploy(t *testing.T) {
 	t.Log("E2E: GHCR OCI deploy")
 
 	var sha string
-	// shas for package published 2023-08-08T22:13:51Z
+	// Digests for dos-games 1.3.0, published January 26, 2026.
 	switch e2e.Arch {
 	case "arm64":
-		sha = "d4f656981241366a82ef3ed2e175802043a3c5615b72cd819dd94ada27708263"
+		sha = "e087e4eeca62f9b6263d69ff567b0046c1881e689925c120f4846a5d7b278c1a"
 	case "amd64":
-		sha = "6032b1d1029d00932fd44e3a4ac93a5ee62f0732d47b022e821c8688fc6c3c55"
+		sha = "a3d5ccd97d617f89f933eb485206945c3eb6836201c3ac97a12d81845724025e"
 	}
 
 	// Test with command from https://docs.zarf.dev/getting-started/install/
-	stdOut, stdErr, err := e2e.Zarf(t, "package", "deploy", fmt.Sprintf("oci://ghcr.io/zarf-dev/packages/dos-games:1.2.0@sha256:%s", sha), "--key=https://zarf.dev/cosign.pub", "--confirm")
+	stdOut, stdErr, err := e2e.Zarf(t, "package", "deploy", fmt.Sprintf("oci://ghcr.io/zarf-dev/packages/dos-games:1.3.0@sha256:%s", sha), "--key=https://zarf.dev/cosign.pub", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "dos-games", "--confirm")

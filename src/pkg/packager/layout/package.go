@@ -47,6 +47,12 @@ func (p *PackageLayout) Definition() api.Package {
 	return p.pkg
 }
 
+// SetComponentSelectors restores runtime selection provenance after an in-process
+// definition reload. Normal selection is recorded by Filter or package loading.
+func (p *PackageLayout) SetComponentSelectors(selectors []string) {
+	p.pkg.SetComponentSelectors(selectors)
+}
+
 // SetName updates the package metadata name.
 func (p *PackageLayout) SetName(name string) {
 	p.pkg.Metadata.Name = name
@@ -88,6 +94,8 @@ func (p *PackageLayout) Digest() string {
 }
 
 // AsV1alpha1 returns the package definition as a v1alpha1 ZarfPackage.
+//
+// Deprecated: Only supported by deprecated v1alpha1 packages.
 func (p *PackageLayout) AsV1alpha1() v1alpha1.ZarfPackage {
 	return convert.PackageToV1alpha1(p.pkg)
 }
@@ -102,7 +110,8 @@ func (p *PackageLayout) OverrideNamespace(namespace string) error {
 	return p.pkg.OverrideNamespace(namespace)
 }
 
-// Filter applies a component filter to this layout's package definition.
+// Filter updates the package definition and retains deployment selection
+// provenance for Deploy.
 func (p *PackageLayout) Filter(filter filters.ComponentFilterStrategy) error {
 	definition, err := filters.Apply(p.pkg, filter)
 	if err != nil {
@@ -114,8 +123,6 @@ func (p *PackageLayout) Filter(filter filters.ComponentFilterStrategy) error {
 
 // PackageLayoutOptions are the options used when loading a package.
 type PackageLayoutOptions struct {
-	// Deprecated: Use VerifyBlobOptions instead. PublicKeyPath validates the create-time signage of a package.
-	PublicKeyPath string
 	// VerificationStrategy specifies whether verification is enforced
 	VerificationStrategy VerificationStrategy
 	IsPartial            bool
@@ -231,15 +238,6 @@ func LoadFromDir(ctx context.Context, dirPath string, opts PackageLayoutOptions)
 
 	if err := pkgLayout.computeManifest(ctx); err != nil {
 		return nil, fmt.Errorf("computing OCI manifest: %w", err)
-	}
-
-	// Resolve deprecated PublicKeyPath into VerifyBlobOptions.
-	// Only applies when VerifyBlobOptions is not already set,
-	// ensuring the new API takes precedence over the deprecated field.
-	if opts.VerifyBlobOptions == nil && opts.PublicKeyPath != "" {
-		defaults := signing.DefaultVerifyBlobOptions()
-		defaults.Key = opts.PublicKeyPath
-		opts.VerifyBlobOptions = &defaults
 	}
 
 	if opts.VerificationStrategy != VerifyNever {
@@ -438,13 +436,6 @@ func (p *PackageLayout) VerifyPackageSignature(ctx context.Context, opts signing
 		return fmt.Errorf("invalid package layout directory: %w", err)
 	} else if !info.IsDir() {
 		return fmt.Errorf("invalid package layout: %s is not a directory", p.dirPath)
-	}
-
-	// Sync the deprecated KeyRef alias before computing hasKey so callers using
-	// only KeyRef are not rejected for missing material. CosignVerifyBlobWithOptions
-	// emits the deprecation warning when invoked.
-	if opts.Key == "" && opts.KeyRef != "" { //nolint:staticcheck // intentional read of deprecated alias for migration sync
-		opts.Key = opts.KeyRef //nolint:staticcheck // intentional read of deprecated alias for migration sync
 	}
 
 	hasKey := opts.Key != ""
@@ -722,13 +713,6 @@ func copyResourceFile(sourcePath string, destinationRoot *os.Root, outputPath st
 	return err
 }
 
-// GetDocumentation extracts documentation files from the package to the given destination path.
-//
-// Deprecated: Use GetAttachments instead.
-func (p *PackageLayout) GetDocumentation(ctx context.Context, destPath string, keys []string) error {
-	return p.GetAttachments(ctx, destPath, keys)
-}
-
 // GetAttachments extracts attachment files (documentation in v1alpha1) to the given destination path.
 // If keys is empty, all attachments are extracted.
 // If keys are provided, only those specific attachments are extracted.
@@ -819,20 +803,6 @@ func copyAttachmentFile(sourceRoot, destinationRoot *os.Root, name string) error
 // FormatAttachmentFileName returns the stored filename for an attachment whose basename collides with another attachment.
 func FormatAttachmentFileName(key, file string) string {
 	return fmt.Sprintf("%s-%s", key, filepath.Base(file))
-}
-
-// FormatDocumentFileName returns the stored filename for a documentation file whose basename collides with another document.
-//
-// Deprecated: Use FormatAttachmentFileName.
-func FormatDocumentFileName(key, file string) string {
-	return FormatAttachmentFileName(key, file)
-}
-
-// GetDocumentationFileNames returns validated stored filenames for the requested documentation keys.
-//
-// Deprecated: Use GetAttachmentFileNames.
-func GetDocumentationFileNames(documentation map[string]string, keys []string) (map[string]string, error) {
-	return GetAttachmentFileNames(documentation, keys)
 }
 
 // GetAttachmentFileNames returns validated stored filenames for the requested attachment keys.

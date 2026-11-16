@@ -40,4 +40,4 @@ jobs:
       - name: Initialize the cluster with the release version
         # Test will initialize the cluster with the latest released version package, with the current built binary
         run: |
-          sudo env CI=true ./build/zarf init --components k3s,git-server --nodeport 31337 --confirm ${HOME}/.zarf-cache/zarf-init-amd64-$(zarf version).tar.zst
+          sudo env CI=true ./build/zarf init --components k3s,git-server --registry-port 31337 --confirm ${HOME}/.zarf-cache/zarf-init-amd64-$(zarf version).tar.zst

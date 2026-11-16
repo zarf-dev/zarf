@@ -46,7 +46,6 @@ Unit tests should always take less than one second. Unit tests should run using 
 There are several ways to run tests depending on your specific situation, such as:
 
 ``` bash
-# Note: You can prepend CI=true to these commands to force the --no-progress flag like CI does
 
 # The default way, from the root directory of the repo. Will run all of the tests against your chosen k8s distro. Will automatically build any binary dependencies that don't already exist.
 make test-e2e ARCH="[amd64|arm64]"

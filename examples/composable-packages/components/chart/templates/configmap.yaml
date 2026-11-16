@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: web-content
+data:
+  index.html: |
+    <!doctype html>
+    <html lang="en">
+      <head>
+        <meta charset="utf-8">
+        <title>Composable Zarf packages</title>
+      </head>
+      <body>
+        <h1>{{ .Values.message | html }}</h1>
+      </body>
+    </html>

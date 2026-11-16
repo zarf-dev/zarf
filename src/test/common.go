@@ -132,7 +132,7 @@ func (e2e *ZarfE2ETest) ZarfInDir(t *testing.T, dir string, args ...string) (_ s
 		}(tmpdir)
 		args = append(args, "--tmpdir", tmpdir)
 	}
-	if !slices.Contains(args, "--zarf-cache") && !isToolCall && isCI && isWindows {
+	if !slices.Contains(args, "--cache") && !isToolCall && isCI && isWindows {
 		// We make the cache dir relative to the working directory to make it work on the Windows Runners
 		// - they use two drives which filepath.Rel cannot cope with.
 		cwd, err := os.Getwd()
@@ -143,7 +143,7 @@ func (e2e *ZarfE2ETest) ZarfInDir(t *testing.T, dir string, args ...string) (_ s
 		if err != nil {
 			return "", "", err
 		}
-		args = append(args, "--zarf-cache", cacheDir)
+		args = append(args, "--cache", cacheDir)
 		defer func(path string) {
 			errRemove := os.RemoveAll(path)
 			err = errors.Join(err, errRemove)

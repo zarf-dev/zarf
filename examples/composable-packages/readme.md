@@ -1,3 +1,5 @@
-As you can see in the example, the `import` key can be combined with other keys to merge components together.  This can be done as many components deep as you wish and in the end will generate one main `zarf.yaml` file with all of the defined resources included.
+This example imports the same Nginx component locally and from an OCI registry. The component provides a Helm chart with a Deployment, Service, and ConfigMap. The consuming package selects a separate namespace for each import and configures its connection name and greeting through `values.yaml`.
 
 This is useful if you want to slightly tweak a given component while maintaining a common core.
+
+To learn more, see [Component Imports](/ref/components/#component-imports).

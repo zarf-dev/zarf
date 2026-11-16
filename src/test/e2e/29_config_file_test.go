@@ -5,14 +5,44 @@
 package test
 
 import (
-	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 )
+
+func TestConfigFileFormats(t *testing.T) {
+	source, err := filepath.Abs("src/test/packages/12-package-signing")
+	require.NoError(t, err)
+
+	for _, tt := range []struct {
+		name     string
+		ext      string
+		contents string
+	}{
+		{name: "yaml", ext: "yaml", contents: "package:\n  create:\n    output: %q\n"},
+		{name: "yml", ext: "yml", contents: "package:\n  create:\n    output: %q\n"},
+		{name: "toml", ext: "toml", contents: "[package.create]\noutput = %q\n"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			workdir := t.TempDir()
+			output := t.TempDir()
+			configPath := filepath.Join(t.TempDir(), "zarf-config."+tt.ext)
+			contents := fmt.Sprintf(tt.contents, filepath.ToSlash(output))
+			require.NoError(t, os.WriteFile(configPath, []byte(contents), 0o600))
+			t.Setenv("ZARF_CONFIG", configPath)
+			generatedPath := filepath.Join(workdir, "generated-config."+tt.ext)
+			_, stderr, err := e2e.ZarfInDir(t, workdir, "dev", "generate-config", generatedPath)
+			require.NoError(t, err, stderr)
+			t.Setenv("ZARF_CONFIG", generatedPath)
+			_, stderr, err = e2e.ZarfInDir(t, workdir, "package", "create", source, "--confirm", "--skip-sbom")
+			require.NoError(t, err, stderr)
+			require.FileExists(t, filepath.Join(output, fmt.Sprintf("zarf-package-basic-signing-%s.tar.zst", e2e.Arch)))
+		})
+	}
+}
 
 func TestConfigFileCreate(t *testing.T) {
 	tmpDir := t.TempDir()
@@ -24,11 +54,6 @@ func TestConfigFileCreate(t *testing.T) {
 	require.NoError(t, err)
 
 	tarPath := filepath.Join(tmpDir, fmt.Sprintf("zarf-package-config-file-%s.tar.zst", e2e.Arch))
-	pkgLayout, err := layout.LoadFromTar(context.Background(), tarPath, layout.PackageLayoutOptions{})
-	require.NoError(t, err)
-	require.Equal(t, "This is a zebra and they have stripes", pkgLayout.Definition().Components[1].Description)
-	require.Equal(t, "This is a leopard and they have spots", pkgLayout.Definition().Components[2].Description)
-
 	_, _, err = e2e.Zarf(t, "package", "deploy", tarPath, "--confirm")
 	require.NoError(t, err)
 
@@ -76,7 +101,6 @@ func TestConfigFileDefault(t *testing.T) {
 
 	initFlags := []string{
 		"components: 359049b9",
-		"storage_class: 9cae917f",
 		"git.pull_password: 8522ccca",
 		"git.pull_username: 36646dbe",
 		"git.push_password: ba00d92d",

@@ -34,11 +34,12 @@ jobs:
 
           # Any component tar files in a package will have the same permissions as the files included in them
           # Therefore to before building a package to replace a file in hack/examples-checksums/ checksums you must run `chmod -R g-w in zarf/examples`
+          # SBOM contents vary between builds. Exclude both legacy archives and v1beta1 resources.
           for f in hack/examples-checksums/*.txt
           do
             NAME=$(basename $f .txt)
-            CHECKSUM=$(tar Oxf build/$NAME.tar.zst checksums.txt | grep -v sboms.tar)
-            EXPECTED_CHECKSUM=$(cat $f | grep -v sboms.tar)
+            CHECKSUM=$(tar Oxf build/$NAME.tar.zst checksums.txt | awk '$2 != "sboms.tar" && $2 !~ /^sboms\//')
+            EXPECTED_CHECKSUM=$(awk '$2 != "sboms.tar" && $2 !~ /^sboms\//' "$f")
             if [[ "$CHECKSUM" != "$EXPECTED_CHECKSUM" ]]
             then
               echo "Package $f does not have expected checksum."

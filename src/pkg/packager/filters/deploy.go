@@ -9,32 +9,25 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/AlecAivazis/survey/v2"
 	"github.com/agnivade/levenshtein"
-	"github.com/pterm/pterm"
 	"github.com/zarf-dev/zarf/src/api"
-	"github.com/zarf-dev/zarf/src/api/convert"
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
-	"github.com/zarf-dev/zarf/src/api/v1beta1"
-	"github.com/zarf-dev/zarf/src/pkg/helpers"
-	"github.com/zarf-dev/zarf/src/pkg/message"
-	"github.com/zarf-dev/zarf/src/pkg/utils"
 )
 
-// ForDeploy creates a new deployment filter.
-func ForDeploy(optionalComponents string, isInteractive bool) ComponentFilterStrategy {
-	requested := helpers.StringToSlice(optionalComponents)
-
-	return &deploymentFilter{
-		requested,
-		isInteractive,
-	}
+// ForDeploy creates a noninteractive deployment filter using explicit selectors,
+// required components, and legacy v1alpha1 defaults and choice groups.
+// An explicit group selection replaces other group members.
+// Selectors are normalized when applied: case and surrounding whitespace are
+// ignored, empty entries are discarded, and invalid glob patterns return an error.
+// Use the package-level Apply function or a package layout's Filter method to
+// record the selectors for deployment. A second deployment selection on the same
+// package is rejected rather than replacing its provenance.
+func ForDeploy(optionalComponents string) ComponentFilterStrategy {
+	return &deploymentFilter{optionalComponents: optionalComponents}
 }
 
 // deploymentFilter is the default filter for deployments.
 type deploymentFilter struct {
-	requestedComponents []string
-	isInteractive       bool
+	optionalComponents string
 }
 
 // Errors for the deployment filter.
@@ -42,16 +35,41 @@ var (
 	ErrMultipleSameGroup    = fmt.Errorf("cannot specify multiple components from the same group")
 	ErrNoDefaultOrSelection = fmt.Errorf("no default or selected component found")
 	ErrNotFound             = fmt.Errorf("no compatible components found")
-	ErrSelectionCanceled    = fmt.Errorf("selection canceled")
 )
 
 // Apply applies the filter.
 func (f *deploymentFilter) Apply(pkg api.Package) ([]api.Component, error) {
+	requestedComponents, err := ParseComponentSelectors(f.optionalComponents)
+	if err != nil {
+		return nil, err
+	}
+	return f.applyComponents(pkg, requestedComponents)
+}
+
+func (f *deploymentFilter) applyPackage(pkg api.Package) (api.Package, error) {
+	if pkg.HasComponentSelection() {
+		return api.Package{}, fmt.Errorf("deployment component selection has already been applied")
+	}
+	requestedComponents, err := ParseComponentSelectors(f.optionalComponents)
+	if err != nil {
+		return api.Package{}, err
+	}
+	components, err := f.applyComponents(pkg, requestedComponents)
+	if err != nil {
+		return api.Package{}, err
+	}
+	pkg.Components = components
+	pkg.SetComponentSelectors(requestedComponents)
+	return pkg, nil
+}
+
+func (f *deploymentFilter) applyComponents(pkg api.Package, requestedComponents []string) ([]api.Component, error) {
 	var selectedComponents []api.Component
 	groupedComponents := map[string][]api.Component{}
 	orderedComponentGroups := []string{}
 
-	// Group the components by Name and Group while maintaining order
+	// Preserve v1alpha1 choice groups and defaults; v1beta1 has neither.
+	// Process each group at its first member's position.
 	for _, component := range pkg.Components {
 		groupKey := component.Name
 		if component.Group != "" {
@@ -65,7 +83,7 @@ func (f *deploymentFilter) Apply(pkg api.Package) ([]api.Component, error) {
 		groupedComponents[groupKey] = append(groupedComponents[groupKey], component)
 	}
 
-	isPartial := len(f.requestedComponents) > 0 && f.requestedComponents[0] != ""
+	isPartial := len(requestedComponents) > 0
 
 	if isPartial {
 		matchedRequests := map[string]bool{}
@@ -75,19 +93,33 @@ func (f *deploymentFilter) Apply(pkg api.Package) ([]api.Component, error) {
 			var groupDefault *api.Component
 			var groupSelected *api.Component
 
+			// An explicit choice selects one group member, even when other members
+			// are required. Ungrouped required components remain mandatory.
+			hasGroupChoice := false
+			if len(groupedComponents[groupKey]) > 1 {
+				for _, component := range groupedComponents[groupKey] {
+					state, err := includedOrExcluded(component.Name, requestedComponents, nil)
+					if err != nil {
+						return nil, err
+					}
+					if state == included {
+						hasGroupChoice = true
+						break
+					}
+				}
+			}
+
 			for _, component := range groupedComponents[groupKey] {
 				// Ensure we have a local version of the component to point to (otherwise the pointer might change on us)
 				component := component
 
-				selectState, matchedRequest, err := includedOrExcluded(component.Name, f.requestedComponents)
+				selectState, err := includedOrExcluded(component.Name, requestedComponents, matchedRequests)
 				if err != nil {
 					return nil, err
 				}
 
-				if component.Optional {
+				if component.Optional || hasGroupChoice {
 					if selectState == excluded {
-						// If the component was explicitly excluded, record the match and continue
-						matchedRequests[matchedRequest] = true
 						continue
 					} else if selectState == unknown && component.Default && groupDefault == nil {
 						// If the component is default but not included or excluded, remember the default
@@ -99,9 +131,6 @@ func (f *deploymentFilter) Apply(pkg api.Package) ([]api.Component, error) {
 				}
 
 				if selectState == included {
-					// If the component was explicitly included, record the match
-					matchedRequests[matchedRequest] = true
-
 					// Then check for already selected groups
 					if groupSelected != nil {
 						return nil, fmt.Errorf("%w: group: %s selected: %s, %s", ErrMultipleSameGroup, component.Group, groupSelected.Name, component.Name)
@@ -127,7 +156,7 @@ func (f *deploymentFilter) Apply(pkg api.Package) ([]api.Component, error) {
 		}
 
 		// Check that we have matched against all requests
-		for _, requestedComponent := range f.requestedComponents {
+		for _, requestedComponent := range requestedComponents {
 			if _, ok := matchedRequests[requestedComponent]; !ok {
 				closeEnough := []string{}
 				for _, c := range pkg.Components {
@@ -143,29 +172,21 @@ func (f *deploymentFilter) Apply(pkg api.Package) ([]api.Component, error) {
 		for _, groupKey := range orderedComponentGroups {
 			group := groupedComponents[groupKey]
 			if len(group) > 1 {
-				if f.isInteractive {
-					component, err := selectChoiceGroup(group)
-					if err != nil {
-						return nil, fmt.Errorf("%w: %w", ErrSelectionCanceled, err)
+				foundDefault := false
+				componentNames := []string{}
+				for _, component := range group {
+					// If the component is default, then use it
+					if component.Default {
+						selectedComponents = append(selectedComponents, component)
+						foundDefault = true
+						break
 					}
-					selectedComponents = append(selectedComponents, component)
-				} else {
-					foundDefault := false
-					componentNames := []string{}
-					for _, component := range group {
-						// If the component is default, then use it
-						if component.Default {
-							selectedComponents = append(selectedComponents, component)
-							foundDefault = true
-							break
-						}
-						// Add each component name to the list
-						componentNames = append(componentNames, component.Name)
-					}
-					if !foundDefault {
-						// If no default component was found, give up
-						return nil, fmt.Errorf("%w: choose from %s", ErrNoDefaultOrSelection, strings.Join(componentNames, ", "))
-					}
+					// Add each component name to the list
+					componentNames = append(componentNames, component.Name)
+				}
+				if !foundDefault {
+					// If no default component was found, give up
+					return nil, fmt.Errorf("%w: choose from %s", ErrNoDefaultOrSelection, strings.Join(componentNames, ", "))
 				}
 			} else {
 				component := groupedComponents[groupKey][0]
@@ -173,17 +194,6 @@ func (f *deploymentFilter) Apply(pkg api.Package) ([]api.Component, error) {
 				if !component.Optional {
 					selectedComponents = append(selectedComponents, component)
 					continue
-				}
-
-				if f.isInteractive {
-					selected, err := selectOptionalComponent(pkg, component)
-					if err != nil {
-						return nil, fmt.Errorf("%w: %w", ErrSelectionCanceled, err)
-					}
-					if selected {
-						selectedComponents = append(selectedComponents, component)
-						continue
-					}
 				}
 
 				if component.Default {
@@ -195,63 +205,4 @@ func (f *deploymentFilter) Apply(pkg api.Package) ([]api.Component, error) {
 	}
 
 	return selectedComponents, nil
-}
-
-func selectOptionalComponent(pkg api.Package, component api.Component) (bool, error) {
-	message.HorizontalRule()
-
-	definition, err := componentForDisplay(pkg, component)
-	if err != nil {
-		return false, err
-	}
-	err = utils.ColorPrintYAML(definition, nil, false)
-	if err != nil {
-		return false, err
-	}
-
-	prompt := &survey.Confirm{
-		Message: fmt.Sprintf("Deploy the %s component?", component.Name),
-		Default: component.Default,
-	}
-
-	var confirm bool
-	err = survey.AskOne(prompt, &confirm)
-	if err != nil {
-		return false, err
-	}
-	return confirm, nil
-}
-
-// componentForDisplay converts a component back to the package's authored API version.
-func componentForDisplay(pkg api.Package, component api.Component) (any, error) {
-	displayPackage := api.Package{APIVersion: pkg.APIVersion, Components: []api.Component{component}}
-	switch pkg.GetAPIVersion() {
-	case v1alpha1.APIVersion:
-		return convert.PackageToV1alpha1(displayPackage).Components[0], nil
-	case v1beta1.APIVersion:
-		return convert.PackageToV1beta1(displayPackage).Components[0], nil
-	default:
-		return nil, fmt.Errorf("unsupported package apiVersion %q", pkg.GetAPIVersion())
-	}
-}
-
-func selectChoiceGroup(componentGroup []api.Component) (api.Component, error) {
-	message.HorizontalRule()
-
-	var chosen int
-	options := make([]string, 0, len(componentGroup))
-
-	for _, component := range componentGroup {
-		text := fmt.Sprintf("Name: %s\n  Description: %s\n", component.Name, component.Description)
-		options = append(options, text)
-	}
-
-	prompt := &survey.Select{
-		Message: "Select a component to deploy:",
-		Options: options,
-	}
-
-	pterm.Println()
-
-	return componentGroup[chosen], survey.AskOne(prompt, &chosen)
 }

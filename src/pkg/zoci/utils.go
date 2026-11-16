@@ -70,8 +70,3 @@ func ReferenceFromMetadataWithOptions(registryLocation string, pkg api.Package, 
 	}
 	return ref, nil
 }
-
-// GetInitPackageURL returns the URL for the init package for the given version.
-func GetInitPackageURL(version string) string {
-	return fmt.Sprintf("ghcr.io/zarf-dev/packages/init:%s", version)
-}

@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/zarf-dev/zarf/src/api"
+	internalv1alpha1 "github.com/zarf-dev/zarf/src/internal/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/internal/checksum"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/signing"
@@ -27,6 +28,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/oci"
 
 	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
@@ -38,8 +40,6 @@ type PullOptions struct {
 	SHASum string
 	// Architecture is the package architecture.
 	Architecture string
-	// Deprecated: Use VerifyBlobOptions instead. PublicKeyPath validates the create-time signage of a package.
-	PublicKeyPath string
 	// VerifyBlobOptions configures package signature verification.
 	VerifyBlobOptions *signing.VerifyBlobOptions
 	// OCIConcurrency is the number of layers pulled in parallel
@@ -58,7 +58,7 @@ func Pull(ctx context.Context, source, destination string, opts PullOptions) (_ 
 	source = zoci.NormalizeOCISource(source)
 
 	// ensure architecture is set
-	arch := config.GetArch(opts.Architecture)
+	arch := helpers.ResolveArch(opts.Architecture)
 
 	opts.CachePath, err = utils.ResolveCachePath(opts.CachePath)
 	if err != nil {
@@ -79,15 +79,6 @@ func Pull(ctx context.Context, source, destination string, opts PullOptions) (_ 
 		return "", errors.New("host cannot be empty")
 	}
 
-	// Resolve deprecated PublicKeyPath into VerifyBlobOptions.
-	// Only applies when VerifyBlobOptions is not already set,
-	// ensuring the new API takes precedence over the deprecated field.
-	if opts.VerifyBlobOptions == nil && opts.PublicKeyPath != "" {
-		defaults := signing.DefaultVerifyBlobOptions()
-		defaults.Key = opts.PublicKeyPath
-		opts.VerifyBlobOptions = &defaults
-	}
-
 	pkgLayout, err := LoadPackage(ctx, source, LoadOptions{
 		Shasum:               opts.SHASum,
 		Architecture:         arch,
@@ -101,6 +92,7 @@ func Pull(ctx context.Context, source, destination string, opts PullOptions) (_ 
 	if err != nil {
 		return "", err
 	}
+	internalv1alpha1.WarnIfDeprecated(ctx, pkgLayout.Definition())
 	if err := pkgLayout.Cleanup(); err != nil {
 		return "", err
 	}
@@ -133,7 +125,7 @@ func pullOCI(ctx context.Context, opts pullOCIOptions) (*layout.PackageLayout, e
 	}
 
 	platform := oci.PlatformForArch(opts.Architecture)
-	remote, err := zoci.NewRemoteWithOptions(ctx, opts.Source, platform, zoci.RemoteClientOptions{
+	remote, err := zoci.NewRemote(ctx, opts.Source, platform, zoci.RemoteClientOptions{
 		CachePath:     opts.CachePath,
 		RemoteOptions: opts.RemoteOptions,
 	})
@@ -149,6 +141,7 @@ func pullOCI(ctx context.Context, opts pullOCIOptions) (*layout.PackageLayout, e
 	if err != nil {
 		return nil, err
 	}
+
 	if supportsFiltering(desc.Platform) {
 		pkg, err = filters.Apply(pkg, opts.Filter)
 		if err != nil {

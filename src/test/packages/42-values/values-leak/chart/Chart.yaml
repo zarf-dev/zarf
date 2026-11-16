@@ -1,0 +1,4 @@
+apiVersion: v2
+name: values-leak-chart
+version: 0.1.0
+description: Minimal chart proving a chart values mapping does not leak between components

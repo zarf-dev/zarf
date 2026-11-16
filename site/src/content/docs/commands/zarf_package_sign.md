@@ -57,7 +57,7 @@ $ zarf package sign zarf-package-demo-amd64-1.0.0.tar.zst --signing-key awskms:/
       --oci-concurrency int                     Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
       --oidc-client-id string                   OIDC client ID used when requesting an identity token. Override for private Sigstore deployments. (default "sigstore")
       --oidc-issuer string                      OIDC issuer URL used to obtain an identity token for keyless signing. Override for private Sigstore deployments. (default "https://oauth2.sigstore.dev/auth")
-  -o, --output string                           Output destination for the signed package. Can be a local directory or an OCI registry URL (oci://). Default: same directory as source package for files, current directory for OCI sources
+  -o, --output string                           Output destination for the signed package. Can be a local directory or an OCI registry URL (oci://). Default: same directory as source package for files, source repository for OCI sources
       --overwrite                               Overwrite an existing signature if the package is already signed
       --rekor-url string                        Rekor transparency log URL. Override for private Sigstore deployments. (default "https://rekor.sigstore.dev")
       --retries int                             Maximum attempts for retryable Zarf operations, including image, Git, and transient Helm failures (default 3)
@@ -78,7 +78,7 @@ $ zarf package sign zarf-package-demo-amd64-1.0.0.tar.zst --signing-key awskms:/
       --features stringToString    Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features "foo=true,bar=false,baz=true" (default [])
       --insecure-skip-tls-verify   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
       --log-format string          Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
-  -l, --log-level string           Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
+  -l, --log-level string           Log level when running Zarf. Valid options are: error, warn, info, debug (default "info")
       --no-color                   Disable terminal color codes in logging and stdout prints.
       --plain-http                 Allow OCI registry connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
       --tmpdir string              Specify the temporary directory to use for intermediate files

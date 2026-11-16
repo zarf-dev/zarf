@@ -166,14 +166,12 @@ func (w *invalidatingWatcher) Watch(ctx context.Context, objs object.ObjMetadata
 
 // InitStateOptions tracks the user-defined options during cluster initialization.
 type InitStateOptions struct {
-	// Indicates if Zarf was initialized while deploying its own k8s cluster
+	// ApplianceMode indicates Zarf installed the cluster control plane and should run host cleanup on destroy.
 	ApplianceMode bool
 	// Information about the repository Zarf is going to be using
 	GitServer state.GitServerInfo
 	// Information about the container registry Zarf is going to be using
 	RegistryInfo state.RegistryInfo
-	// StorageClass of the k8s cluster Zarf is initializing
-	StorageClass string
 	// InjectorPort is the port that the injector will be exposed through
 	InjectorPort int
 	// AgentTLS allows providing user-managed TLS certificates for the agent. When nil, certs are auto-generated.
@@ -211,31 +209,8 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 
 	// If state is nil, this is a new cluster.
 	if s == nil {
-		s = &state.State{}
+		s = &state.State{ZarfAppliance: opts.ApplianceMode}
 		l.Debug("new cluster, no prior Zarf deployments found")
-		if opts.ApplianceMode {
-			// If the K3s component is being deployed, skip distro detection.
-			s.Distro = DistroIsK3s
-			s.ZarfAppliance = true
-		} else {
-			// Otherwise, trying to detect the K8s distro type.
-			nodeList, err := c.Clientset.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
-			if err != nil {
-				return nil, err
-			}
-			if len(nodeList.Items) == 0 {
-				return nil, fmt.Errorf("cannot init Zarf state in empty cluster")
-			}
-			namespaceList, err := c.Clientset.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
-			if err != nil {
-				return nil, err
-			}
-			s.Distro = detectDistro(nodeList.Items[0], namespaceList.Items)
-		}
-
-		if s.Distro != DistroIsUnknown {
-			l.Debug("Detected K8s distro", "name", s.Distro)
-		}
 
 		if opts.InternalServices.Has(state.AgentKey) {
 			if err := c.initAgent(ctx, s, opts.AgentTLS); err != nil {
@@ -335,29 +310,16 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 		s.RegistryInfo.MTLSStrategy = state.MTLSStrategyZarfManaged
 	}
 
-	switch s.Distro {
-	case DistroIsK3s, DistroIsK3d:
-		s.StorageClass = "local-path"
-
-	case DistroIsKind, DistroIsGKE:
-		s.StorageClass = "standard"
-
-	case DistroIsDockerDesktop:
-		s.StorageClass = "hostpath"
-	}
-
-	if opts.StorageClass != "" {
-		s.StorageClass = opts.StorageClass
-	}
-
 	if opts.InjectorPort != 0 {
 		s.InjectorInfo.Port = opts.InjectorPort
 	}
 
-	if s.AgentInfo.IsConfigured() && opts.AgentMutationPolicy != "" {
-		agentInfo := s.AgentInfo
-		agentInfo.MutationPolicy = opts.AgentMutationPolicy
-		s.SetAgentInfo(agentInfo)
+	if s.AgentInfo.IsConfigured() {
+		if opts.AgentMutationPolicy != "" {
+			s.AgentInfo.MutationPolicy = opts.AgentMutationPolicy
+		} else if s.AgentInfo.MutationPolicy == "" {
+			s.AgentInfo.MutationPolicy = state.MutationPolicyAll
+		}
 	}
 
 	// Save the state back to K8s
@@ -381,7 +343,7 @@ func (c *Cluster) initAgent(ctx context.Context, s *state.State, agentTLS *pki.G
 		agentInfo.TLS = generatedAgentTLS
 		agentInfo.TLSUserProvided = false
 	}
-	s.SetAgentInfo(agentInfo)
+	s.AgentInfo = agentInfo
 	return c.ignoreExistingNamespacesForAgent(ctx)
 }
 
@@ -515,18 +477,33 @@ func (c *Cluster) LoadState(ctx context.Context) (*state.State, error) {
 	}
 
 	s := &state.State{}
-	err = json.Unmarshal(secret.Data[state.ZarfStateDataKey], s)
+	// Keep the pre-v0.85 agent fields at the read boundary; saves use only state.State.
+	stored := struct {
+		*state.State
+		AgentInfo            *state.AgentInfo     `json:"agentInfo"`
+		AgentTLS             pki.GeneratedPKI     `json:"agentTLS"`
+		AgentTLSUserProvided bool                 `json:"agentTLSUserProvided"`
+		AgentMutationPolicy  state.MutationPolicy `json:"agentMutationPolicy"`
+	}{State: s}
+	err = json.Unmarshal(secret.Data[state.ZarfStateDataKey], &stored)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", stateErr, err)
 	}
-	// Reconcile compatibility fields from older state versions.
-	s.Reconcile()
-	// If registry mode is not set then this is an old Zarf cluster and we can assume it's either external or nodeport
-	if s.RegistryInfo.RegistryMode == "" {
-		if s.RegistryInfo.IsInternal() {
-			s.RegistryInfo.RegistryMode = state.RegistryModeNodePort
+	if stored.AgentInfo != nil {
+		s.AgentInfo = *stored.AgentInfo
+	} else {
+		s.AgentInfo = state.AgentInfo{
+			TLS:             stored.AgentTLS,
+			TLSUserProvided: stored.AgentTLSUserProvided,
+			MutationPolicy:  stored.AgentMutationPolicy,
+		}
+	}
+	// Older state identified the Git server by address without recording its mode.
+	if s.GitServer.IsConfigured() && s.GitServer.GitServerMode == "" {
+		if s.GitServer.IsInternal() {
+			s.GitServer.GitServerMode = state.GitServerModeInternal
 		} else {
-			s.RegistryInfo.RegistryMode = state.RegistryModeExternal
+			s.GitServer.GitServerMode = state.GitServerModeExternal
 		}
 	}
 	return s, nil
@@ -534,8 +511,6 @@ func (c *Cluster) LoadState(ctx context.Context) (*state.State, error) {
 
 // SaveState takes a given state.State and persists it to k8s Cluster secrets.
 func (c *Cluster) SaveState(ctx context.Context, s *state.State) error {
-	// Sync compatibility fields so older Zarf versions can read the state.
-	s.Reconcile()
 	state.DebugPrint(ctx, s)
 
 	data, err := json.Marshal(&s)

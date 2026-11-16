@@ -1123,9 +1123,7 @@ func TestFromTOML_Errors(t *testing.T) {
 
 func testState() *state.State {
 	return &state.State{
-		Distro:       "k3s",
-		StorageClass: "standard",
-		IPFamily:     state.IPFamilyIPv4,
+		IPFamily: state.IPFamilyIPv4,
 		RegistryInfo: state.RegistryInfo{
 			Address:      "registry.example.com",
 			Port:         5000,
@@ -1176,8 +1174,7 @@ func TestWithState_NonSensitiveFields(t *testing.T) {
 	require.Contains(t, objs, objectKeyState)
 
 	for tmpl, expected := range map[string]string{
-		`{{ .State.Distro }}`:                     s.Distro,
-		`{{ .State.StorageClass }}`:               s.StorageClass,
+		`{{ .State.StorageClass }}`:               "",
 		`{{ .State.IPFamily }}`:                   string(s.IPFamily),
 		`{{ .State.Registry.Address }}`:           s.RegistryInfo.Address,
 		`{{ .State.Registry.PushUsername }}`:      s.RegistryInfo.PushUsername,
