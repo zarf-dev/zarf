@@ -37,6 +37,8 @@ type RemoveOptions struct {
 	// Timeout for Helm operations.
 	Timeout          time.Duration
 	SkipVersionCheck bool
+	// PruneScopes specifies the scopes to prune during removal.
+	PruneScopes PruneScopes
 }
 
 // Remove runs removal actions and uninstalls recorded Helm charts for components
@@ -46,6 +48,9 @@ type RemoveOptions struct {
 // selections. Standalone local packages without a deployment record never create one.
 func Remove(ctx context.Context, definition api.Package, opts RemoveOptions) error {
 	if err := definition.Validate(); err != nil {
+		return err
+	}
+	if err := opts.PruneScopes.Validate(PruneCommandRemove); err != nil {
 		return err
 	}
 	l := logger.From(ctx)

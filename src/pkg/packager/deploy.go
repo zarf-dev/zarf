@@ -94,10 +94,15 @@ type DeployOptions struct {
 	SkipArchitectureCheck bool
 	// SkipVersionCheck skips version requirement validation
 	SkipVersionCheck bool
+	// PruneScopes specifies the scopes to prune during deployment.
+	PruneScopes PruneScopes
 }
 
 // Validate checks whether the deployment options are supported by the package.
 func (opts DeployOptions) Validate(pkg api.Package) error {
+	if err := opts.PruneScopes.Validate(PruneCommandDeploy); err != nil {
+		return err
+	}
 	if !opts.Connectivity.IsValid() {
 		return fmt.Errorf("unsupported package connectivity mode %q", opts.Connectivity)
 	}
