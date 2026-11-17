@@ -28,6 +28,7 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
+	internalv1alpha1 "github.com/zarf-dev/zarf/src/internal/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/internal/checksum"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/helpers"
@@ -240,6 +241,8 @@ func (o *devInspectDefinitionOptions) run(cmd *cobra.Command, args []string) err
 		printLintFindings(err)
 		return err
 	}
+
+	internalv1alpha1.WarnAuthorIfDeprecated(ctx, definition)
 
 	// The definition is printed in the apiVersion it was authored in.
 	if definition.APIVersion == v1beta1.APIVersion {

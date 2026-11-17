@@ -381,6 +381,7 @@ func TestDeployInitComponentServices(t *testing.T) {
 		registry        bool
 		agent           bool
 		git             bool
+		appliance       bool
 		failedComponent int
 	}{
 		{
@@ -420,6 +421,11 @@ func TestDeployInitComponentServices(t *testing.T) {
 				{Name: "zarf-agent"},
 				{Name: "git-server"},
 			},
+		},
+		{
+			name:       "K3s component enables appliance cleanup",
+			components: []api.Component{{Name: "k3s"}},
+			appliance:  true,
 		},
 		{
 			name: "external registry skips renamed registry services",
@@ -481,6 +487,7 @@ func TestDeployInitComponentServices(t *testing.T) {
 			require.Equal(t, tt.registry, s.RegistryInfo.IsConfigured())
 			require.Equal(t, tt.agent, s.AgentInfo.IsConfigured())
 			require.Equal(t, tt.git, s.GitServer.IsConfigured())
+			require.Equal(t, tt.appliance, s.ZarfAppliance)
 			if tt.opts.RegistryInfo.Address != "" {
 				require.Equal(t, tt.opts.RegistryInfo.Address, s.RegistryInfo.Address)
 			}

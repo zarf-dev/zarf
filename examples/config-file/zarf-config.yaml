@@ -1,12 +1,9 @@
-# Example config file, use "zarf prepare generate-config zarf-config.yaml" to generate a new one
+# Example config file, use "zarf dev generate-config zarf-config.yaml" to generate a new one
 log_level : 'info'
 
 package:
   create:
     skip_sbom : false
-    set:
-      zebra : 'stripes'
-      leopard : 'spots'
   deploy:
     components: 'lion'
     values:

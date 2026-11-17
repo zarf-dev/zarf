@@ -20,8 +20,9 @@ type Package struct {
 	Values      Values
 	Attachments map[string]string
 
-	// v1alpha1-only fields
+	// Deprecated: Only supported by deprecated v1alpha1 packages.
 	Variables []InteractiveVariable
+	// Deprecated: Only supported by deprecated v1alpha1 packages.
 	Constants []Constant
 
 	// Runtime selection provenance is not part of either package wire schema.
@@ -60,14 +61,20 @@ type PackageMetadata struct {
 	Annotations              map[string]string
 	PreventNamespaceOverride bool
 
-	// v1alpha1-only metadata fields.
-	URL           string
-	Image         string
-	YOLO          bool
-	Authors       string
+	// Deprecated: Only supported by deprecated v1alpha1 packages.
+	URL string
+	// Deprecated: Only supported by deprecated v1alpha1 packages.
+	Image string
+	// Deprecated: Only supported by deprecated v1alpha1 packages.
+	YOLO bool
+	// Deprecated: Only supported by deprecated v1alpha1 packages.
+	Authors string
+	// Deprecated: Only supported by deprecated v1alpha1 packages.
 	Documentation string
-	Source        string
-	Vendor        string
+	// Deprecated: Only supported by deprecated v1alpha1 packages.
+	Source string
+	// Deprecated: Only supported by deprecated v1alpha1 packages.
+	Vendor string
 }
 
 // BuildData contains build metadata shared across package API versions.
@@ -87,7 +94,7 @@ type BuildData struct {
 	ProvenanceFiles     []string
 	AggregateChecksum   string
 
-	// v1alpha1-only build fields.
+	// Deprecated: Only supported by deprecated v1alpha1 packages.
 	DifferentialMissing []string
 }
 
@@ -127,11 +134,16 @@ type Component struct {
 	StateAccess   []StateAccessKey
 	Actions       ComponentActions
 
-	Default        bool
-	Group          string
+	// Deprecated: Only supported by deprecated v1alpha1 packages.
+	Default bool
+	// Deprecated: Only supported by deprecated v1alpha1 packages.
+	Group string
+	// Deprecated: Only supported by deprecated v1alpha1 packages.
 	DataInjections []ZarfDataInjection
-	HealthChecks   []NamespacedObjectKindReference
-	Distros        []string
+	// Deprecated: Only supported by deprecated v1alpha1 packages.
+	HealthChecks []NamespacedObjectKindReference
+	// Deprecated: Only supported by deprecated v1alpha1 packages.
+	Distros []string
 }
 
 // Service identifies a Zarf-managed cluster service provided by a component.
@@ -170,6 +182,8 @@ type ComponentImport struct {
 
 	// Name identifies a v1alpha1 imported component. Path and URL are projected onto
 	// Local and Remote by the v1alpha1 converter.
+	//
+	// Deprecated: Only supported by deprecated v1alpha1 packages.
 	Name string
 }
 
@@ -230,6 +244,8 @@ type Chart struct {
 	Name string
 	// LegacyVersion is kept for existing v1alpha1 packages so that we can track the chart's archive and values files.
 	// The version of the chart is separately tracked in OCI source, HelmRepository, or GitSource
+	//
+	// Deprecated: Only supported by deprecated v1alpha1 packages.
 	LegacyVersion        string
 	Namespace            string
 	ReleaseName          string
@@ -245,6 +261,8 @@ type Chart struct {
 	OCI            *OCISource
 
 	// Variables are required to run v1alpha1 chart actions.
+	//
+	// Deprecated: Only supported by deprecated v1alpha1 packages.
 	Variables []ZarfChartVariable
 }
 
@@ -306,7 +324,8 @@ type Repository struct {
 	// LegacyURL retains the original v1alpha1 URL, including an inline ref, so
 	// repositories retain the directory names used by existing package layouts
 	// For instance, GitRef can't express ref/tags/v1.0 vs only v1.0
-	// Will be deleted with v1alpha1 is no longer support
+	//
+	// Deprecated: Only supported by deprecated v1alpha1 packages.
 	LegacyURL string
 }
 
@@ -423,8 +442,9 @@ type ComponentActions struct {
 
 // ActionSet contains actions for one package lifecycle operation.
 type ActionSet struct {
-	Defaults  ActionDefaults
-	Before    []Action
+	Defaults ActionDefaults
+	Before   []Action
+	// Deprecated: Only supported by deprecated v1alpha1 packages.
 	After     []Action
 	OnSuccess []Action
 	OnFailure []Action
@@ -442,13 +462,14 @@ type ActionDefaults struct {
 
 // Action is a command or wait operation performed during a package lifecycle operation.
 type Action struct {
-	Silent           *bool
-	MaxTotalSeconds  *int
-	Retries          *int
-	Dir              *string
-	Env              []string
-	Cmd              string
-	Shell            *Shell
+	Silent          *bool
+	MaxTotalSeconds *int
+	Retries         *int
+	Dir             *string
+	Env             []string
+	Cmd             string
+	Shell           *Shell
+	// Deprecated: Only supported by deprecated v1alpha1 packages.
 	SetVariables     []Variable
 	SetValues        []SetValue
 	Description      string
@@ -458,7 +479,8 @@ type Action struct {
 
 // SetValue declares how command output is stored in the package values map.
 type SetValue struct {
-	Key   string
+	Key string
+	// Deprecated: Only supported by deprecated v1alpha1 packages.
 	Value any
 	Type  SetValueType
 }

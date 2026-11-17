@@ -48,7 +48,6 @@ type initOptions struct {
 	setValues                  map[string]string
 	optionalComponents         string
 	skipValuesSchemaValidation bool
-	storageClass               string
 	gitServer                  state.GitServerInfo
 	registryInfo               state.RegistryInfo
 	injectorPort               int
@@ -90,7 +89,6 @@ func newInitCommand(architecture *architectureOptions) *cobra.Command {
 	// Continue to require --confirm flag for init command to avoid accidental deployments
 	cmd.Flags().BoolVarP(&o.confirm, "confirm", "c", false, lang.CmdInitFlagConfirm)
 	cmd.Flags().StringVar(&o.optionalComponents, "components", v.GetString(VInitComponents), lang.CmdInitFlagComponents)
-	cmd.Flags().StringVar(&o.storageClass, "storage-class", v.GetString(VInitStorageClass), lang.CmdInitFlagStorageClass)
 
 	cmd.Flags().StringVar((*string)(&o.registryInfo.RegistryMode), "registry-mode", "",
 		fmt.Sprintf("How to access the registry (valid values: %s, %s, %s). Proxy mode is an alpha feature", state.RegistryModeNodePort, state.RegistryModeProxy, state.RegistryModeExternal))
@@ -258,7 +256,6 @@ func (o *initOptions) run(cmd *cobra.Command, args []string) error {
 		Timeout:                    o.timeout,
 		Retries:                    o.retries,
 		OCIConcurrency:             o.ociConcurrency,
-		StorageClass:               o.storageClass,
 		InjectorPort:               o.injectorPort,
 		InjectorImage:              o.injectorImage,
 		RemoteOptions:              defaultRemoteOptions(),

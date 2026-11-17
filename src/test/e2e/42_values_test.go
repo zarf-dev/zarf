@@ -70,10 +70,6 @@ func TestValues(t *testing.T) {
 	require.NotContains(t, kubectlOut, "{{", "registryAddress should have been templated")
 	require.NotEmpty(t, kubectlOut, "registryAddress should be non-empty")
 
-	kubectlOut, _, err = e2e.Kubectl(t, "get", "configmap", "test-state-configmap", "-o", "jsonpath='{.data.storageClass}'")
-	require.NoError(t, err, "unable to get state configmap")
-	require.NotContains(t, kubectlOut, "{{", "storageClass should have been templated")
-
 	// Verify templatedValuesFiles rendered .Values.* into chart values at deploy time.
 	kubectlOut, _, err = e2e.Kubectl(t, "get", "configmap", "test-values-chart-configmap", "-o", "jsonpath='{.data.staticKey}'")
 	require.NoError(t, err, "unable to get chart configmap")

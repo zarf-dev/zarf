@@ -95,6 +95,8 @@ type NamespacedObjectKindReference struct {
 }
 
 // RequiresCluster returns if the component requires a cluster connection to deploy.
+//
+// Deprecated: Only supported by deprecated v1alpha1 packages.
 func (c ZarfComponent) RequiresCluster() bool {
 	hasImages := len(c.Images) > 0
 	hasImageArchives := len(c.ImageArchives) > 0
@@ -112,6 +114,8 @@ func (c ZarfComponent) RequiresCluster() bool {
 }
 
 // IsRequired returns if the component is required or not.
+//
+// Deprecated: Only supported by deprecated v1alpha1 packages.
 func (c ZarfComponent) IsRequired() bool {
 	if c.Required != nil {
 		return *c.Required
@@ -121,6 +125,8 @@ func (c ZarfComponent) IsRequired() bool {
 }
 
 // GetImages returns all images specified in the component, including those from ImageArchives.
+//
+// Deprecated: Only supported by deprecated v1alpha1 packages.
 func (c ZarfComponent) GetImages() []string {
 	images := []string{}
 
@@ -142,6 +148,8 @@ var supportedOS = []string{"linux", "darwin", "windows", ""}
 // The supported operating systems are: linux, darwin, windows.
 //
 // An empty string signifies no OS restrictions.
+//
+// Deprecated: Only supported by deprecated v1alpha1 packages.
 func SupportedOS() []string {
 	return supportedOS
 }
@@ -185,6 +193,8 @@ type ZarfFile struct {
 }
 
 // IsTemplate returns if the ZarfFile should be templated or not.
+//
+// Deprecated: Only supported by deprecated v1alpha1 packages.
 func (f ZarfFile) IsTemplate() bool {
 	if f.Template != nil {
 		return *f.Template
@@ -234,6 +244,8 @@ type ZarfChart struct {
 }
 
 // ShouldRunSchemaValidation returns if Helm schema validation should be run or not
+//
+// Deprecated: Only supported by deprecated v1alpha1 packages.
 func (zc ZarfChart) ShouldRunSchemaValidation() bool {
 	if zc.SchemaValidation != nil {
 		return *zc.SchemaValidation
@@ -242,6 +254,8 @@ func (zc ZarfChart) ShouldRunSchemaValidation() bool {
 }
 
 // GetServerSideApply returns server side apply with default of "auto" if it is not set
+//
+// Deprecated: Only supported by deprecated v1alpha1 packages.
 func (zc ZarfChart) GetServerSideApply() string {
 	if zc.ServerSideApply == "" {
 		return "auto"
@@ -299,6 +313,8 @@ type ZarfManifest struct {
 }
 
 // GetServerSideApply returns server side apply with default of "auto" if it is not set
+//
+// Deprecated: Only supported by deprecated v1alpha1 packages.
 func (m ZarfManifest) GetServerSideApply() string {
 	if m.ServerSideApply == "" {
 		return "auto"
@@ -307,6 +323,8 @@ func (m ZarfManifest) GetServerSideApply() string {
 }
 
 // IsTemplate returns if the ZarfFile should be templated.
+//
+// Deprecated: Only supported by deprecated v1alpha1 packages.
 func (m ZarfManifest) IsTemplate() bool {
 	if m.Template != nil {
 		return *m.Template
@@ -403,6 +421,8 @@ type ZarfComponentAction struct {
 }
 
 // ShouldTemplate returns if the action cmd should be templated or not.
+//
+// Deprecated: Only supported by deprecated v1alpha1 packages.
 func (a ZarfComponentAction) ShouldTemplate() bool {
 	if a.Template != nil {
 		return *a.Template

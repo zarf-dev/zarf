@@ -2,6 +2,8 @@
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
 // Package v1alpha1 holds the definition of the v1alpha1 Zarf Package
+//
+// Deprecated: Only supported by deprecated v1alpha1 packages.
 package v1alpha1
 
 import (
@@ -71,11 +73,15 @@ type ZarfPackage struct {
 }
 
 // IsInitConfig returns whether a Zarf package is an init config.
+//
+// Deprecated: Only supported by deprecated v1alpha1 packages.
 func (pkg ZarfPackage) IsInitConfig() bool {
 	return pkg.Kind == ZarfInitConfig
 }
 
 // GetComponent returns the component with the given name, or an error if no such component exists.
+//
+// Deprecated: Only supported by deprecated v1alpha1 packages.
 func (pkg ZarfPackage) GetComponent(name string) (ZarfComponent, error) {
 	for _, component := range pkg.Components {
 		if component.Name == name {
@@ -86,6 +92,8 @@ func (pkg ZarfPackage) GetComponent(name string) (ZarfComponent, error) {
 }
 
 // HasImages returns true if one of the components contains an image.
+//
+// Deprecated: Only supported by deprecated v1alpha1 packages.
 func (pkg ZarfPackage) HasImages() bool {
 	for _, component := range pkg.Components {
 		if len(component.Images) > 0 || len(component.ImageArchives) > 0 {
@@ -96,6 +104,8 @@ func (pkg ZarfPackage) HasImages() bool {
 }
 
 // IsSBOMAble checks if a package has contents that an SBOM can be created on (i.e. images, files, or data injections).
+//
+// Deprecated: Only supported by deprecated v1alpha1 packages.
 func (pkg ZarfPackage) IsSBOMAble() bool {
 	for _, c := range pkg.Components {
 		if len(c.ImageArchives) > 0 || len(c.Images) > 0 || len(c.Files) > 0 || len(c.DataInjections) > 0 {
@@ -106,6 +116,8 @@ func (pkg ZarfPackage) IsSBOMAble() bool {
 }
 
 // AllowsNamespaceOverride returns whether the package allows the namespace to be overridden
+//
+// Deprecated: Only supported by deprecated v1alpha1 packages.
 func (pkg ZarfPackage) AllowsNamespaceOverride() bool {
 	if pkg.Metadata.AllowNamespaceOverride != nil {
 		return *pkg.Metadata.AllowNamespaceOverride
@@ -154,6 +166,8 @@ type Constant struct {
 }
 
 // Validate runs all validation checks on a package constant.
+//
+// Deprecated: Only supported by deprecated v1alpha1 packages.
 func (c Constant) Validate() error {
 	if !regexp.MustCompile(c.Pattern).MatchString(c.Value) {
 		return fmt.Errorf("provided value for constant %s does not match pattern %s", c.Name, c.Pattern)

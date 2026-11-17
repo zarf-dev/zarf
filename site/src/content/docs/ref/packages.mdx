@@ -63,7 +63,7 @@ Zarf currently supports consuming packages from the following sources:
 
 ### Local Tarball Path (`.tar` and `.tar.zst`)
 
-A local tarball is the default output of `zarf package create` and is a package contained within a tarball with or without [Zstandard](https://facebook.github.io/zstd/) compression.  Compression is determined by a given package's [`metadata.uncompressed` key](https://docs.zarf.dev/docs/create-a-zarf-package/zarf-schema#metadata) within it's `zarf.yaml` package definition
+A local tarball is the default output of `zarf package create` and is a package contained within a tarball with or without [Zstandard](https://github.com/meta/zstd) compression.  Compression is determined by a given package's [`metadata.uncompressed` key](/schema/v1alpha1-package/#ZarfMetadata) within it's `zarf.yaml` package definition
 
 ### Split Tarball Path (`.part...`)
 

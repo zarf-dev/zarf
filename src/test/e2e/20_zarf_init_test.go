@@ -54,10 +54,10 @@ func TestZarfInit(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	// run `zarf init`
-	_, _, err := e2e.Zarf(t, "init", "--components="+initComponents, "--registry-port", "31337", "--injector-port", "31888", "--confirm")
+	// Run `zarf init`.
+	v1AlphaInitArgs := []string{"init", "--components=" + initComponents, "--registry-port", "31337", "--injector-port", "31888", "--confirm"}
+	_, _, err := e2e.Zarf(t, v1AlphaInitArgs...)
 	require.NoError(t, err)
-
 	// Load the initialized cluster state.
 	s := state.State{}
 	base64State, _, err := e2e.Kubectl(t, "get", "secret", "zarf-state", "-n", "zarf", "-o", "jsonpath={.data.state}")
@@ -92,15 +92,16 @@ func TestZarfInit(t *testing.T) {
 	verifyZarfPodLabels(t)
 	verifyZarfServiceLabels(t)
 
-	// Zarf should fail since registry credentials are changing on a subsequent init
-	_, _, err = e2e.Zarf(t, "init", "--components="+initComponents, "--registry-push-password", "new-password", "--confirm")
+	// Zarf should fail since registry credentials are changing on a subsequent init.
+	v1AlphaReinitArgs := []string{"init", "--components=" + initComponents, "--registry-push-password", "new-password", "--confirm"}
+	_, _, err = e2e.Zarf(t, v1AlphaReinitArgs...)
 	require.Error(t, err)
 
 	// Upgrade the v1alpha1 init installation to the v1beta1 init package.
 	initPackageV1beta1 := filepath.Join("build", "v1beta1-init", fmt.Sprintf("zarf-init-%s-%s.tar.zst", e2e.Arch, initPackageVersion))
-	stdOut, stdErr, err := e2e.Zarf(t, "init", initPackageV1beta1, "--components="+initComponents, "--features=v1beta1=true,values=true", "--confirm")
+	v1BetaInitArgs := []string{"init", initPackageV1beta1, "--components=" + initComponents, "--features=v1beta1=true,values=true", "--confirm"}
+	stdOut, stdErr, err := e2e.Zarf(t, v1BetaInitArgs...)
 	require.NoError(t, err, stdOut, stdErr)
-
 	verifyZarfNamespaceLabels(t)
 	verifyZarfSecretLabels(t)
 	verifyZarfPodLabels(t)
