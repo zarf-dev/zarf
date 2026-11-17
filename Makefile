@@ -230,8 +230,6 @@ build-examples: ## Build all of the example packages
 
 	@test -s ./build/zarf-package-argocd-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/argocd -o build -a $(ARCH)
 
-	@test -s ./build/zarf-package-yolo-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/yolo -o build -a $(ARCH)
-
 	@test -s ./build/zarf-package-values-templating-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/values-templating -o build -a $(ARCH)
 
 ## NOTE: Requires an existing cluster or the env var APPLIANCE_MODE=true

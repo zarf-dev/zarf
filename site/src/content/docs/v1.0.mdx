@@ -9,6 +9,8 @@ import Timeline from "@components/Timeline.astro";
 
 Zarf is happy to announce `v1.0.0`. This milestone marks our commitment to stable releases, backward compatibility, and long-term support.
 
+Users should expect upgrading to v1.0 to be straightforward. However, v1.0 stores package secrets in a format that earlier CLI versions cannot read. Operators who share a cluster should coordinate their upgrades.
+
 ## v1beta1 Package Schema
 
 A package schema defines the fields and structure of the `zarf.yaml` package definition. Zarf `v1.0.0` introduces a new version of that format, `v1beta1`. It introduces reusable [published components](/commands/zarf_component_publish/) and a dedicated [templating workflow](/commands/zarf_dev_template/). The new format removes several deprecated features from the existing schema, `v1alpha1`. The `v1beta1` schema provides a migration path for each removed feature, improving usability, security, or performance. The [`v1alpha1` to `v1beta1` migration guide](/best-practices/v1alpha1-to-v1beta1/) provides a detailed list of changes and instructions for updating existing package definitions.
@@ -29,7 +31,7 @@ With the release of `v1.0.0`, Zarf will log a warning when `v1alpha1` packages a
   ]}
 />
 
-Package removal will continue to work without a feature flag until `v1alpha1` is fully unsupported. 
+Package removal will continue to work without a feature flag until `v1alpha1` is fully unsupported.
 
 ## Init Package
 

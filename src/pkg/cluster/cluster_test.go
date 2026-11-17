@@ -1088,3 +1088,37 @@ func TestIgnoreExistingNamespacesForAgent(t *testing.T) {
 		require.ErrorContains(t, c.ignoreExistingNamespacesForAgent(ctx), "unable to mark the namespace app as ignored by Zarf Agent")
 	})
 }
+
+func TestInitStateAgentMutationPolicy(t *testing.T) {
+	t.Parallel()
+	for _, tt := range []struct {
+		name     string
+		existing state.MutationPolicy
+		option   state.MutationPolicy
+		want     state.MutationPolicy
+	}{
+		{"new agent defaults to all", "", "", state.MutationPolicyAll},
+		{"explicit labeled", "", state.MutationPolicyLabeled, state.MutationPolicyLabeled},
+		{"existing agent without policy defaults to all", "", "", state.MutationPolicyAll},
+		{"preserve labeled", state.MutationPolicyLabeled, "", state.MutationPolicyLabeled},
+		{"explicit all overrides labeled", state.MutationPolicyLabeled, state.MutationPolicyAll, state.MutationPolicyAll},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			existing := &state.State{AgentInfo: state.AgentInfo{MutationPolicy: tt.existing}}
+			if tt.name == "new agent defaults to all" || tt.name == "explicit labeled" {
+				existing = nil
+			} else {
+				certs, err := pki.GeneratePKI(state.ZarfAgentHost)
+				require.NoError(t, err)
+				existing.AgentInfo.TLS = certs
+			}
+			c := newFakeInitStateCluster(t.Context(), t, existing)
+			got, err := c.InitState(t.Context(), InitStateOptions{
+				InternalServices:    state.NewServiceSet(state.AgentKey),
+				AgentMutationPolicy: tt.option,
+			})
+			require.NoError(t, err)
+			require.Equal(t, tt.want, got.AgentInfo.MutationPolicy)
+		})
+	}
+}
