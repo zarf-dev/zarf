@@ -2,7 +2,7 @@
 
 First off, thanks so much for wanting to help out! :tada:
 
-This document describes the steps and requirements for contributing a bug fix or feature in a Pull Request to Zarf! If you have any questions about the process or the pull request you are working on feel free to reach out in the [Zarf Kubernetes Slack Channel](https://kubernetes.slack.com/archives/C03B6BJAUJ3). The doc also details a bit about the governance structure of the project.
+This document describes the steps and requirements for contributing a bug fix or feature in a Pull Request to Zarf! If you have any questions about the process or the pull request you are working on feel free to reach out in the [Zarf OpenSSF Slack Channel](https://openssf.slack.com/archives/C07AKUMBDMJ). The doc also details a bit about the governance structure of the project.
 
 ## Developer Experience
 
@@ -70,7 +70,6 @@ Zarf maintainers will require one (1) core team review before merge. See the (co
 1. Create an issue or find a relevant unassigned issue. Before starting implementation, the issue must be assigned to you and its status on the project board must be Ready
    - If the issue isn't Ready, comment to clarify ambiguous behavior and resolve open questions.
    - Comment to request assignment.
-   - If you have any questions as you work through the code, reach out in the [Zarf OpenSSF Slack Channel](https://openssf.slack.com/archives/C07AKUMBDMJ).
 1. :key: Set up your Git config to GPG sign all commits. [Here's some documentation on how to set it up](https://docs.github.com/en/authentication/managing-commit-signature-verification/signing-commits). You won't be able to merge your PR if you have any unverified commits.
 1. In addition to signing your commits, you will also need to sign-off on commits stating you agree to the contribution terms.
    - This can be done by using `-s` with your git commit - adding "Signed-off-by" line automatically.
