@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   verify-commit-signatures:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     timeout-minutes: 5
     permissions:
       contents: read
@@ -23,8 +23,7 @@ jobs:
     steps:
       - name: Check PR commit signatures
         if: github.event_name == 'pull_request_target'
-        # TODO: pin to the commit SHA once the action is merged into zarf-dev/actions.
-        uses: zarf-dev/actions/verify-commit-signatures@main
+        uses: zarf-dev/actions/verify-commit-signatures@1d371c5843ef2ddb9d3eb1deb91e2c8cdca937df
 
       - name: Report merge queue status
         if: github.event_name == 'merge_group'
