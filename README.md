@@ -45,7 +45,7 @@ Zarf eliminates the [complexity of airgap software delivery](https://www.itopsti
 
 ## 🛠️ Configurable Features
 
-- Customizable [variables and package templates](https://docs.zarf.dev/ref/values/) with defaults and user prompting
+- Customizable [package values](https://docs.zarf.dev/ref/package-values/) and Go templating
 - [Composable packages](https://docs.zarf.dev/ref/components/#component-imports) to include multiple sub-packages/components
 - Component-level OS/architecture filtering
 
@@ -65,7 +65,7 @@ To discover more about Zarf and explore its features, please visit [docs.zarf.de
 - [packages](https://docs.zarf.dev/ref/packages)
 - [components](https://docs.zarf.dev/ref/components)
 - [actions](https://docs.zarf.dev/ref/actions)
-- [variables](https://docs.zarf.dev/ref/values)
+- [package values](https://docs.zarf.dev/ref/package-values/)
 - [SBOMs](https://docs.zarf.dev/ref/sboms)
 - and more!
 
