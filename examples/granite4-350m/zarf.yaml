@@ -1,0 +1,37 @@
+apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: granite4-350m
+  version: 1.0.0
+  description: Package IBM Granite 4.0 350M for disconnected import into an existing Ollama runtime
+  annotations:
+    org.opencontainers.image.source: https://huggingface.co/ibm-granite/granite-4.0-350m
+    org.opencontainers.image.revision: bd8a1497065c0d6ba1ef19af6b0d2b14bacf71c2
+    org.opencontainers.image.licenses: Apache-2.0
+
+attachments:
+  readme: README.md
+  model-card: MODEL_CARD.md
+
+components:
+  - name: granite4-350m
+    description: Stage the pinned GGUF and import it into an existing Ollama runtime
+    files:
+      - source: https://registry.ollama.ai/v2/library/granite4/blobs/sha256:431e956cac90a7e4d36a9b37bb086c413491c598bb51f90ada8e0c75d0219645
+        destination: .zarf/models/granite4-350m/granite4-350m.gguf
+        checksum: sha256:431e956cac90a7e4d36a9b37bb086c413491c598bb51f90ada8e0c75d0219645
+      - source: https://registry.ollama.ai/v2/library/granite4/blobs/sha256:0f6ec9740c765c3fb0dc38fe25f4d283c3bc1ede32b76f81c3a971daef20f76c
+        destination: .zarf/models/granite4-350m/template.tmpl
+        checksum: sha256:0f6ec9740c765c3fb0dc38fe25f4d283c3bc1ede32b76f81c3a971daef20f76c
+      - source: https://registry.ollama.ai/v2/library/granite4/blobs/sha256:cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30
+        destination: .zarf/models/granite4-350m/LICENSE
+        checksum: sha256:cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30
+      - source: scripts/import-model.sh
+        destination: .zarf/models/granite4-350m/import-model.sh
+        executable: true
+    actions:
+      onDeploy:
+        onSuccess:
+          - cmd: ./.zarf/models/granite4-350m/import-model.sh
+            description: Import the pinned Granite GGUF into Ollama
+            maxTotalSeconds: 600
