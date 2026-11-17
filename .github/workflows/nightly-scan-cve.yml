@@ -86,6 +86,7 @@ jobs:
           path: |
             build/grype.json
             build/grype.sarif
+            build/govulncheck.sarif
             build/grype-summary.md
 
       - name: Send trigger to Slack on scheduled workflow failure
