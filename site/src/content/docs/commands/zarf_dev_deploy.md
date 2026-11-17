@@ -12,7 +12,7 @@ Creates and deploys a Zarf package from a given directory
 
 ### Synopsis
 
-Creates and deploys a Zarf package from a given directory, setting options like YOLO mode for faster iteration.
+Creates and deploys a Zarf package from a given directory, using `connected` mode by default for faster iteration.
 
 ```
 zarf dev deploy [flags]

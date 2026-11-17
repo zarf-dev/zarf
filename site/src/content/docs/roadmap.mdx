@@ -89,7 +89,7 @@ Several documentation gaps are being addressed ahead of v1.0.0:
 A set of improvements targeting the experience of operators deploying and managing packages:
 
 - **Agent mutation selection** ([#4419](https://github.com/zarf-dev/zarf/issues/4419)): Giving users more control over which resources the Zarf agent mutates during deployment.
-- **Connected mode** ([#4580](https://github.com/zarf-dev/zarf/issues/4580)): A `--connected` flag for `zarf package deploy` that allows the same package to be deployed in connected environments without mirroring images or repositories. This also paves the way for removing the `yolo` construct from the v1beta1 schema.
+- **Connected mode** ([#4580](https://github.com/zarf-dev/zarf/issues/4580)): A `--connected` flag for `zarf package deploy` that allows the same package to be deployed in connected environments without mirroring images or repositories. The `metadata.yolo` configuration is deprecated in v1alpha1 and removed in v1beta1; use `--connected` instead.
 - **Git fallback** ([#2772](https://github.com/zarf-dev/zarf/issues/2772)): Improve integrations with Go Git libraries so the fallback shell out to host `git` can be removed.
 - **Package state collisions and conflicts** ([#3629](https://github.com/zarf-dev/zarf/issues/3629)): Better detection and handling of conflicting state when multiple packages interact with overlapping resources.
 

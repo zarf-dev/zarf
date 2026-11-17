@@ -1,3 +1,4 @@
+# DEPRECATED: This package uses the `metadata.yolo` field which is no longer recommended. Use `zarf package deploy --connected` instead.
 kind: ZarfPackageConfig
 metadata:
   name: yolo
@@ -11,8 +12,5 @@ components:
       - name: multi-games
         namespace: zarf-yolo-example
         files:
-          - ../dos-games/manifests/deployment.yaml
-          - ../dos-games/manifests/service.yaml
-          
-documentation:
-  readme: readme.md
+          - manifests/deployment.yaml
+          - manifests/service.yaml
