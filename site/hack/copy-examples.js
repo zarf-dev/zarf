@@ -94,7 +94,7 @@ import { LinkCard, CardGrid } from '@astrojs/starlight/components';
 }
 
 // CLI entry: generate the current checkout's examples (used by prebuild/predev).
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (process.argv[1] && __filename === path.resolve(process.argv[1])) {
   await generateExamples().catch((err) => {
     console.error(err);
     process.exit(1);

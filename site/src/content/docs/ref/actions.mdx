@@ -51,13 +51,13 @@ Within each of the `action` lists (`before`, `onSuccess`, and `onFailure`), the 
 - `silent` - whether to mute the realtime output of the command, output is always shown at the end on failure (default: `false`).
 - `retries` - the maximum number of times to retry the command if it fails (default: `0` - no retries).
 - `env` - an array of environment variables to set for the command in the form of `name=value`.
-- `setValues` - store the command’s standard output under one or more value keys for subsequent actions or components (`onDeploy` and `onRemove` only). Each entry specifies a `key` and an optional `type` of `string` (default), `json`, or `yaml`.
+- `setValues` - store the command's standard output under one or more value keys for subsequent actions or components (`onDeploy` and `onRemove` only). Each entry specifies a `key` and an optional `type` of `string` (default), `json`, or `yaml`.
 - `enableTemplating` - render the command using package values and other template data (`onDeploy` and `onRemove` only; default: `false`).
 - `shell` - set a preferred shell for the command to run in for a particular operating system (default is `sh` for macOS/Linux and `powershell` for Windows).
 
 :::note
 
-By default, multi-line `cmd` blocks will fail if one of the lines errors out; this is analogous to setting `set -e` in a shell script, as documented in the [GNU bash docs](https://www.gnu.org/software/bash/manual/html_node/The-Set-Builtin.html).
+By default, multi-line `cmd` blocks will fail if one of the lines errors out; this is analogous to setting `set -e` in a shell script, as documented in the [GNU bash docs](https://tiswww.case.edu/php/chet/bash/bashref.html#The-Set-Builtin).
 
 :::
 

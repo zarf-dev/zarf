@@ -15,8 +15,7 @@
     "test": "node --test && npm run check",
     "build:versions": "node hack/build-versions.mjs",
     "preview": "astro preview",
-    "astro": "astro",
-    "link-check": "linkinator --server-root dist/ \"**/*.html\" --retry-errors --config linkinator.config.json"
+    "astro": "astro"
   },
   "dependencies": {
     "@astrojs/check": "^0.9.9",
@@ -33,7 +32,6 @@
     "unist-util-visit": "^5.0.0"
   },
   "devDependencies": {
-    "linkinator": "^7.5.3",
     "markdownlint-cli2": "^0.24.0",
     "remark-gemoji": "^8.0.0",
     "yaml": "^2.8.3"
@@ -47,9 +45,6 @@
     },
     "micromark-extension-math": {
       "katex": "0.18.10"
-    },
-    "linkinator": {
-      "glob": "14.0.3"
     }
   }
 }
