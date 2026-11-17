@@ -1,7 +1,5 @@
 This example shows you how to deploy [Longhorn](https://longhorn.io/) using Zarf.
 
-The package uses `zarf.dev/v1beta1`; use a Zarf CLI with v1beta1 support to create and deploy it. See the [migration guide](https://docs.zarf.dev/best-practices/v1alpha1-to-v1beta1/) when updating an existing copy of this example.
-
 Before deploying Longhorn, make sure your nodes are configured with the [Longhorn Installation Requirements](https://longhorn.io/docs/latest/deploy/install/#installation-requirements). You can verify this automatically with Longhorn's own [preflight checker](https://github.com/longhorn/cli): install `longhornctl` and run `longhornctl check preflight --kubeconfig=<path-to-your-kubeconfig>` against the target cluster before deploying this package. It requires a real kubeconfig (it self-deploys its own short-lived DaemonSet across the cluster to run the checks), so it isn't included as a Zarf component here. Run it from your workstation as a pre-deploy step instead.
 
 You will need [open-iscsi](https://longhorn.io/docs/latest/deploy/install/#installing-open-iscsi) installed.
