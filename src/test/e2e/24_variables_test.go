@@ -18,7 +18,7 @@ func TestVariables(t *testing.T) {
 
 	evilSrc := filepath.Join("src", "test", "packages", "24-evil-variables")
 	evilPath := fmt.Sprintf("zarf-package-evil-variables-%s.tar.zst", e2e.Arch)
-	src := filepath.Join("examples", "variables")
+	src := filepath.Join("src", "test", "packages", "24-variables")
 
 	tfPath := "modified-config.json"
 
@@ -95,7 +95,7 @@ func TestVariables(t *testing.T) {
 	require.NoError(t, err, "unable to get nginx-extra configmap")
 	require.Equal(t, "extra-value", string(extraOut))
 
-	// Remove the variables example
+	// Remove the variables package
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", path, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
