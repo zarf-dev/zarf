@@ -67,7 +67,7 @@ Zarf maintainers will require one (1) core team review before merge. See the (co
 
 Issues primarily move through the following statuses: `triage` → `accepted` → `ready`. Issues begin in `triage`. A Maintainer or Reviewer can move an issue to `accepted` once its scope and value to the project are clear. Once prioritized and assigned, the issue moves to `ready`.
 
-To help move an issue forward, from `triage` to `ready`, ask clarifying questions or clear up undefined behavior.
+To help move an issue forward, from `triage` to `accepted`, ask clarifying questions or clear up undefined behavior.
 
 When creating or scoping issues, do not use AI to generate project feedback or use cases. Feedback grounded in experience with the project is extremely helpful to maintainers, while AI output can create noise that distracts from higher priorities.
 
