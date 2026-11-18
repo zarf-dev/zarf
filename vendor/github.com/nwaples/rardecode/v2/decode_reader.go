@@ -111,39 +111,24 @@ func (d *decodeReader) writeByte(c byte) {
 // copyBytes copies len bytes at off distance from the end
 // to the end of the window.
 func (d *decodeReader) copyBytes(length, offset int) {
-	length %= d.size
-	if length < 0 {
-		length += d.size
-	}
-
+	length = (d.size + length) % d.size
+	wend := min(d.w+length, d.size)
 	i := (d.w - offset) % d.size
 	if i < 0 {
+		// offset can exceed d.size+d.w for a corrupt archive,
+		// which makes the modulo negative; wrap it back into
+		// the circular window so we never index out of range.
 		i += d.size
 	}
-	iend := i + length
-	if i > d.w {
-		if iend > d.size {
-			iend = d.size
-		}
-		n := copy(d.win[d.w:], d.win[i:iend])
-		d.w += n
-		length -= n
-		if length == 0 {
-			return
-		}
-		iend = length
+	if i == d.w {
+		d.w = wend
+		return
+	} else if i > d.w {
+		d.w += copy(d.win[d.w:wend], d.win[i:])
 		i = 0
 	}
-	if iend <= d.w {
-		n := copy(d.win[d.w:], d.win[i:iend])
-		d.w += n
-		return
-	}
-	for length > 0 && d.w < d.size {
-		d.win[d.w] = d.win[i]
-		d.w++
-		i++
-		length--
+	for d.w < wend {
+		d.w += copy(d.win[d.w:wend], d.win[i:d.w])
 	}
 }
 
@@ -325,6 +310,41 @@ func (d *decodeReader) ReadByte() (byte, error) {
 	b := d.outbuf[0]
 	d.outbuf = d.outbuf[1:]
 	return b, nil
+}
+
+func (d *decodeReader) writeToN(w io.Writer, n int64) (int64, error) {
+	if n == 0 {
+		return 0, nil
+	}
+	var tot int64
+	var err error
+	for tot != n && err == nil {
+		if len(d.outbuf) == 0 {
+			err = d.decode()
+			if err != nil {
+				break
+			}
+		}
+		buf := d.outbuf
+		if n > 0 {
+			todo := n - tot
+			if todo < int64(len(buf)) {
+				buf = buf[:todo]
+			}
+		}
+		var l int
+		l, err = w.Write(buf)
+		tot += int64(l)
+		d.outbuf = d.outbuf[l:]
+	}
+	if n < 0 && err == io.EOF {
+		err = nil
+	}
+	return tot, err
+}
+
+func (d *decodeReader) WriteTo(w io.Writer) (int64, error) {
+	return d.writeToN(w, -1)
 }
 
 func (d *decodeReader) nextFile() (*fileBlockList, error) {

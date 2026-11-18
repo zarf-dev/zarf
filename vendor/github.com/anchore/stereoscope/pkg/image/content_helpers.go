@@ -11,6 +11,9 @@ import (
 // fetchReaderByPath is a common helper function for resolving the file contents for a path from the file
 // catalog relative to the given tree.
 func fetchReaderByPath(ft filetree.Reader, fileCatalog FileCatalogReader, path file.Path) (io.ReadCloser, error) {
+	if ft == nil {
+		return nil, fmt.Errorf("no tree to resolve %s against", path)
+	}
 	exists, refVia, err := ft.File(path, filetree.FollowBasenameLinks)
 	if err != nil {
 		return nil, err

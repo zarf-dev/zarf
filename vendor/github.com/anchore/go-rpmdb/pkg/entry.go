@@ -16,6 +16,10 @@ const (
 
 	// ref. https://github.com/rpm-software-management/rpm/blob/rpm-4.14.3-release/lib/header.c#L113
 	headerMaxbytes = 256 * 1024 * 1024
+
+	// ref. https://github.com/rpm-software-management/rpm/blob/rpm-4.14.3-release/lib/header_internal.h
+	headerTagsMax = 0x0000ffff
+	headerDataMax = 0x0fffffff
 )
 
 var (
@@ -113,13 +117,20 @@ func hdrblobInit(data []byte) (*hdrblob, error) {
 	if err = binary.Read(reader, binary.BigEndian, &blob.dl); err != nil {
 		return nil, fmt.Errorf("invalid data length: %w", err)
 	}
+
+	// bound il and dl before they size anything: past these limits the int32 math below overflows and
+	// make() below is asked for up to 32GB.
+	// ref. https://github.com/rpm-software-management/rpm/blob/rpm-4.14.3-release/lib/header.c (hdrblobVerifyLengths)
+	if hdrchkRange(headerTagsMax, blob.il) || blob.il < 1 {
+		return nil, fmt.Errorf("hdr tags: BAD, no. of tags(%d) out of range", blob.il)
+	}
+	if hdrchkRange(headerDataMax, blob.dl) {
+		return nil, fmt.Errorf("hdr data: BAD, no. of bytes(%d) out of range", blob.dl)
+	}
+
 	blob.dataStart = int32(unsafe.Sizeof(blob.il)) + int32(unsafe.Sizeof(blob.dl)) + blob.il*int32(unsafe.Sizeof(entryInfo{}))
 	blob.pvlen = int32(unsafe.Sizeof(blob.il)) + int32(unsafe.Sizeof(blob.dl)) + blob.il*int32(unsafe.Sizeof(entryInfo{})) + blob.dl
 	blob.dataEnd = blob.dataStart + blob.dl
-
-	if blob.il < 1 {
-		return nil, errors.New("region no tags error")
-	}
 
 	blob.peList = make([]entryInfo, blob.il)
 	for i := 0; i < int(blob.il); i++ {
@@ -164,6 +175,12 @@ func hdrblobImport(blob hdrblob, data []byte) ([]indexEntry, error) {
 		ril := blob.ril
 		if entry.Offset == 0 {
 			ril = blob.il
+		}
+
+		// a well-formed trailer can still encode ril = 0, which upstream tolerates as an empty loop
+		// but would be an inverted slice here. The upper bound is already enforced by hdrblobVerifyRegion.
+		if ril < 1 || ril > int32(len(blob.peList)) {
+			return nil, fmt.Errorf("invalid region index length: %d", ril)
 		}
 
 		// ref. https://github.com/rpm-software-management/rpm/blob/rpm-4.14.3-release/lib/header.c#L917
@@ -296,6 +313,10 @@ func hdrblobVerifyRegion(blob *hdrblob, data []byte) error {
 	}
 	blob.rdl = regionEnd + REGION_TAG_COUNT - blob.dataStart
 
+	// validate the trailer itself, not the region entry that points at it
+	einfo = ei2h(trailer)
+	einfo.Offset = -einfo.Offset
+
 	if regionTag == RPMTAG_HEADERSIGNATURES && einfo.Tag == RPMTAG_HEADERIMAGE {
 		einfo.Tag = RPMTAG_HEADERSIGNATURES
 	}
@@ -304,8 +325,6 @@ func hdrblobVerifyRegion(blob *hdrblob, data []byte) error {
 		return errors.New("invalid region trailer")
 	}
 
-	einfo = ei2h(trailer)
-	einfo.Offset = -einfo.Offset
 	blob.ril = einfo.Offset / int32(unsafe.Sizeof(blob.peList[0]))
 	if (einfo.Offset%REGION_TAG_COUNT) != 0 || hdrchkRange(blob.il, blob.ril) || hdrchkRange(blob.dl, blob.rdl) {
 		return fmt.Errorf("invalid region size, region %d", regionTag)
@@ -412,7 +431,12 @@ func strtaglen(data []byte, count uint32, start, dataEnd int32) int {
 		if offset > int32(len(data)) {
 			return -1
 		}
-		length += bytes.IndexByte(data[offset:dataEnd], byte(0x00)) + 1
+		idx := bytes.IndexByte(data[offset:dataEnd], byte(0x00))
+		if idx < 0 {
+			// fewer terminators than count claims
+			return -1
+		}
+		length += idx + 1
 	}
 	return length
 }

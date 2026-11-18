@@ -5,6 +5,7 @@ import (
 	"io"
 	"sync"
 
+	"github.com/anchore/stereoscope/internal/log"
 	"github.com/anchore/stereoscope/pkg/file"
 	"github.com/anchore/stereoscope/pkg/filetree"
 )
@@ -57,6 +58,26 @@ func (c *FileCatalog) addImageReferences(id file.ID, l *Layer, opener file.Opene
 	}
 	if opener != nil {
 		c.openerByID[id] = opener
+	}
+}
+
+// remove drops the given references from the catalog, for nodes an image read removed from the only tree that
+// held them, so the catalog keeps no entry that no tree reaches.
+func (c *FileCatalog) remove(refs ...file.Reference) {
+	remover, _ := c.Index.(interface{ Remove(file.Reference) })
+	if remover == nil && len(refs) > 0 {
+		// NewFileCatalog always uses an index that can remove, so this is a programming error: the index would keep
+		// entries whose opener is gone
+		log.WithFields("index", fmt.Sprintf("%T", c.Index)).Warn("file catalog index cannot remove entries, it will keep stale ones")
+	}
+	c.Lock()
+	defer c.Unlock()
+	for _, r := range refs {
+		delete(c.layerByID, r.ID())
+		delete(c.openerByID, r.ID())
+		if remover != nil {
+			remover.Remove(r)
+		}
 	}
 }
 

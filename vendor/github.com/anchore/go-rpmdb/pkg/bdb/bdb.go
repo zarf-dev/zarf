@@ -24,11 +24,17 @@ type BerkeleyDB struct {
 	HashMetadata *HashMetadataPage
 }
 
-func Open(path string) (*BerkeleyDB, error) {
+func Open(path string) (_ *BerkeleyDB, err error) {
 	file, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
+	defer func() {
+		// the caller only gets a handle to close on success (and probing the wrong format is expected to fail)
+		if err != nil {
+			_ = file.Close()
+		}
+	}()
 
 	// read just a bit in to parse at least the metadata...
 	metadataBuff := make([]byte, 512)

@@ -139,8 +139,7 @@ func (d *lz29Decoder) decodeLength(i int) error {
 	d.length = lengthBase[i] + 2
 	bits := lengthExtraBits[i]
 	if bits > 0 {
-		var n int
-		n, err = d.br.readBits(bits)
+		n, err := d.br.readBits(bits)
 		if err != nil {
 			return err
 		}

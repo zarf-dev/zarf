@@ -5,6 +5,8 @@
 This is a pure-Go SQLite driver for Golang's native [database/sql](https://pkg.go.dev/database/sql) package.
 The driver has [Go-based implementation of SQLite](https://gitlab.com/cznic/sqlite) embedded in itself (so, you don't need to install SQLite separately)
 
+This is a fork of [cznic/sqlite](https://gitlab.com/cznic/sqlite) with changes to make it compatible with [GORM](https://github.com/go-gorm/gorm).
+
 # Usage
 
 ## Example

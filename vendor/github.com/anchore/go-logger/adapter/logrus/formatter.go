@@ -3,7 +3,6 @@ package logrus
 import (
 	"bytes"
 	"fmt"
-	"io"
 	"os"
 	"regexp"
 	"sort"
@@ -14,6 +13,8 @@ import (
 	"github.com/mgutz/ansi"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/term"
+
+	iface "github.com/anchore/go-logger"
 )
 
 /*
@@ -83,10 +84,11 @@ type compiledColorScheme struct {
 }
 
 type TextFormatter struct {
-	// Set to true to bypass checking for a TTY before outputting colors.
+	// Set to true to bypass checking for a TTY (or TerminalWriter) before outputting colors.
 	ForceColors bool
 
-	// Force disabling colors. For a TTY colors are enabled by default.
+	// Force disabling colors. For a TTY (or a TerminalWriter reporting true) colors are enabled by default. The
+	// terminal check is made for every entry against the current output.
 	DisableColors bool
 
 	// Force formatted layout, even for non-TTY output.
@@ -126,9 +128,6 @@ type TextFormatter struct {
 	// Color scheme to use.
 	colorScheme *compiledColorScheme
 
-	// Whether the logger's out is to a terminal.
-	isTerminal bool
-
 	sync.Once
 }
 
@@ -156,17 +155,21 @@ func compileColorScheme(s *ColorScheme) *compiledColorScheme {
 	}
 }
 
-func (f *TextFormatter) init(entry *logrus.Entry) {
+func (f *TextFormatter) init() {
 	if len(f.QuoteCharacter) == 0 {
 		f.QuoteCharacter = "\""
 	}
-	if entry.Logger != nil {
-		f.isTerminal = f.checkIfTerminal(entry.Logger.Out)
-	}
 }
 
-func (f *TextFormatter) checkIfTerminal(w io.Writer) bool {
-	switch v := w.(type) {
+// checkIfTerminal is evaluated for every entry (not cached) since the output may be swapped at runtime (e.g. to a
+// TUI buffer and back to stderr).
+func (f *TextFormatter) checkIfTerminal(entry *logrus.Entry) bool {
+	if entry.Logger == nil {
+		return false
+	}
+	switch v := entry.Logger.Out.(type) {
+	case iface.TerminalWriter:
+		return v.IsTerminal()
 	case *os.File:
 		return term.IsTerminal(int(v.Fd()))
 	default:
@@ -197,16 +200,17 @@ func (f *TextFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 
 	prefixFieldClashes(entry.Data)
 
-	f.Do(func() { f.init(entry) })
+	f.Do(f.init)
 
-	isFormatted := f.ForceFormatting || f.isTerminal
+	isTerminal := f.checkIfTerminal(entry)
+	isFormatted := f.ForceFormatting || isTerminal
 
 	timestampFormat := f.TimestampFormat
 	if timestampFormat == "" {
 		timestampFormat = defaultTimestampFormat
 	}
 	if isFormatted {
-		isColored := (f.ForceColors || f.isTerminal) && !f.DisableColors
+		isColored := (f.ForceColors || isTerminal) && !f.DisableColors
 		var colorScheme *compiledColorScheme
 		if isColored {
 			if f.colorScheme == nil {

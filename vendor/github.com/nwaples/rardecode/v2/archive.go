@@ -1,6 +1,7 @@
 package rardecode
 
 import (
+	"encoding/binary"
 	"errors"
 	"hash"
 )
@@ -37,20 +38,19 @@ func (b *readBuf) byte() byte {
 }
 
 func (b *readBuf) uint16() uint16 {
-	v := uint16((*b)[0]) | uint16((*b)[1])<<8
+	v := binary.LittleEndian.Uint16(*b)
 	*b = (*b)[2:]
 	return v
 }
 
 func (b *readBuf) uint32() uint32 {
-	v := uint32((*b)[0]) | uint32((*b)[1])<<8 | uint32((*b)[2])<<16 | uint32((*b)[3])<<24
+	v := binary.LittleEndian.Uint32(*b)
 	*b = (*b)[4:]
 	return v
 }
 
 func (b *readBuf) uint64() uint64 {
-	v := uint64((*b)[0]) | uint64((*b)[1])<<8 | uint64((*b)[2])<<16 | uint64((*b)[3])<<24 |
-		uint64((*b)[4])<<32 | uint64((*b)[5])<<40 | uint64((*b)[6])<<48 | uint64((*b)[7])<<56
+	v := binary.LittleEndian.Uint64(*b)
 	*b = (*b)[8:]
 	return v
 }
@@ -62,20 +62,12 @@ func (b *readBuf) bytes(n int) []byte {
 }
 
 func (b *readBuf) uvarint() uint64 {
-	var x uint64
-	var s uint
-	for i, n := range *b {
-		if n < 0x80 {
-			*b = (*b)[i+1:]
-			return x | uint64(n)<<s
-		}
-		x |= uint64(n&0x7f) << s
-		s += 7
-
+	n, cnt := binary.Uvarint(*b)
+	if cnt == 0 {
+		cnt = len(*b)
 	}
-	// if we run out of bytes, just return 0
-	*b = (*b)[len(*b):]
-	return 0
+	*b = (*b)[cnt:]
+	return n
 }
 
 // fileBlockHeader represents a file block in a RAR archive.
@@ -96,6 +88,7 @@ type fileBlockHeader struct {
 	decVer    int              // decoder to use for file
 	key       []byte           // key for AES, non-empty if file encrypted
 	iv        []byte           // iv for AES, non-empty if file encrypted
+	errs      []error          // errors to return when trying to read file body
 	FileHeader
 }
 

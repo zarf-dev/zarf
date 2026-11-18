@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2015, 2025
+// Copyright IBM Corp. 2015, 2026
 // SPDX-License-Identifier: MPL-2.0
 
 package getter
@@ -133,6 +133,10 @@ func (g *GCSGetter) Get(dst string, u *url.URL) error {
 			if err != nil {
 				return err
 			}
+			if containsDotDot(objDst) {
+				return fmt.Errorf("key in bucket contains path traversal out of the directory")
+			}
+
 			objDst = filepath.Join(dst, objDst)
 			// Download the matching object.
 			err = g.getObject(ctx, client, objDst, bucket, obj.Name, "")

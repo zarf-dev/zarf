@@ -3,6 +3,8 @@ package filetree
 import (
 	"regexp"
 	"strings"
+
+	"github.com/bmatcuk/doublestar/v4"
 )
 
 const (
@@ -60,6 +62,17 @@ func (s searchRequest) String() string {
 }
 
 func parseGlob(glob string) []searchRequest {
+	if strings.Contains(glob, `\`) && !exactMatch(glob) {
+		// escapes are only understood by doublestar, while the cleanup and basename parsing below read a glob a
+		// character at a time and would take an escaped character for a live one. Match the whole glob instead.
+		return []searchRequest{
+			{
+				searchBasis: searchByGlob,
+				glob:        glob,
+			},
+		}
+	}
+
 	glob = cleanGlob(glob)
 
 	if exactMatch(glob) {
@@ -170,15 +183,15 @@ func parseGlobBasename(basenameInput, glob string) []searchRequest {
 }
 
 func parseBasenameAltAndClassGlobSections(basenameInput, glob string) []searchRequest {
-	// TODO: process escape sequences
-
 	altStartCount := strings.Count(basenameInput, "{")
 	altEndCount := strings.Count(basenameInput, "}")
 	classStartCount := strings.Count(basenameInput, "[")
 	classEndCount := strings.Count(basenameInput, "]")
 
-	if altStartCount != altEndCount || classStartCount != classEndCount {
-		// imbalanced braces, this is not a valid glob relative to just the basename
+	// imbalanced braces or invalid syntax means this is not a valid glob relative to just the basename (e.g. the split
+	// landed inside a group). Both checks are needed: a stray closing bracket is literal to doublestar but still means
+	// a bad split.
+	if altStartCount != altEndCount || classStartCount != classEndCount || !doublestar.ValidatePattern(basenameInput) {
 		return []searchRequest{
 			{
 				searchBasis: searchByGlob,

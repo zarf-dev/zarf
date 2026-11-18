@@ -16,8 +16,7 @@ func (d *ppm29Decoder) init(br *rarBitReader) error {
 
 	var maxMB int
 	if reset {
-		var c byte
-		c, err = d.br.ReadByte()
+		c, err := d.br.ReadByte()
 		if err != nil {
 			return err
 		}
@@ -49,16 +48,15 @@ func (d *ppm29Decoder) readFilterData() ([]byte, error) {
 		return nil, err
 	}
 	n := int(c&7) + 1
-	if n == 7 {
-		var b byte
-		b, err = d.m.ReadByte()
+	switch n {
+	case 7:
+		b, err := d.m.ReadByte()
 		if err != nil {
 			return nil, err
 		}
 		n += int(b)
-	} else if n == 8 {
-		var b byte
-		b, err = d.m.ReadByte()
+	case 8:
+		b, err := d.m.ReadByte()
 		if err != nil {
 			return nil, err
 		}

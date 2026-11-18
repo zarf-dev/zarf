@@ -26,6 +26,7 @@ type SetupConfig struct {
 	postConstructs    []postConstruct
 	postRuns          []PostRun
 	mapExitCode       MapExitCode
+	noLogrusBridge    bool
 }
 
 func NewSetupConfig(id Identification) *SetupConfig {
@@ -91,6 +92,13 @@ func (c *SetupConfig) WithNoLogging() *SetupConfig {
 	c.LoggerConstructor = func(_ Config, _ redact.Store) (logger.Logger, error) {
 		return discard.New(), nil
 	}
+	return c
+}
+
+// WithoutLogrusBridge leaves logrus.StandardLogger() alone. By default its entries are forwarded to the application
+// logger and its own output is discarded, which is wrong for applications that log through it directly.
+func (c *SetupConfig) WithoutLogrusBridge() *SetupConfig {
+	c.noLogrusBridge = true
 	return c
 }
 

@@ -388,8 +388,11 @@ type parser struct {
 
 func newParser(pkgScope *Scope, path string, src []byte, record bool) *parser {
 	return &parser{
-		a:            newAnalyzer(),
-		budget:       parserBudget,
+		a: newAnalyzer(),
+		// The budget bounds pathological backtracking; for very large (e.g.
+		// machine-generated) files the fixed parserBudget is too low, so scale it
+		// with the source size while keeping parserBudget as the floor.
+		budget:       max(parserBudget, 16*len(src)),
 		fileScope:    newScope(pkgScope, FileScope),
 		packageScope: pkgScope,
 		path:         path,
@@ -569,11 +572,12 @@ func (p *parser) additiveExpression(preBlock bool) (r Expression) {
 
 // AliasDeclNode represents the production
 //
-//	AliasDecl = identifier "=" Type .
+//	AliasDecl = identifier [ TypeParameters ] "=" Type .
 type AliasDeclNode struct {
-	IDENT    Token
-	ASSIGN   Token
-	TypeNode Type
+	IDENT          Token
+	TypeParameters *TypeParametersNode
+	ASSIGN         Token
+	TypeNode       Type
 
 	visible
 }
@@ -592,20 +596,44 @@ func (n *AliasDeclNode) Position() (r token.Position) {
 
 func (p *parser) aliasDecl() (r *AliasDeclNode) {
 	var (
-		identTok  Token
-		assignTok Token
-		typeNode  Type
+		ok             bool
+		identTok       Token
+		typeParameters *TypeParametersNode
+		assignTok      Token
+		typeNode       Type
 	)
-	// ebnf.Sequence identifier "=" Type ctx [IDENT]
+	// ebnf.Sequence identifier [ TypeParameters ] "=" Type ctx [IDENT]
 	{
-		if p.peek(1) != ASSIGN {
+		switch p.peek(1) {
+		case ASSIGN:
+			// ok
+		case LBRACK:
+			// TypeParameters require an identifier after the '['. This does not
+			// disambiguate from, e.g., an ArrayType with a constant length 'type A
+			// [N]int', which is resolved by backtracking below.
+			if p.peek(2) != IDENT {
+				return nil
+			}
+		default:
 			return nil
 		}
 		ix := p.ix
 		// *ebnf.Name identifier ctx [IDENT]
 		identTok = p.expect(IDENT)
-		// *ebnf.Token "=" ctx [ASSIGN]
-		assignTok = p.expect(ASSIGN)
+		// *ebnf.Option [ TypeParameters ] ctx []
+		switch p.c() {
+		case LBRACK:
+			// *ebnf.Name TypeParameters ctx [LBRACK]
+			if typeParameters = p.typeParameters(); typeParameters == nil {
+				p.back(ix)
+				return nil
+			}
+		}
+		// *ebnf.Token "=" ctx []
+		if assignTok, ok = p.accept(ASSIGN); !ok {
+			p.back(ix)
+			return nil
+		}
 		// *ebnf.Name Type ctx []
 		switch p.c() {
 		case ARROW, CHAN, FUNC, IDENT, INTERFACE, LBRACK, LPAREN, MAP, MUL, STRUCT:
@@ -619,9 +647,10 @@ func (p *parser) aliasDecl() (r *AliasDeclNode) {
 		}
 	}
 	r = &AliasDeclNode{
-		IDENT:    identTok,
-		ASSIGN:   assignTok,
-		TypeNode: typeNode,
+		IDENT:          identTok,
+		TypeParameters: typeParameters,
+		ASSIGN:         assignTok,
+		TypeNode:       typeNode,
 	}
 	p.declare(p.sc, identTok, r, int32(p.ix), false)
 	return r
@@ -4608,13 +4637,14 @@ func (p *parser) mapType() *MapTypeNode {
 
 // MethodDeclNode represents the production
 //
-//	MethodDecl = "func" Receiver MethodName Signature [ FunctionBody ] .
+//	MethodDecl = "func" Receiver MethodName [ TypeParameters ] Signature [ FunctionBody ] .
 type MethodDeclNode struct {
-	FUNC         Token
-	Receiver     *ParametersNode
-	MethodName   Token
-	Signature    *SignatureNode
-	FunctionBody *FunctionBodyNode
+	FUNC           Token
+	Receiver       *ParametersNode
+	MethodName     Token
+	TypeParameters *TypeParametersNode
+	Signature      *SignatureNode
+	FunctionBody   *FunctionBodyNode
 }
 
 // Source implements Node.
@@ -4631,13 +4661,14 @@ func (n *MethodDeclNode) Position() (r token.Position) {
 
 func (p *parser) methodDecl() *MethodDeclNode {
 	var (
-		funcTok      Token
-		receiver     *ParametersNode
-		methodName   Token
-		signature    *SignatureNode
-		functionBody *FunctionBodyNode
+		funcTok        Token
+		receiver       *ParametersNode
+		methodName     Token
+		typeParameters *TypeParametersNode
+		signature      *SignatureNode
+		functionBody   *FunctionBodyNode
 	)
-	// ebnf.Sequence "func" Receiver MethodName Signature [ FunctionBody ] ctx [FUNC]
+	// ebnf.Sequence "func" Receiver MethodName [ TypeParameters ] Signature [ FunctionBody ] ctx [FUNC]
 	{
 		switch p.peek(1) {
 		case LPAREN:
@@ -4663,6 +4694,18 @@ func (p *parser) methodDecl() *MethodDeclNode {
 			p.back(ix)
 			return nil
 		}
+		// *ebnf.Option [ TypeParameters ] ctx []
+		switch p.c() {
+		case LBRACK:
+			// *ebnf.Name TypeParameters ctx [LBRACK]
+			if typeParameters = p.typeParameters(); typeParameters == nil {
+				goto _2
+			}
+		}
+		goto _3
+	_2:
+		typeParameters = nil
+	_3:
 		// *ebnf.Name Signature ctx []
 		switch p.c() {
 		case LPAREN:
@@ -4688,11 +4731,12 @@ func (p *parser) methodDecl() *MethodDeclNode {
 	_1:
 	}
 	return &MethodDeclNode{
-		FUNC:         funcTok,
-		Receiver:     receiver,
-		MethodName:   methodName,
-		Signature:    signature,
-		FunctionBody: functionBody,
+		FUNC:           funcTok,
+		Receiver:       receiver,
+		MethodName:     methodName,
+		TypeParameters: typeParameters,
+		Signature:      signature,
+		FunctionBody:   functionBody,
 	}
 }
 
@@ -5528,7 +5572,7 @@ func (p *parser) postStmt() Node {
 
 // PrimaryExprNode represents the production
 //
-//	PrimaryExpr = Operand | Conversion | MethodExpr { Selector | Index | Slice | TypeAssertion | Arguments } .
+//	PrimaryExpr = Operand | Conversion | MethodExpr { Selector | Index | Slice | TypeAssertion | Arguments | TypeArgs } .
 type PrimaryExprNode struct {
 	PrimaryExpr Expression
 	Postfix     Node
@@ -5624,7 +5668,7 @@ func (p *parser) primaryExpr(preBlock bool) (r Expression) {
 
 		r = item0
 
-		// *ebnf.Repetition { Selector | Index | Slice | TypeAssertion | Arguments } ctx []
+		// *ebnf.Repetition { Selector | Index | Slice | TypeAssertion | Arguments | TypeArgs } ctx []
 	_7:
 		{
 			var item Node
@@ -5633,9 +5677,10 @@ func (p *parser) primaryExpr(preBlock bool) (r Expression) {
 			var slice *SliceNode
 			var typeAssertion *TypeAssertionNode
 			var arguments Node
+			var typeArgs *TypeArgsNode
 			switch p.c() {
 			case LBRACK, LPAREN, PERIOD:
-				// ebnf.Alternative Selector | Index | Slice | TypeAssertion | Arguments ctx [LBRACK, LPAREN, PERIOD]
+				// ebnf.Alternative Selector | Index | Slice | TypeAssertion | Arguments | TypeArgs ctx [LBRACK, LPAREN, PERIOD]
 				switch p.c() {
 				case PERIOD: // 0 3
 					// *ebnf.Name Selector ctx [PERIOD]
@@ -5653,7 +5698,7 @@ func (p *parser) primaryExpr(preBlock bool) (r Expression) {
 					break
 				_10:
 					goto _8
-				case LBRACK: // 1 2
+				case LBRACK: // 1 2 5
 					// *ebnf.Name Index ctx [LBRACK]
 					if index = p.index(); index == nil {
 						goto _11
@@ -5668,6 +5713,15 @@ func (p *parser) primaryExpr(preBlock bool) (r Expression) {
 					item = slice
 					break
 				_12:
+					// *ebnf.Name TypeArgs ctx [LBRACK]
+					// Explicit instantiation of a generic method: a type argument
+					// list, e.g. 'x.m[T1, T2]', is not a valid Index or Slice.
+					if typeArgs = p.typeArgs(); typeArgs == nil {
+						goto _14
+					}
+					item = typeArgs
+					break
+				_14:
 					goto _8
 				case LPAREN: // 4
 					// *ebnf.Name Arguments ctx [LPAREN]

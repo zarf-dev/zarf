@@ -34,7 +34,9 @@ Also, checkout the [`examples`](./example_test.go) to get an idea of how this li
 |  >= v0.7.0, < v0.8.0  |         1.17+         |         1.0-1.4          |
 |       == v0.8.0       |         1.18+         |         1.0-1.5          |
 |       >= v0.9.0       |         1.20+         |         1.0-1.6          |
-|       >= 0.10.0       |         1.23+         |         1.0-1.6          |
+| >= v0.10.0, < v0.11.0 |         1.23+         |         1.0-1.6          |
+| >= v0.11.0, < v0.12.0 |         1.23+         |         1.0-1.7          |
+|      >= v0.12.0       |         1.25+         |         1.0-1.7          |
 
 We're aiming to support all [officially supported](https://golang.org/doc/devel/release.html#policy) Go versions, plus
 an additional older version.
@@ -52,8 +54,6 @@ Permission to modify and redistribute is granted under the terms of the Apache 2
 See the [LICENSE](./LICENSE) file for the full license.
 
 ## Contributing
-
-[![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#https://github.com/CycloneDX/cyclonedx-go)
 
 Pull requests are welcome. But please read the
 [CycloneDX contributing guidelines](https://github.com/CycloneDX/.github/blob/master/CONTRIBUTING.md) first.

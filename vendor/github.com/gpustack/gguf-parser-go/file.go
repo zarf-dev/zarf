@@ -388,7 +388,7 @@ func parseGGUFFile(fs []_GGUFFileReadSeeker, o _GGUFReadOptions) (_ *GGUFFile, e
 		}
 		gf.Header.Version = version
 
-		rd := _GGUFReader{v: version, o: o, f: f, bo: bo}
+		rd := _GGUFReader{v: version, o: o, f: f, bo: bo, size: f.Size}
 
 		// tensor count
 		var tensorCount uint64
@@ -478,7 +478,11 @@ func parseGGUFFile(fs []_GGUFFileReadSeeker, o _GGUFReadOptions) (_ *GGUFFile, e
 			if v, ok := gf.Header.MetadataKV.Get("general.alignment"); ok {
 				ag = v.ValueUint32()
 			}
-			padding = int64(ag) - (pds % int64(ag))
+			// A header that already ends on the alignment boundary needs no
+			// padding. Without the outer modulo this adds a whole alignment
+			// block, putting TensorDataStartOffset past where the data starts
+			// and understating ModelSize by the same amount.
+			padding = (int64(ag) - pds%int64(ag)) % int64(ag)
 		}
 		if len(fs) == 1 {
 			gf.Padding = padding
@@ -503,6 +507,29 @@ func parseGGUFFile(fs []_GGUFFileReadSeeker, o _GGUFReadOptions) (_ *GGUFFile, e
 		gf.SplitModelSizes = append(gf.SplitModelSizes, modelSize)
 	}
 
+	// tensor data consistency
+	//
+	// A tensor type identifies a block layout. A file written with a different
+	// layout under the same type id declares tensors whose bytes the file cannot
+	// hold, and llama.cpp refuses it with "failed to read tensor data". Reporting
+	// such a file as parsed tells a caller it can load something it cannot.
+	// Checked only for a single file, where every tensor is accounted for by one
+	// offset and one size.
+	if len(fs) == 1 && gf.TensorDataStartOffset >= 0 &&
+		uint64(gf.TensorDataStartOffset) <= uint64(gf.Size) {
+		held := uint64(gf.Size) - uint64(gf.TensorDataStartOffset)
+		if want := gf.TensorInfos.Bytes(); want > held {
+			return nil, fmt.Errorf(
+				"tensor data needs %d bytes but only %d follow the header: "+
+					"a tensor type's block layout does not match how the file was written",
+				want, held)
+		}
+	}
+
+	if err := gf.validateMetadata(); err != nil {
+		return nil, err
+	}
+
 	// model parameters
 	gf.ModelParameters = GGUFParametersScalar(gf.TensorInfos.Elements())
 
@@ -512,6 +539,83 @@ func parseGGUFFile(fs []_GGUFFileReadSeeker, o _GGUFReadOptions) (_ *GGUFFile, e
 	}
 
 	return &gf, nil
+}
+
+// validateMetadata refuses a file whose metadata llama.cpp refuses to load,
+// so that a caller gets an error instead of a confident answer about a file
+// that cannot run.
+func (gf *GGUFFile) validateMetadata() error {
+	// A file type of the wrong value type.
+	//
+	// llama.cpp reads "general.file_type" as a uint32 and throws
+	// "key general.file_type has wrong type" when the file declares another one, see
+	// https://github.com/ggml-org/llama.cpp/blob/b3c3b96a139d4ef1bdec926ac17aa040981cfc5d/src/llama-model-loader.cpp#L164-L171.
+	// Reading it here panics instead, which a caller cannot catch.
+	const fileTypeKey = "general.file_type"
+	if v, ok := gf.Header.MetadataKV.Get(fileTypeKey); ok && !v.ValueType.IsNumeric() {
+		return fmt.Errorf("metadata key %q holds a %v, but it must hold a number", fileTypeKey, v.ValueType)
+	}
+
+	// A projector that names no type.
+	//
+	// llama.cpp resolves the projector type from "clip.projector_type", then from
+	// the key of the modality it is loading, and refuses the load with
+	// "unknown projector type" when neither names one, see
+	// https://github.com/ggml-org/llama.cpp/blob/b3c3b96a139d4ef1bdec926ac17aa040981cfc5d/tools/mtmd/clip.cpp#L1255-L1278.
+	// The mmproj format that predates "clip.projector_type" carries no such key at all.
+	const architectureKey = "general.architecture"
+	v, ok := gf.Header.MetadataKV.Get(architectureKey)
+	isClip := ok && v.ValueType == GGUFMetadataValueTypeString && v.ValueString() == "clip"
+	if isClip {
+		if _, found := gf.Header.MetadataKV.Index(_GGUFClipProjectorTypeKeys); found == 0 {
+			return fmt.Errorf("the projector declares no type under any of %v, and llama.cpp cannot load it",
+				_GGUFClipProjectorTypeKeys)
+		}
+	}
+
+	// A projector key of the wrong type, a vision projector without the sizes
+	// llama.cpp requires, or a scale factor it refuses.
+	//
+	// llama.cpp reads these keys through gguf_get_val_bool and gguf_get_val_u32,
+	// which assert the stored type, see
+	// https://github.com/ggml-org/llama.cpp/blob/c841aeeb8/ggml/src/gguf.cpp#L194.
+	// It throws when a vision projector lacks one of _GGUFClipVisionRequiredKeys,
+	// and refuses a merge factor of 0 or of 65536 and above, see
+	// https://github.com/ggml-org/llama.cpp/blob/c841aeeb8/tools/mtmd/clip.cpp#L2001-L2003.
+	// 65536 squared is 2^32, which wraps a uint32 product to zero.
+	const (
+		hasVisionEncoderKey = "clip.has_vision_encoder"
+		scaleFactorKey      = "clip.vision.projector.scale_factor"
+	)
+	if isClip {
+		// The architecture reader reads every one of these keys that is present,
+		// whatever the vision flag says, so each one must hold its type.
+		if v, ok := gf.Header.MetadataKV.Get(hasVisionEncoderKey); ok && v.ValueType != GGUFMetadataValueTypeBool {
+			return fmt.Errorf("metadata key %q holds a %v, but it must hold a bool", hasVisionEncoderKey, v.ValueType)
+		}
+		typed := make([]string, 0, len(_GGUFClipVisionRequiredKeys)+1)
+		typed = append(typed, _GGUFClipVisionRequiredKeys...)
+		typed = append(typed, scaleFactorKey)
+		for _, key := range typed {
+			if v, ok := gf.Header.MetadataKV.Get(key); ok && v.ValueType != GGUFMetadataValueTypeUint32 {
+				return fmt.Errorf("metadata key %q holds a %v, but it must hold a uint32", key, v.ValueType)
+			}
+		}
+		if v, ok := gf.Header.MetadataKV.Get(scaleFactorKey); ok {
+			if s := ValueNumeric[uint64](v); s == 0 || s >= 65536 {
+				return fmt.Errorf("the vision projector declares a scale factor of %d, but llama.cpp requires 1 to 65535", s)
+			}
+		}
+		if v, ok := gf.Header.MetadataKV.Get(hasVisionEncoderKey); ok && v.ValueBool() {
+			for _, key := range _GGUFClipVisionRequiredKeys {
+				if _, ok := gf.Header.MetadataKV.Get(key); !ok {
+					return fmt.Errorf("the vision projector declares no %q, and llama.cpp cannot load it", key)
+				}
+			}
+		}
+	}
+
+	return nil
 }
 
 // Types for GGUF hierarchical tensors.
@@ -686,21 +790,28 @@ func (kv GGUFMetadataKV) ValueFloat64() float64 {
 // Compare to the GGUFMetadataKV's Value* functions,
 // ValueNumeric will cast the original value to the target type.
 func ValueNumeric[T constraints.Integer | constraints.Float](kv GGUFMetadataKV) T {
-	switch kv.ValueType {
-	case GGUFMetadataValueTypeUint8:
-	case GGUFMetadataValueTypeInt8:
-	case GGUFMetadataValueTypeUint16:
-	case GGUFMetadataValueTypeInt16:
-	case GGUFMetadataValueTypeUint32:
-	case GGUFMetadataValueTypeInt32:
-	case GGUFMetadataValueTypeFloat32:
-	case GGUFMetadataValueTypeUint64:
-	case GGUFMetadataValueTypeInt64:
-	case GGUFMetadataValueTypeFloat64:
-	default:
+	if !kv.ValueType.IsNumeric() {
 		panic(fmt.Errorf("key %q try to get type Numeric but got type %v", kv.Key, kv.ValueType))
 	}
 	return anyx.Number[T](kv.Value)
+}
+
+// IsNumeric returns true if the GGUFMetadataValueType holds a number.
+func (t GGUFMetadataValueType) IsNumeric() bool {
+	switch t {
+	case GGUFMetadataValueTypeUint8,
+		GGUFMetadataValueTypeInt8,
+		GGUFMetadataValueTypeUint16,
+		GGUFMetadataValueTypeInt16,
+		GGUFMetadataValueTypeUint32,
+		GGUFMetadataValueTypeInt32,
+		GGUFMetadataValueTypeFloat32,
+		GGUFMetadataValueTypeUint64,
+		GGUFMetadataValueTypeInt64,
+		GGUFMetadataValueTypeFloat64:
+		return true
+	}
+	return false
 }
 
 func (av GGUFMetadataKVArrayValue) ValuesUint8() []uint8 {
@@ -1004,6 +1115,17 @@ func (ti GGUFTensorInfo) Elements(filter ...GGUFTensorInfoFilter) uint64 {
 func (ti GGUFTensorInfo) Bytes(filter ...GGUFTensorInfoFilter) uint64 {
 	if ti.NDimensions == 0 {
 		return 0
+	}
+
+	// An empty tensor holds no bytes. ggml_nbytes returns 0 before it computes
+	// the strides below, see
+	// https://github.com/ggml-org/llama.cpp/blob/b3c3b96a139d4ef1bdec926ac17aa040981cfc5d/ggml/src/ggml.c#L1297-L1302.
+	// The stride arithmetic subtracts 1 from each dimension, so an unsigned zero
+	// wraps to 2^64-1 and the overflow guard then refuses the multiplication.
+	for i := uint32(0); i < ti.NDimensions; i++ {
+		if ti.Dimensions[i] == 0 {
+			return 0
+		}
 	}
 
 	tt, ok := ti.Type.Trait()
@@ -1496,10 +1618,11 @@ func (ltis GGUFLayerTensorInfos) Cut(names []string) (before, after GGUFLayerTen
 }
 
 type _GGUFReader struct {
-	v  GGUFVersion
-	o  _GGUFReadOptions
-	f  io.ReadSeeker
-	bo binary.ByteOrder
+	v    GGUFVersion
+	o    _GGUFReadOptions
+	f    io.ReadSeeker
+	bo   binary.ByteOrder
+	size int64 // total file size, 0 when unknown; bounds untrusted string lengths
 }
 
 func (rd _GGUFReader) ReadUint8() (v uint8, err error) {
@@ -1582,6 +1705,29 @@ func (rd _GGUFReader) ReadString() (v string, err error) {
 		return "", fmt.Errorf("read string length: %w", err)
 	}
 
+	// Bound the untrusted length before allocating. Mirrors the SkipReadingString
+	// guard on the read path: an int64 cast of l > MaxInt64 would wrap negative
+	// (bytex.GetBytes truncates to int and panics on a negative slice bound), and
+	// a valid string can never exceed the bytes remaining in the file.
+	if l > math.MaxInt64 {
+		return "", fmt.Errorf("read string: length %d exceeds maximum %d", l, int64(math.MaxInt64))
+	}
+	if rd.size > 0 {
+		pos, err := rd.f.Seek(0, io.SeekCurrent)
+		if err != nil {
+			return "", fmt.Errorf("seek string start: %w", err)
+		}
+		if remaining := rd.size - pos; l > uint64(remaining) {
+			return "", fmt.Errorf("read string: length %d exceeds %d remaining bytes", l, remaining)
+		}
+	}
+
+	// An empty string holds no bytes. Reading zero would hand a default-sized
+	// pooled buffer to the reader, which swallows the rest of the file.
+	if l == 0 {
+		return "", nil
+	}
+
 	b := bytex.GetBytes(l)
 	defer bytex.Put(b)
 	if _, err = rd.f.Read(b); err != nil {
@@ -1638,7 +1784,21 @@ func (rd _GGUFReader) ReadArray(key string) (v GGUFMetadataKVArrayValue, err err
 		return v, fmt.Errorf("seek array item start: %w", err)
 	}
 
-	if !rd.o.SkipLargeMetadata || stringx.HasSuffixes(key, ".feed_forward_length", ".attention.head_count") {
+	// Bound the untrusted array length before allocating. Every array item
+	// occupies at least one byte on disk, so a valid array can never declare
+	// more items than the bytes remaining in the file. Without this guard a
+	// crafted length makes `make([]any, v.Len)` below either panic
+	// ("makeslice: len out of range") or allocate gigabytes and OOM the host
+	// before any item is read. Mirrors the remaining-bytes guard in ReadString.
+	if rd.size > 0 {
+		if remaining := rd.size - itemStart; v.Len > uint64(remaining) {
+			return v, fmt.Errorf("read array: length %d exceeds %d remaining bytes", v.Len, remaining)
+		}
+	}
+
+	if !rd.o.SkipLargeMetadata ||
+		stringx.HasSuffixes(key,
+			".feed_forward_length", ".attention.head_count", ".attention.head_count_kv", ".attention.sliding_window_pattern") {
 		v.Array = make([]any, v.Len)
 		for i := uint64(0); i < v.Len; i++ {
 			v.Array[i], err = rd.ReadValue(key, v.Type)

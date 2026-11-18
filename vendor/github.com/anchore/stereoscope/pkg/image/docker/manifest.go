@@ -139,6 +139,10 @@ func assembleOCIManifest(configBytes []byte, layerSizes []int64) (*v1.Manifest, 
 		},
 	}
 
+	if len(cfg.RootFS.DiffIDs) != len(layerSizes) {
+		return nil, fmt.Errorf("docker config declares %d diff_ids but manifest declares %d layers", len(cfg.RootFS.DiffIDs), len(layerSizes))
+	}
+
 	for idx, diffID := range cfg.RootFS.DiffIDs {
 		ociManifest.Layers = append(ociManifest.Layers, v1.Descriptor{
 			MediaType: types.DockerLayer,

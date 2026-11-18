@@ -1,6 +1,12 @@
 version: "2"
 run:
   tests: false
+  # containers-storage (pkg/image/containerstorage) is only compiled with this tag; without it,
+  # only the stub provider gets linted. exclude_graphdriver_btrfs avoids needing btrfs/version.h,
+  # which CI runners don't have.
+  build-tags:
+    - containers_image_openpgp
+    - exclude_graphdriver_btrfs
 linters:
   default: none
   enable:

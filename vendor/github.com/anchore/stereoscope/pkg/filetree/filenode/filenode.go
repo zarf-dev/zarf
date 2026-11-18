@@ -8,6 +8,8 @@ import (
 	"github.com/anchore/stereoscope/pkg/tree/node"
 )
 
+// FileNode is a single path within a FileTree. A FileNode in a tree is shared with every copy of that tree, so it
+// must never be modified once added. To change one, copy it, change the copy, and swap it in (see tree.Tree.Replace).
 type FileNode struct {
 	RealPath  file.Path // all constituent paths cannot have links (the base may be a link however)
 	FileType  file.Type

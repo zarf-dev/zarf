@@ -4,6 +4,8 @@ repos:
     hooks:
       - id: check-added-large-files
         args: ["--maxkb=1024"]
+        # Upstream SQLite amalgamation; keep the size limit for other files.
+        exclude: ^vendor/github\.com/mattn/go-sqlite3/sqlite3-binding\.c$
       - id: check-merge-conflict
       - id: detect-aws-credentials
         args:
@@ -12,7 +14,13 @@ repos:
         exclude: |
             (?x)^(
                 src/test/e2e/29_config_file_test\.go|
-                examples/longhorn/values\.yaml
+                examples/longhorn/values\.yaml|
+                # Upstream test-key fixtures.
+                vendor/github\.com/ProtonMail/go-crypto/openpgp/keys_test_data\.go|
+                vendor/github\.com/ProtonMail/go-crypto/openpgp/read_write_test_data\.go|
+                vendor/github\.com/digitorus/pkcs7/verify_test_dsa\.go|
+                # PEM delimiter strings, not private key material.
+                vendor/github\.com/alibabacloud-go/openapi-util/service/service\.go
             )$
       - id: end-of-file-fixer
         exclude: |

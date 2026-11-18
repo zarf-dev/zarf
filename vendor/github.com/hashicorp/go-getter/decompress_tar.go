@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2015, 2025
+// Copyright IBM Corp. 2015, 2026
 // SPDX-License-Identifier: MPL-2.0
 
 package getter
@@ -105,8 +105,12 @@ func untar(input io.Reader, dst, src string, dir bool, umask os.FileMode, fileSi
 		// Mark that we're done so future in single file mode errors
 		done = true
 
+		// Sanitize file permissions to avoid permissions escalation attacks
+		mode := hdr.FileInfo().Mode()
+		mode &= 0o777
+
 		// Size limit is tracked using the returned file info.
-		err = copyReader(path, tarR, hdr.FileInfo().Mode(), umask, 0)
+		err = copyReader(path, tarR, mode, umask, 0)
 		if err != nil {
 			return err
 		}

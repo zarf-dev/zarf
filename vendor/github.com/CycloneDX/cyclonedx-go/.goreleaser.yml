@@ -1,3 +1,5 @@
+version: 2
+
 builds:
 # This is a library project, we don't want to build any binaries.
 # Building and testing is performed in the CI workflow
@@ -12,13 +14,13 @@ source:
 sboms:
 - artifacts: source
   documents:
-  - "${artifact}.cdx.sbom"
+  - "${artifact}.cdx.json"
   cmd: cyclonedx-gomod
   args: [ "mod", "-licenses", "-json", "-output", "$document", "./.." ]
 
 milestones:
 - name_template: "{{ .Tag }}"
-  close: true
+  close: false
 
 changelog:
   use: github

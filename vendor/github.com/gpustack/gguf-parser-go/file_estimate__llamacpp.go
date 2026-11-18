@@ -4,6 +4,7 @@ import (
 	"math"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/gpustack/gguf-parser-go/util/anyx"
@@ -50,6 +51,16 @@ type (
 		//
 		// Only available when EmbeddingOnly is true.
 		Reranking bool `json:"reranking"`
+		// Decision is the flag to indicate whether the model is used for decision,
+		// i.e. serving the "POST /v1/systemone" endpoint in llama-server,
+		// true for decision.
+		//
+		// It is presence-based: any string-typed "<architecture>.decision.type"
+		// metadata marks the model, mirroring common_get_decision_type in
+		// llama.cpp. It outranks Reranking: a declared decision head carries
+		// classifier tensors and rank pooling that would otherwise read as
+		// reranking.
+		Decision bool `json:"decision"`
 		// Distributable is the flag to indicate whether the model is distributable,
 		// true for distributable.
 		Distributable bool `json:"distributable"`
@@ -244,6 +255,483 @@ func (gf *GGUFFile) EstimateLLaMACppRun(opts ...GGUFRunEstimateOption) (e LLaMAC
 	return e
 }
 
+// llama.cpp runs a host layer's heavy nodes on a device once the physical batch
+// reaches this size, see ggml_backend_cuda_device_offload_op.
+const _LMCOffloadOpMinBatchSize = 32
+
+// The measured rows. Each constant is a count of embedding-wide rows read from
+// one GGML_ALLOCATOR_DEBUG replay of the file named beside it. None of them
+// derives from the graph builder, so a change to that family's graph in
+// llama.cpp silently invalidates it. Re-measure the family when its graph
+// changes, and replace the constant with a derivation when one is found.
+const (
+	// rwkv7-g1c-13.3b: the rows alive at the peak, a dozen embedding-wide
+	// rows and the six-way fused projection.
+	_LMCMeasuredRWKV7PeakRows = 19
+	// arwkv-qwen-r1-1b5: the qwen FFN rides beside the rwkv rows.
+	_LMCMeasuredARWKV7PeakRows = 24
+	// v6-Finch-7B: a similar but narrower set than rwkv7.
+	_LMCMeasuredRWKV6PeakRows = 15
+	// RWKV6QwQ-32B.
+	_LMCMeasuredRWKV6Qwen2PeakRows = 20
+	// granite-switch-4.1-3b-preview: the switch router keeps three extra rows
+	// at the full-offload peak.
+	_LMCMeasuredGraniteSwitchRouterRows = 3
+	// moondream2 (phi2): the parallel residual holds one more row at both
+	// moments.
+	_LMCMeasuredPhi2ResidualRows = 1
+	// Qwen3-VL-8B: the deepstack embedding rides beside the residual through
+	// the whole graph, three rows wide.
+	_LMCMeasuredQwen3VLDeepstackRows = 3
+	// gemma-3n-E2B: the altup block holds the selected per-layer inputs in
+	// nine rows before the attention node.
+	_LMCMeasuredGemma3nAltupRows = 9
+	// gemma-3n-E2B: the altup input count that stands in when the file
+	// carries no altup_predict_coef tensor to read it from.
+	_LMCMeasuredGemma3nAltupInputs = 4
+	// NVIDIA-Nemotron-Nano-12B-v2 and plamo-2-translate: half of one zx row
+	// strands beside the zx row at the recurrent peak, so the share divides
+	// the row by this.
+	_LMCMeasuredSSMFragmentedZxDivisor = 2
+	// OLMoE-1B-7B and granite-3.1-3b-a800m: a host boundary stages four
+	// weight and cache slots, the K and V cache, the attention weight, and
+	// the gate and up weights, and each frees a slot that strands under the
+	// activation stack by at most one activation row. The two FFN slots price
+	// as the largest FFN weight.
+	_LMCMeasuredStagedFFNSlots = 2
+)
+
+// clampInt32 narrows a declared count to the int32 range the run options hold.
+// llama.cpp reads the same keys as uint32, so a file it loads declares at most
+// 2^32 - 1, and the clamp keeps the estimate at the largest context the options
+// can name rather than at a negative one.
+func clampInt32(v uint64) int32 {
+	return int32(min(v, math.MaxInt32))
+}
+
+var (
+	// One transformer layer's attention weights, as llama.cpp names them.
+	_LMCAttentionWeightRegex = regexp.MustCompile(`.*\.\d+\.attn_(q|k|v|output|qkv|q_a|q_b|kv_a_mqa|kv_b)\.weight`)
+	// One transformer layer's feed-forward weights, dense or expert.
+	_LMCFeedForwardWeightRegex = regexp.MustCompile(`.*\.\d+\.ffn_(gate|up|down)(_exps|_shexp)?\.weight`)
+	// The expert up projection, shaped [n_embd, n_ff_exp, n_expert].
+	_LMCExpertUpWeightRegex = regexp.MustCompile(`.*\.\d+\.ffn_up_exps\.weight`)
+	// The dense gate projection; its absence marks a gateless MLP.
+	_LMCGateWeightRegex = regexp.MustCompile(`.*\.\d+\.ffn_gate\.weight`)
+	// The dense up projection; its output width is the activation row.
+	_LMCUpWeightRegex = regexp.MustCompile(`.*\.\d+\.ffn_up\.weight`)
+	// The compressed KV projection that marks a latent-attention graph.
+	_LMCLatentAttentionRegex = regexp.MustCompile(`.*\.\d+\.attn_kv_a_mqa\.weight`)
+	// Any transformer-layer weight tensor.
+	_LMCLayerWeightRegex = regexp.MustCompile(`.*\.\d+\..*\.weight`)
+	// The gemma3n altup prediction coefficients; their first dimension is n_altup.
+	_LMCAltupPredictCoefRegex = regexp.MustCompile(`.*\.\d+\.altup_predict_coef\.weight`)
+	// The relative attention bias that marks a KQ-biased graph (t5).
+	_LMCRelativeBiasWeightRegex = regexp.MustCompile(`.*\.\d+\.attn_rel_b\.weight`)
+	// The block index inside a tensor name.
+	_LMCBlockIndexRegex = regexp.MustCompile(`\.(\d+)\.`)
+	// The weights whose outputs the non-flash attention moment holds.
+	_LMCAttentionNodeWeightRegex = regexp.MustCompile(`.*\.\d+\.attn_(norm|q|qkv|q_b)\.weight`)
+	// The weights whose outputs the non-flash FFN moment holds.
+	_LMCFeedForwardNodeWeightRegex = regexp.MustCompile(`.*\.\d+\.(attn_norm|ffn_norm|ffn_gate|ffn_up)\.weight`)
+)
+
+// estimateLLaMACppRecurrentComputeFloor floors a recurrent graph's device
+// compute buffer at the rows the allocator holds at once, read from
+// GGML_ALLOCATOR_DEBUG replays: rwkv7 keeps a dozen embedding-wide rows and
+// its six-way fused projection, rwkv6 a similar but narrower set, and mamba2
+// the fused zx projection with two convolution-width rows. Every recurrent
+// graph strands two residual rows, and a host boundary stages one layer's
+// largest weight.
+func estimateLLaMACppRecurrentComputeFloor(
+	a *GGUFArchitecture, tfLs GGUFLayerTensorInfos, nTokens, cp uint64, boundary bool,
+) uint64 {
+	embdRow := GGMLTypeF32.RowSizeOf([]uint64{a.EmbeddingLength, nTokens})
+	floor := uint64(0)
+	switch a.Architecture {
+	case "rwkv7":
+		floor = _LMCMeasuredRWKV7PeakRows * embdRow
+	case "arwkv7":
+		floor = _LMCMeasuredARWKV7PeakRows * embdRow
+	case "rwkv6":
+		floor = _LMCMeasuredRWKV6PeakRows * embdRow
+	case "rwkv6qwen2":
+		floor = _LMCMeasuredRWKV6Qwen2PeakRows * embdRow
+	}
+	if a.SSMInnerSize > 0 {
+		zx, conv := a.ssmProjectionRows(nTokens)
+		floor = max(floor, zx+
+			2*conv+ // the two convolution-width rows
+			2*embdRow+ // the stranded residual rows
+			zx/_LMCMeasuredSSMFragmentedZxDivisor)
+	}
+	cp = max(cp, floor) + 2*embdRow // every recurrent graph strands two residual rows
+	if boundary {
+		var w uint64
+		for _, l := range tfLs[0].Search(_LMCLayerWeightRegex) {
+			w = max(w, l.Bytes())
+		}
+		cp += w
+	}
+	return cp
+}
+
+// _LMCBackendUnholdableArchitectures lists the architectures the CUDA backend
+// has no kernels for. llama.cpp assigns every layer of these to the CPU
+// whatever the offload asks, then the batch offload path copies each layer's
+// weights into the device compute buffer, and the graph allocator holds close
+// to the whole model at once. Checked against llama.cpp c841aeeb8; refresh
+// this set as llama.cpp gains kernels.
+var _LMCBackendUnholdableArchitectures = []string{"nanbeige"}
+
+// searchLastBlock returns the regex's matches for the highest-numbered block
+// among the given layers. A per-block layout keeps one block per tf layer, so
+// the last layer's matches come back as they are. A prefixed family like t5
+// folds every enc block into one tf layer; there a search of the last matching
+// layer spans every block, so only the last block's tensors are kept.
+func searchLastBlock(tfLs GGUFLayerTensorInfos, re *regexp.Regexp) []GGUFTensorInfo {
+	for i := len(tfLs) - 1; i >= 0; i-- {
+		matches := tfLs[i].Search(re)
+		if len(matches) == 0 {
+			continue
+		}
+		maxBlk, blkOf := -1, make([]int, len(matches))
+		for j := range matches {
+			blkOf[j] = -1
+			if sm := _LMCBlockIndexRegex.FindStringSubmatch(matches[j].Name); sm != nil {
+				blkOf[j], _ = strconv.Atoi(sm[1])
+			}
+			maxBlk = max(maxBlk, blkOf[j])
+		}
+		out := matches[:0]
+		for j := range matches {
+			if blkOf[j] == maxBlk {
+				out = append(out, matches[j])
+			}
+		}
+		return out
+	}
+	return nil
+}
+
+// estimateLLaMACppFlashComputeMoments sizes the device compute buffer of a
+// flash attention graph. The buffer peaks at one of a few moments of a single
+// layer: its FLASH_ATTN_EXT node, its FFN block, or, on a hybrid, its
+// recurrent block. With boundary set, the device also stages the host layer's
+// K and V cache and its largest weights, one layer at a time, so the buffer is
+// the same at every partial depth.
+// _LMCFlashStagedSlots holds what a host boundary stages on the device for
+// one layer: its K and V cache rows, its K and V rows staged a second time,
+// and its largest attention and FFN weights. Without a boundary the weight
+// slots stay zero.
+type _LMCFlashStagedSlots struct {
+	boundary            bool
+	loadAttnInc         uint64
+	stagedKV            uint64
+	wAttnSlot           uint64
+	wFfnSlot, wFfnSlot2 uint64
+}
+
+// strandedUnder is what the staged slots leave stranded under an activation
+// stack of the given row: at most one activation row per slot, see
+// _LMCMeasuredStagedFFNSlots.
+func (s _LMCFlashStagedSlots) strandedUnder(act uint64) uint64 {
+	return min(s.loadAttnInc, act) + min(s.wAttnSlot, act) + _LMCMeasuredStagedFFNSlots*min(s.wFfnSlot, act)
+}
+
+// estimateLLaMACppFlashFFNActivations sizes the widest run of FFN activations
+// in one flash attention layer, beside the slots a host boundary stages. It
+// also returns the dense hole a mixture strands under its peak, and one
+// activation row for the hybrid moment.
+func estimateLLaMACppFlashFFNActivations(
+	a *GGUFArchitecture, hostLayers, allLayers []IGGUFTensorInfos,
+	nTokens, embdRow uint64, slots _LMCFlashStagedSlots, gated bool,
+) (acts, strand, lastAct uint64) {
+	if a.ExpertCount > 0 || a.ExpertUsedCount > 0 {
+		acts += GGMLTypeF32.RowSizeOf([]uint64{uint64(a.ExpertCount), a.EmbeddingLength}) // ffn_gate_input
+		acts += GGMLTypeF32.RowSizeOf([]uint64{uint64(a.ExpertCount), nTokens})           // ffn_moe_logits
+		nFFExp := a.ExpertFeedForwardLength
+		if nFFExp == 0 {
+			// Some files do not declare <arch>.expert_feed_forward_length.
+			// Every layer counts: an interleaved mixture's block zero can be
+			// dense, and a full offload references only that block here.
+			for _, hl := range allLayers {
+				for _, l := range hl.Search(_LMCExpertUpWeightRegex) {
+					if l.NDimensions > 1 {
+						nFFExp = l.Dimensions[1]
+						break
+					}
+				}
+			}
+		}
+		act := GGMLTypeF32.RowSizeOf([]uint64{nFFExp, uint64(a.ExpertUsedCount), nTokens})
+		down := GGMLTypeF32.RowSizeOf([]uint64{a.EmbeddingLength, uint64(a.ExpertUsedCount), nTokens}) // ffn_moe_down
+		lastAct = act
+		stack := 3 * act
+		if a.ExpertSharedFeedForwardLength > 0 {
+			// The shared expert runs beside the routed ones.
+			stack += 3 * GGMLTypeF32.RowSizeOf([]uint64{a.ExpertSharedFeedForwardLength, nTokens})
+		}
+		if down > 2*act {
+			// The down projection cannot reuse the hole the gate and up
+			// activations free, so all four stages hold slots at once.
+			stack += down
+		}
+		if slots.boundary {
+			actsPhase := stack + slots.strandedUnder(act)
+			downMoment := act + // the swiglu product
+				slots.wFfnSlot + // the staged expert weight
+				slots.wAttnSlot + // the staged attention weight
+				down + // ffn_moe_down
+				slots.stagedKV // the host layer's K and V rows
+			acts += max(actsPhase, downMoment)
+		} else {
+			acts += stack
+		}
+		// A mixture whose graph also holds dense blocks frees a dense-sized
+		// hole between layers. When that hole is smaller than the mixture's
+		// own activations, the live residual fragments it and the peak keeps
+		// it as dead space.
+		denseFF := uint64(0)
+		if len(a.FeedForwardLength) > 0 {
+			denseFF = a.FeedForwardLength[0]
+		}
+		if denseFF > 0 && denseFF != nFFExp {
+			for _, hl := range hostLayers {
+				if len(hl.Search(_LMCExpertUpWeightRegex)) == 0 {
+					strand = 3 * GGMLTypeF32.RowSizeOf([]uint64{denseFF, nTokens})
+					break
+				}
+			}
+		}
+	} else {
+		var nFFMeta uint64
+		for _, v := range a.FeedForwardLength {
+			nFFMeta = max(nFFMeta, v)
+		}
+		nFF := nFFMeta
+		for _, tl := range allLayers {
+			for _, l := range tl.Search(_LMCUpWeightRegex) {
+				nFF = max(nFF, l.Dimensions[l.NDimensions-1])
+			}
+		}
+		act := GGMLTypeF32.RowSizeOf([]uint64{nFF, nTokens})
+		actStack := act + embdRow // a gateless MLP: the activation reuses the up slot, the down output rides beside it
+		switch {
+		case gated:
+			actStack = 3 * act // gate, up and the GLU product hold rows at once
+		case nFFMeta > 0 && nFF >= 2*nFFMeta:
+			actStack = act + act/2 + embdRow // fused GLU: the product holds half a row beside the up row
+		}
+		lastAct = act
+		if slots.boundary {
+			actsPhase := actStack + slots.strandedUnder(act)
+			downMoment := act + // the up activation
+				slots.wFfnSlot + // the staged FFN weight
+				slots.wAttnSlot + // the staged attention weight
+				embdRow + // ffn_out
+				slots.stagedKV // the host layer's K and V rows
+			if !gated {
+				// Only the small down output follows, so the freed up-weight
+				// hole strands under the peak.
+				downMoment += slots.wFfnSlot2
+			}
+			acts += max(actsPhase, downMoment)
+		} else {
+			acts += actStack
+		}
+	}
+	return acts, strand, lastAct
+}
+
+func estimateLLaMACppFlashComputeMoments(
+	o *_GGUFRunEstimateOptions, a *GGUFArchitecture,
+	hostLayers, allLayers []IGGUFTensorInfos,
+	nKV, nTokens, loadAttnInc uint64,
+	boundary, gated bool,
+) (attnInc, ffnInc uint64) {
+	// One layer's working set around the attention node.
+	embdRow := GGMLTypeF32.RowSizeOf([]uint64{a.EmbeddingLength, nTokens})
+	attnQ := GGMLTypeF32.RowSizeOf([]uint64{uint64(a.AttentionKeyLength) * a.AttentionHeadCount, nTokens})
+	attnK := GGMLTypeF32.RowSizeOf([]uint64{uint64(a.AttentionKeyLength) * a.AttentionHeadCountKV, nTokens})
+	attnV := GGMLTypeF32.RowSizeOf([]uint64{uint64(a.AttentionValueLength) * a.AttentionHeadCountKV, nTokens})
+	kqMask := GGMLTypeF16.RowSizeOf([]uint64{nKV, nTokens})
+	if a.AttentionSlidingWindow > 0 {
+		// A sliding-window graph builds a windowed mask next to the full one.
+		kqMask *= 2
+	}
+
+	// A latent-attention graph decompresses K and V through low-rank rows that
+	// ride beside every moment.
+	archRows := uint64(0)
+	for _, tl := range allLayers {
+		if len(tl.Search(_LMCLatentAttentionRegex)) != 0 {
+			archRows = 2 * embdRow
+			break
+		}
+	}
+
+	// The largest weights of any host layer, staged on the device as split
+	// inputs, one layer at a time. Every host layer counts: a mixture with
+	// leading dense blocks keeps its expert tensors past block zero.
+	slots := _LMCFlashStagedSlots{boundary: boundary, loadAttnInc: loadAttnInc, stagedKV: attnK + attnV}
+	if a.buildsMemorylessGraph() {
+		// A memoryless graph has no cache tensors to stage; only weights cross.
+		slots.stagedKV = 0
+	}
+	if boundary {
+		for _, hl := range hostLayers {
+			for _, l := range hl.Search(_LMCAttentionWeightRegex) {
+				slots.wAttnSlot = max(slots.wAttnSlot, l.Bytes())
+			}
+			for _, l := range hl.Search(_LMCFeedForwardWeightRegex) {
+				if b := l.Bytes(); b > slots.wFfnSlot {
+					slots.wFfnSlot, slots.wFfnSlot2 = b, slots.wFfnSlot
+				} else {
+					slots.wFfnSlot2 = max(slots.wFfnSlot2, b)
+				}
+			}
+		}
+	}
+
+	// The FLASH_ATTN_EXT allocation. On CUDA and ROCm it is the f32 output plus
+	// room to convert one layer's K and V to f16 when the cache is quantized,
+	// see ggml_cuda_flash_attn_ext_get_alloc_size.
+	faAlloc := GGMLTypeF32.RowSizeOf([]uint64{uint64(a.AttentionValueLength) * a.AttentionHeadCount, nTokens})
+	if *o.LMCCacheKeyType != GGMLTypeF16 {
+		faAlloc += GGMLTypeF16.RowSizeOf([]uint64{uint64(a.AttentionKeyLength), nKV, a.AttentionHeadCountKV})
+	}
+	if *o.LMCCacheValueType != GGMLTypeF16 {
+		faAlloc += GGMLTypeF16.RowSizeOf([]uint64{uint64(a.AttentionValueLength), nKV, a.AttentionHeadCountKV})
+	}
+
+	// The attention moment: the rows alive at the FLASH_ATTN_EXT node.
+	attnInc = archRows +
+		embdRow + // l_out, the residual
+		embdRow + // the norm output
+		embdRow + // attn_out
+		attnQ + // Qcur
+		attnK + // Kcur
+		attnV + // Vcur
+		kqMask +
+		faAlloc
+	if boundary {
+		attnInc += loadAttnInc + // the host layer's K and V cache
+			slots.wAttnSlot + // its largest attention weight
+			slots.stagedKV // its K and V rows, staged a second time to cross the boundary
+	}
+
+	// The FFN moment: the slots the attention node stranded, the mask, the
+	// FFN input, and the widest run of FFN activations.
+	ffnInc = archRows +
+		embdRow + // l_out, the residual
+		attnQ + // the stranded Qcur slot
+		embdRow + // ffn_inp
+		embdRow + // the stranded norm slot
+		embdRow + // the stranded attn_out slot
+		kqMask
+	acts, strand, lastAct := estimateLLaMACppFlashFFNActivations(
+		a, hostLayers, allLayers, nTokens, embdRow, slots, gated)
+	ffnInc += acts
+	strand = min(strand, faAlloc)
+	attnInc += strand
+	if boundary {
+		ffnInc += strand
+	}
+	attnMeasured, ffnMeasured, ssmMeasured := estimateLLaMACppMeasuredFamilyRows(a, embdRow, lastAct, slots)
+	attnInc += attnMeasured
+	ffnInc += ffnMeasured
+	if a.AttentionSlidingWindow > 0 {
+		// An interleaved graph keeps the global layer's FLASH_ATTN_EXT scratch
+		// alive under the windowed layer's FFN peak.
+		ffnInc += faAlloc
+	}
+	// A hybrid's recurrent blocks hold their own moment: the fused zx
+	// projection, two convolution-width rows, the residuals and a
+	// fragmentation share, sized from the mamba2 graph.
+	if a.SSMInnerSize > 0 {
+		zx, conv := a.ssmProjectionRows(nTokens)
+		ssm := zx +
+			2*conv + // the two convolution-width rows
+			4*embdRow + // the residual rows the block holds
+			zx/_LMCMeasuredSSMFragmentedZxDivisor +
+			kqMask +
+			ssmMeasured
+		if boundary {
+			ssm += loadAttnInc + slots.wAttnSlot
+		}
+		ffnInc = max(ffnInc, ssm)
+	}
+	return attnInc, ffnInc
+}
+
+// estimateLLaMACppMeasuredFamilyRows adds what one replay of one file showed
+// beyond the derived moments, for the families that carry such a constant.
+// See the measured rows above for what each one is and where it came from.
+func estimateLLaMACppMeasuredFamilyRows(
+	a *GGUFArchitecture, embdRow, lastAct uint64, slots _LMCFlashStagedSlots,
+) (attnInc, ffnInc, ssmInc uint64) {
+	switch a.Architecture {
+	case "qwen3vl", "qwen3vlmoe":
+		// The deepstack embedding rides beside the residual through the
+		// whole graph, at both moments.
+		attnInc = _LMCMeasuredQwen3VLDeepstackRows * embdRow
+		ffnInc = _LMCMeasuredQwen3VLDeepstackRows * embdRow
+	case "plamo2", "nemotron_h":
+		// These blocks hold the ssm and FFN working sets together.
+		ssmInc = lastAct + embdRow
+	case "graniteswitch":
+		ffnInc = _LMCMeasuredGraniteSwitchRouterRows * embdRow
+	case "mistral4":
+		// Mistral-Small-4: two staged expert tensors overlap at a host boundary.
+		if slots.boundary {
+			ffnInc = slots.wFfnSlot2
+		}
+	case "nemotron_h_moe":
+		// Nemotron-3.5-Lightning: the copies of two host layers' expert
+		// tensors overlap at a host boundary.
+		if slots.boundary {
+			ffnInc = slots.wFfnSlot + slots.wFfnSlot2
+		}
+	case "phi2":
+		attnInc = _LMCMeasuredPhi2ResidualRows * embdRow
+		ffnInc = _LMCMeasuredPhi2ResidualRows * embdRow
+	}
+	return attnInc, ffnInc, ssmInc
+}
+
+// estimateLLaMACppGemma3nAltupMoment sizes the moment before the attention
+// node of a gemma3n layer, where the altup block holds the selected per-layer
+// inputs, one [n_embd, n_altup] row per altup projection, two masks, and at a
+// host boundary the staged cache and FFN weight. Measured on gemma-3n-E2B.
+func estimateLLaMACppGemma3nAltupMoment(
+	a *GGUFArchitecture, ipLs, tfLs GGUFLayerTensorInfos,
+	nKV, nTokens, loadAttnInc uint64, boundary bool,
+) uint64 {
+	embdRow := GGMLTypeF32.RowSizeOf([]uint64{a.EmbeddingLength, nTokens})
+	am := _LMCMeasuredGemma3nAltupRows * embdRow
+	if l, ok := ipLs.Get("per_layer_model_proj.weight"); ok {
+		am += 2 * GGMLTypeF32.RowSizeOf([]uint64{l.Dimensions[l.NDimensions-1], nTokens})
+	}
+	var nAltup uint64
+	for _, l := range tfLs[0].Search(_LMCAltupPredictCoefRegex) {
+		nAltup = l.Dimensions[0]
+	}
+	if nAltup == 0 {
+		nAltup = _LMCMeasuredGemma3nAltupInputs
+	}
+	am += 4 * nAltup * embdRow
+	am += 2 * GGMLTypeF16.RowSizeOf([]uint64{nKV, nTokens})
+	if boundary {
+		var wFfn uint64
+		for _, l := range tfLs[0].Search(_LMCFeedForwardWeightRegex) {
+			wFfn = max(wFfn, l.Bytes())
+		}
+		am += loadAttnInc + wFfn
+	}
+	return am
+}
+
 // estimateLLaMACppRunInModel estimates the usages of the GGUF file for model,
 // including the usages of footprint, weight, KV cache, and computation.
 func (gf *GGUFFile) estimateLLaMACppRunInModel(o *_GGUFRunEstimateOptions, a *GGUFArchitecture, t *GGUFTokenizer, e *LLaMACppRunEstimate) {
@@ -266,7 +754,7 @@ func (gf *GGUFFile) estimateLLaMACppRunInModel(o *_GGUFRunEstimateOptions, a *GG
 	}
 
 	// Using sliding window attention.
-	usingSWA := a.AttentionSlidingWindowPattern != 1 && !o.LMCFullSizeSWACache
+	usingSWA := a.usesSlidingWindowAttention() && !o.LMCFullSizeSWACache
 
 	// Full offload: nLoadLayers == 0 && isOffloadOutputLayer
 	// Zero offload: nOffloadLayers == 0
@@ -277,23 +765,32 @@ func (gf *GGUFFile) estimateLLaMACppRunInModel(o *_GGUFRunEstimateOptions, a *GG
 		nLoadLayers          = a.BlockCount
 		idxOutputDevice      int
 
-		fullOffload, zeroOffload          bool
-		nSWALoadLayers, nSWAOffloadLayers uint64
+		fullOffload, zeroOffload bool
+		// Whether the output layer sits on an offload device. llama.cpp counts it
+		// inside n_gpu_layers and fills from the end, so it is offloaded before
+		// any block is, not after all of them.
+		isOffloadOutputLayer bool
+
+		// The device that holds each layer, as e.Devices is indexed:
+		// 0 for the host, 1+N for the N-th offload device.
+		// Bounded so a hostile block_count cannot size the allocation; the layers beyond
+		// the bound fall back to the host device, see maxSaneBlockCount.
+		layerDevices = make([]int, min(a.BlockCount, maxSaneBlockCount))
 	)
 	{
-		var isOffloadOutputLayer bool
-
 		switch v := o.LMCOffloadLayers; {
 		case v == nil:
-			o.LMCOffloadLayers = ptr.To(a.BlockCount)
+			o.LMCOffloadLayers = ptr.To(a.BlockCount + 1)
 			nOffloadLayers = a.BlockCount
 			isOffloadOutputLayer = true
 		case *v != 0:
-			nOffloadLayers = *v
-			if nOffloadLayers > a.BlockCount {
-				isOffloadOutputLayer = true
-				nOffloadLayers = a.BlockCount
-			}
+			// i_gpu_start = max(n_layer_all + 1 - n_gpu_layers, 0), so the count
+			// spans the blocks plus the output layer and the output is the first
+			// thing to land on the card. --gpu-layers 28 on a 28 block model puts
+			// blocks 1..27 and the output on the device and leaves block 0 on the
+			// host, which llama.cpp reports as "offloaded 28/29 layers".
+			isOffloadOutputLayer = true
+			nOffloadLayers = min(*v-1, a.BlockCount)
 		}
 		nActualOffloadLayers = nOffloadLayers
 		if isOffloadOutputLayer {
@@ -312,25 +809,31 @@ func (gf *GGUFFile) estimateLLaMACppRunInModel(o *_GGUFRunEstimateOptions, a *GG
 			case i < nLoadLayers:
 				e.Devices[0].HandleLayers += 1
 				e.Devices[0].HandleLastLayer = int(i)
-				if usingSWA && (a.AttentionSlidingWindowPattern == 0 || i%uint64(a.AttentionSlidingWindowPattern) != 0) {
+				if usingSWA && a.isSWALayer(i) {
 					e.Devices[0].HandleSWALayers += 1
-					nSWALoadLayers += 1
 				}
 			case i >= offloadStart:
 				x := float64(i-offloadStart) / float64(nActualOffloadLayers)
 				j = slicex.UpperBound(o.TensorSplitFraction, x)
+				if i < uint64(len(layerDevices)) {
+					layerDevices[i] = j + 1
+				}
 				e.Devices[j+1].HandleLayers += 1
 				e.Devices[j+1].HandleLastLayer = int(i)
-				if usingSWA && (a.AttentionSlidingWindowPattern == 0 || i%uint64(a.AttentionSlidingWindowPattern) != 0) {
+				if usingSWA && a.isSWALayer(i) {
 					e.Devices[j+1].HandleSWALayers += 1
-					nSWAOffloadLayers += 1
 				}
-				if fullOffload && i == a.BlockCount-1 {
+				if isOffloadOutputLayer && i == a.BlockCount-1 {
 					idxOutputDevice = j + 1
 				}
 			}
 		}
 
+		// An offload that reaches the output layer but no block leaves the loop
+		// above with nothing to key off, so name the first offload device here.
+		if isOffloadOutputLayer && idxOutputDevice == 0 && len(e.Devices) > 1 {
+			idxOutputDevice = 1
+		}
 		e.Devices[idxOutputDevice].HandleOutputLayer = true
 	}
 
@@ -350,31 +853,47 @@ func (gf *GGUFFile) estimateLLaMACppRunInModel(o *_GGUFRunEstimateOptions, a *GG
 		e.FlashAttention = o.FlashAttention
 	}
 
+	// Decision, see common_get_decision_type in llama.cpp's common/common.cpp:
+	// a string-typed "<arch>.decision.type" metadata marks a decision model
+	// serving "POST /v1/systemone". The detection is presence-only and
+	// independent of the attention direction: causal decision models read
+	// logits, non-causal ones read embeddings.
+	{
+		v, found := gf.Header.MetadataKV.Get(a.Architecture + ".decision.type")
+		e.Decision = found && v.ValueType == GGUFMetadataValueTypeString
+	}
+
 	// Embedding.
 	if !a.AttentionCausal {
 		ropeFrequencyBase := ptr.Deref(o.LMCRoPEFrequencyBase, a.RoPEFrequencyBase)
 		ropeFrequencyScale := ptr.Deref(o.LMCRoPEFrequencyScale, a.RoPEFrequencyScale)
 		ropeScalingType := ptr.Deref(o.LMCRoPEScalingType, a.RoPEScalingType)
-		ropeScalingOriginalContextSize := ptr.Deref(o.LMCRoPEScalingOriginalContextSize, int32(a.RoPEScalingOriginalContextLength))
+		ropeScalingOriginalContextSize := ptr.Deref(o.LMCRoPEScalingOriginalContextSize, clampInt32(a.RoPEScalingOriginalContextLength))
 		isRoPECustomized := ropeFrequencyBase != a.RoPEFrequencyBase ||
 			ropeFrequencyScale != a.RoPEFrequencyScale ||
 			ropeScalingType != a.RoPEScalingType ||
-			(ropeScalingType == "yarn" && ropeScalingOriginalContextSize != int32(a.RoPEScalingOriginalContextLength))
+			(ropeScalingType == "yarn" && ropeScalingOriginalContextSize != clampInt32(a.RoPEScalingOriginalContextLength))
 
 		e.EmbeddingOnly = true
-		o.LMCContextSize = ptr.To(ptr.Deref(o.LMCContextSize, int32(a.MaximumContextLength)))
-		// Set context size/physical batch size/logical batch size to the training context size.
+		o.LMCContextSize = ptr.To(ptr.Deref(o.LMCContextSize, clampInt32(a.MaximumContextLength)))
+		// Cap the context size to the training context size.
 		if !isRoPECustomized {
-			o.LMCContextSize = ptr.To(min(int32(a.MaximumContextLength), *o.LMCContextSize))
+			o.LMCContextSize = ptr.To(min(clampInt32(a.MaximumContextLength), *o.LMCContextSize))
 		}
-		o.LMCLogicalBatchSize = o.LMCContextSize
-		o.LMCPhysicalBatchSize = o.LMCLogicalBatchSize
-		// Reranking.
-		if _, found := gf.TensorInfos.Index([]string{"cls.bias", "cls.weight"}); found > 0 {
-			e.Reranking = true
-		}
-		if !e.Reranking && a.PoolingType == 4 { // 0: None, 1: Mean, 2: Cls, 3: Last, 4: Rank
-			e.Reranking = true
+		// The batch sizes stay as configured: llama.cpp encodes in n_ubatch
+		// slices whatever the context is, and sched_reserve prices the worst
+		// graph over min(n_ctx, n_ubatch) tokens, see
+		// https://github.com/ggml-org/llama.cpp/blob/c841aeeb8/src/llama-context.cpp#L595.
+		// Reranking is outranked by a declared decision head: general backbones
+		// (e.g. modern-bert) carry classifier tensors and rank pooling while
+		// serving decisions.
+		if !e.Decision {
+			if _, found := gf.TensorInfos.Index([]string{"cls.bias", "cls.weight"}); found > 0 {
+				e.Reranking = true
+			}
+			if !e.Reranking && a.PoolingType == 4 { // 0: None, 1: Mean, 2: Cls, 3: Last, 4: Rank
+				e.Reranking = true
+			}
 		}
 	}
 
@@ -421,6 +940,13 @@ func (gf *GGUFFile) estimateLLaMACppRunInModel(o *_GGUFRunEstimateOptions, a *GG
 		nOutputs = nTokens
 		nSeq = uint64(ptr.Deref(o.ParallelSize, 1))
 		nKV = nContext
+		if a.buildsMemorylessGraph() {
+			// A memoryless graph attends over the ubatch only: there is no KV
+			// cache, and build_attn_inp_no_cache shapes the attention mask as
+			// [n_tokens, n_tokens], see
+			// https://github.com/ggml-org/llama.cpp/blob/c841aeeb8/src/llama-graph.cpp#L2676-L2698.
+			nKV = nTokens
+		}
 
 		e.ContextSize = nContext
 	}
@@ -441,11 +967,24 @@ func (gf *GGUFFile) estimateLLaMACppRunInModel(o *_GGUFRunEstimateOptions, a *GG
 
 		// Output buffer,
 		// see https://github.com/ggerganov/llama.cpp/blob/7672adeec7a79ea271058c63106c142ba84f951a/llama.cpp#L11940-L12003.
+		//
+		// This is host memory whatever the offload. llama_context::output_reserve
+		// allocates it from ggml_backend_cpu_buffer_type, or from the output
+		// device's *host* buffer type when it has one, which is pinned system
+		// memory chosen "for faster transfer to system memory" rather than VRAM:
+		// https://github.com/ggml-org/llama.cpp/blob/master/src/llama-context.cpp
+		// (llama_context::output_reserve, the buf_output allocation).
+		// Charging it to the output device instead reported ~700 MiB of VRAM that
+		// no card ever holds, which is enough to reject a model that fits.
 		ob := a.EmbeddingLength * nOutputs * 4 /* float32 size */
 		if a.AttentionCausal {
 			ob += a.VocabularyLength * nOutputs * 4 /* float32 size */
 		}
-		if fullOffload {
+		// A speculator head scores every position it proposes, so llama.cpp reserves
+		// the full vocabulary by batch tensor on the device that holds the head. The
+		// host placement above is correct only for a decoder reserved with
+		// n_outputs = 1, which is every other architecture.
+		if fullOffload && a.emitsLogitsAtEveryPosition() {
 			e.Devices[idxOutputDevice].Footprint += GGUFBytesScalar(ob)
 		} else {
 			e.Devices[0].Footprint += GGUFBytesScalar(ob)
@@ -543,7 +1082,7 @@ func (gf *GGUFFile) estimateLLaMACppRunInModel(o *_GGUFRunEstimateOptions, a *GG
 			ps = GGUFParametersScalar(opLs.Elements() + ipLs.Elements())
 		}
 		e.Devices[0].Weight.Output = wg
-		if fullOffload {
+		if idxOutputDevice != 0 {
 			e.Devices[idxOutputDevice].Weight.Output = wg
 			e.Devices[idxOutputDevice].Parameter.Output = ps
 		} else {
@@ -553,93 +1092,106 @@ func (gf *GGUFFile) estimateLLaMACppRunInModel(o *_GGUFRunEstimateOptions, a *GG
 
 	// KV cache.
 	if a.AttentionCausal {
+		// Recurrent state per layer, context independent,
+		// see https://github.com/ggml-org/llama.cpp/blob/16d222fc5f2c0fdc3d0180e0b772516ec6e2eddd/src/llama-hparams.cpp#L183-L222.
+		var r, s uint64
 		switch {
-		// Recurrent,
-		// see https://github.com/ggml-org/llama.cpp/blob/704bb7a71c01dc07c1478b85f6322bf5dfde1eaf/src/llama-hparams.cpp#L68-L88.
-		case a.AttentionRecurrent:
-			var r, s uint64
-			if a.RWKVHeadSize > 0 {
-				r = uint64(a.RWKVTokenShiftCount) * a.EmbeddingLength
-				s = uint64(a.RWKVHeadSize) * a.EmbeddingLength
-			} else {
-				r = uint64((a.SSMConvolutionKernel - 1) * (a.SSMInnerSize + 2*a.SSMGroupCount*a.SSMStateSize))
-				s = uint64(a.SSMStateSize * a.SSMInnerSize)
+		case a.RWKVHeadSize > 0:
+			r = uint64(a.RWKVTokenShiftCount) * a.EmbeddingLength
+			s = uint64(a.RWKVHeadSize) * a.EmbeddingLength
+		case a.ShortConvLCache > 0:
+			r = (uint64(a.ShortConvLCache) - 1) * a.EmbeddingLength
+		case a.KDAHeadDim > 0:
+			dConv := uint64(3)
+			if a.SSMConvolutionKernel > 0 {
+				dConv = uint64(a.SSMConvolutionKernel)
 			}
-
-			rps, sps := r*nSeq, s*nSeq
-			rrs, srs := GGMLTypeF32.RowSizeOf([]uint64{rps}), GGMLTypeF32.RowSizeOf([]uint64{sps})
-
-			e.Devices[0].KVCache.Key += GGUFBytesScalar(rrs * nLoadLayers)
-			e.Devices[0].KVCache.Value += GGUFBytesScalar(srs * nLoadLayers)
-			e.Devices[0].Parameter.KVCache += GGUFParametersScalar((rrs + srs) * nLoadLayers)
-			if !*o.LMCOffloadKVCache {
-				e.Devices[0].KVCache.Key += GGUFBytesScalar(rrs * nOffloadLayers)
-				e.Devices[0].KVCache.Value += GGUFBytesScalar(srs * nOffloadLayers)
-				e.Devices[0].Parameter.KVCache += GGUFParametersScalar((rrs + srs) * nOffloadLayers)
-			} else if !zeroOffload {
-				for i, d := range e.Devices[1:] {
-					e.Devices[i+1].KVCache.Key += GGUFBytesScalar(rrs * d.HandleLayers)
-					e.Devices[i+1].KVCache.Value += GGUFBytesScalar(srs * d.HandleLayers)
-					e.Devices[i+1].Parameter.KVCache += GGUFParametersScalar((rrs + srs) * d.HandleLayers)
-				}
-			}
-
-			if !a.AttentionHybrid {
-				break
-			}
-
-			fallthrough
-		// Causal,
-		// see https://github.com/ggml-org/llama.cpp/blob/d6ef0e77dd25f54fb5856af47e3926cf6f36c281/llama.cpp#L2479-L2501.
+			r = 3 * (dConv - 1) * a.AttentionHeadCount * uint64(a.KDAHeadDim)
+			s = uint64(a.KDAHeadDim) * uint64(a.KDAHeadDim) * a.AttentionHeadCount
 		default:
-			akl, avl := uint64(a.AttentionKeyLength), uint64(a.AttentionValueLength)
-			if a.AttentionKeyLengthMLA > 0 && a.AttentionValueLengthMLA > 0 {
-				akl, avl = uint64(a.AttentionKeyLengthMLA), uint64(a.AttentionValueLengthMLA)
+			r = a.ssmConvolutionStateSize()
+			s = uint64(a.SSMStateSize) * uint64(a.SSMInnerSize)
+		}
+		rps, sps := r*nSeq, s*nSeq
+		rrs, srs := GGMLTypeF32.RowSizeOf([]uint64{rps}), GGMLTypeF32.RowSizeOf([]uint64{sps})
+
+		// Attention KV width per layer,
+		// see https://github.com/ggml-org/llama.cpp/blob/16d222fc5f2c0fdc3d0180e0b772516ec6e2eddd/src/llama-hparams.cpp#L131-L141.
+		akl, avl := uint64(a.AttentionKeyLength), uint64(a.AttentionValueLength)
+		if a.AttentionKeyLengthMLA > 0 && a.AttentionValueLengthMLA > 0 {
+			akl, avl = uint64(a.AttentionKeyLengthMLA), uint64(a.AttentionValueLengthMLA)
+		}
+		headsKVOfLayer := func(i uint64) uint64 {
+			if i < uint64(len(a.AttentionHeadCountKVs)) {
+				return a.AttentionHeadCountKVs[i]
 			}
-			kGQA := akl * a.AttentionHeadCountKV
-			vGQA := avl * a.AttentionHeadCountKV
-			kps, vps := kGQA*nKV, vGQA*nKV
-			krs, vrs := o.LMCCacheKeyType.RowSizeOf([]uint64{kps}), o.LMCCacheValueType.RowSizeOf([]uint64{vps})
+			return a.AttentionHeadCountKV
+		}
 
-			if !usingSWA {
-				e.Devices[0].KVCache.Key += GGUFBytesScalar(krs * nLoadLayers)
-				e.Devices[0].KVCache.Value += GGUFBytesScalar(vrs * nLoadLayers)
-				e.Devices[0].Parameter.KVCache += GGUFParametersScalar((kps + vps) * nLoadLayers)
-				if !*o.LMCOffloadKVCache {
-					e.Devices[0].KVCache.Key += GGUFBytesScalar(krs * nOffloadLayers)
-					e.Devices[0].KVCache.Value += GGUFBytesScalar(vrs * nOffloadLayers)
-					e.Devices[0].Parameter.KVCache += GGUFParametersScalar((kps + vps) * nOffloadLayers)
-				} else if !zeroOffload {
-					for i, d := range e.Devices[1:] {
-						e.Devices[i+1].KVCache.Key += GGUFBytesScalar(krs * d.HandleLayers)
-						e.Devices[i+1].KVCache.Value += GGUFBytesScalar(vrs * d.HandleLayers)
-						e.Devices[i+1].Parameter.KVCache += GGUFParametersScalar((kps + vps) * d.HandleLayers)
-					}
-				}
-			} else {
-				// Sliding window attention size,
-				// see https://github.com/ggml-org/llama.cpp/blob/3079e9ac8e04ef6eddeb0c164d72edb6b6fd2df5/src/llama-kv-cache.cpp#L1640-L1642.
-				swas := min(nKV, GGMLPadding(a.AttentionSlidingWindow*nSeq+uint64(*o.LMCLogicalBatchSize), paddingAlign))
-				swaKps, swaVps := kGQA*swas, vGQA*swas
-				swaKrs, swaVrs := o.LMCCacheKeyType.RowSizeOf([]uint64{swaKps}), o.LMCCacheValueType.RowSizeOf([]uint64{swaVps})
+		// The sliding window layers may size their heads separately (Gemma 4).
+		swaAkl, swaAvl := akl, avl
+		if a.AttentionKeyLengthSWA > 0 {
+			swaAkl = uint64(a.AttentionKeyLengthSWA)
+		}
+		if a.AttentionValueLengthSWA > 0 {
+			swaAvl = uint64(a.AttentionValueLengthSWA)
+		}
 
-				nNonSWALoadLayers, nNonSWAOffloadLayers := nLoadLayers-nSWALoadLayers, nOffloadLayers-nSWAOffloadLayers
+		// Sliding window attention size,
+		// see https://github.com/ggml-org/llama.cpp/blob/3079e9ac8e04ef6eddeb0c164d72edb6b6fd2df5/src/llama-kv-cache.cpp#L1640-L1642.
+		swas := min(nKV, GGMLPadding(a.AttentionSlidingWindow*nSeq+uint64(*o.LMCLogicalBatchSize), paddingAlign))
 
-				e.Devices[0].KVCache.Key += GGUFBytesScalar(swaKrs*nSWALoadLayers + krs*nNonSWALoadLayers)
-				e.Devices[0].KVCache.Value += GGUFBytesScalar(swaVrs*nSWALoadLayers + vrs*nNonSWALoadLayers)
-				e.Devices[0].Parameter.KVCache += GGUFParametersScalar((swaKps+swaVps)*nSWALoadLayers + (kps+vps)*nNonSWALoadLayers)
-				if !*o.LMCOffloadKVCache {
-					e.Devices[0].KVCache.Key += GGUFBytesScalar(swaKrs*nSWAOffloadLayers + krs*nNonSWAOffloadLayers)
-					e.Devices[0].KVCache.Value += GGUFBytesScalar(swaVrs*nSWAOffloadLayers + vrs*nNonSWAOffloadLayers)
-					e.Devices[0].Parameter.KVCache += GGUFParametersScalar((swaKps+swaVps)*nSWAOffloadLayers + (kps+vps)*nNonSWAOffloadLayers)
-				} else if !zeroOffload {
-					for i, d := range e.Devices[1:] {
-						e.Devices[i+1].KVCache.Key += GGUFBytesScalar(swaKrs*d.HandleSWALayers + krs*(d.HandleLayers-d.HandleSWALayers))
-						e.Devices[i+1].KVCache.Value += GGUFBytesScalar(swaVrs*d.HandleSWALayers + vrs*(d.HandleLayers-d.HandleSWALayers))
-						e.Devices[i+1].Parameter.KVCache += GGUFParametersScalar((swaKps+swaVps)*d.HandleSWALayers + (kps+vps)*(d.HandleLayers-d.HandleSWALayers))
-					}
-				}
+		// The NextN/MTP blocks of the hybrid family are filtered out of the main context cache,
+		// see https://github.com/ggml-org/llama.cpp/blob/16d222fc5f2c0fdc3d0180e0b772516ec6e2eddd/src/llama-model.cpp#L2290-L2296
+		// and https://github.com/ggml-org/llama.cpp/blob/16d222fc5f2c0fdc3d0180e0b772516ec6e2eddd/src/llama-model.cpp#L2360-L2368;
+		// GLM/DeepSeek-style NextN blocks stay in it.
+		nextNWithoutKV := a.NextNPredictLayers > 0 && (a.interleavesAttention() ||
+			slices.Contains([]string{"step35", "hy-v3", "glm-dsa", "mimo2", "deepseek32"}, a.Architecture))
+
+		charge := func(device int, key, value, parameter uint64) {
+			e.Devices[device].KVCache.Key += GGUFBytesScalar(key)
+			e.Devices[device].KVCache.Value += GGUFBytesScalar(value)
+			e.Devices[device].Parameter.KVCache += GGUFParametersScalar(parameter)
+		}
+		for i := uint64(0); i < a.BlockCount; i++ {
+			if a.AttentionKVFromStartLayerCount > 0 && i >= uint64(a.AttentionKVFromStartLayerCount) {
+				// The layer reuses the cache of a leading layer (Gemma3n/Gemma4),
+				// see https://github.com/ggml-org/llama.cpp/blob/16d222fc5f2c0fdc3d0180e0b772516ec6e2eddd/src/llama-model.cpp#L2343-L2352.
+				continue
 			}
+			if nextNWithoutKV && i+uint64(a.NextNPredictLayers) >= a.BlockCount {
+				continue
+			}
+			device := 0
+			if i < uint64(len(layerDevices)) {
+				device = layerDevices[i]
+			}
+			if device > 0 && !*o.LMCOffloadKVCache {
+				// The host holds the cache of every offloaded layer without KV offloading.
+				device = 0
+			}
+			fullAttention, recurrent := a.memoryKindOfLayer(i)
+			if recurrent {
+				charge(device, rrs, srs, rrs+srs)
+			}
+			if !fullAttention {
+				continue
+			}
+			kGQA, vGQA := akl*headsKVOfLayer(i), avl*headsKVOfLayer(i)
+			n := nKV
+			if usingSWA && a.isSWALayer(i) {
+				kGQA, vGQA = swaAkl*headsKVOfLayer(i), swaAvl*headsKVOfLayer(i)
+				n = swas
+			}
+			if kGQA == 0 && vGQA == 0 {
+				// Attention-free layer, a Deci-style dummy block.
+				continue
+			}
+			kps, vps := kGQA*n, vGQA*n
+			charge(device,
+				o.LMCCacheKeyType.RowSizeOf([]uint64{kps}),
+				o.LMCCacheValueType.RowSizeOf([]uint64{vps}),
+				kps+vps)
 		}
 	}
 
@@ -675,16 +1227,27 @@ func (gf *GGUFFile) estimateLLaMACppRunInModel(o *_GGUFRunEstimateOptions, a *GG
 			inpSMask  = GGMLTypeF32.RowSizeOf([]uint64{1, nSeq})                   // F32 [1, n_seq]
 			inpSSeq   = GGMLTypeI32.RowSizeOf([]uint64{nSeq, nBatch})              // I32 [n_seq, n_batch]
 		)
-		if a.AttentionRecurrent {
+		switch {
+		// A hybrid architecture holding a KV cache above needs the inputs of its full (self-)attention
+		// layers here as well, otherwise it silently loses `inpPos + inpKQMask`.
+		//
+		// TODO(thxCode): so does a hybrid architecture declaring no interleaving, like Falcon-H1,
+		// but charging it here changes the estimate of architectures shipping today.
+		case a.interleavesAttention():
+			e.Devices[0].Computation.Input = GGUFBytesScalar(inpTokens + inpEmbd + inpPos + inpKQMask + 2*inpSMask + inpSSeq + inpOutIds)
+		case a.AttentionRecurrent:
 			e.Devices[0].Computation.Input = GGUFBytesScalar(inpTokens + inpEmbd + 2*inpSMask + inpSSeq + inpOutIds)
-		} else {
+		default:
 			e.Devices[0].Computation.Input = GGUFBytesScalar(inpTokens + inpEmbd + inpPos + inpKQMask + inpOutIds)
 		}
 		{
 			var v GGUFBytesScalar
-			if a.AttentionRecurrent {
+			switch {
+			case a.interleavesAttention():
+				v = GGUFBytesScalar(inpEmbd + inpPos + inpKQMask + inpSMask + inpSSeq)
+			case a.AttentionRecurrent:
 				v = GGUFBytesScalar(inpEmbd + inpSMask + inpSSeq)
-			} else {
+			default:
 				v = GGUFBytesScalar(inpEmbd + inpPos + inpKQMask)
 			}
 			if len(o.RPCServers) == 0 && len(o.TensorSplitFraction) > 1 {
@@ -702,7 +1265,12 @@ func (gf *GGUFFile) estimateLLaMACppRunInModel(o *_GGUFRunEstimateOptions, a *GG
 		// the allocated memory can be reused for the next layer.
 		// So, we only consider the usage of the largest layer,
 		// which is the last layer by default.
-		if a.AttentionRecurrent && !a.AttentionHybrid {
+		switch {
+		case len(tfLs) == 0:
+			// A file with no transformer block holds nothing to size per layer.
+			// llama.cpp refuses to load it for its missing blk.0 tensors, so the
+			// device compute stays zero rather than reading past the layer list.
+		case a.AttentionRecurrent && !a.AttentionHybrid:
 			if a.RWKVHeadSize > 0 {
 				attnInc := uint64(0)
 				for _, l := range tfLs[len(tfLs)-1].Search(regexp.MustCompile(`.*\.\d+\.(attn_norm|attn_norm_2)\.weight`)) {
@@ -713,7 +1281,22 @@ func (gf *GGUFFile) estimateLLaMACppRunInModel(o *_GGUFRunEstimateOptions, a *GG
 				for _, l := range tfLs[len(tfLs)-1].Search(regexp.MustCompile(`.*\.\d+\.time_mix_(lerp_x|receptance|decay_w2|key|value|gate|w2|output)\.weight`)) { // nolint: lll
 					switch {
 					case strings.HasSuffix(l.Name, ".time_mix_w2.weight"):
-						rs := GGMLTypeF32.RowSizeOf([]uint64{a.EmbeddingLength, 1, nTokens, l.Dimensions[l.NDimensions-1]})
+						// RWKV6 reshapes time_mix_w2 to [ne0, ne1, 1, 5] and multiplies the
+						// five-way lerp stack, so the node is 4-D and its last dimension is
+						// that fan-out, see
+						// https://github.com/ggml-org/llama.cpp/blob/b3c3b96a139d4ef1bdec926ac17aa040981cfc5d/src/models/rwkv6-base.cpp#L59-L65.
+						// RWKV7 gives the same tensor name to a plain decay projection whose
+						// node is [n_embd, n_tokens], see
+						// https://github.com/ggml-org/llama.cpp/blob/b3c3b96a139d4ef1bdec926ac17aa040981cfc5d/src/models/rwkv7-base.cpp#L67-L70.
+						// Its last dimension is the embedding length, so the 4-D shape charges
+						// the node n_embd times over.
+						var rs uint64
+						switch a.Architecture {
+						case "rwkv7", "arwkv7":
+							rs = GGMLTypeF32.RowSizeOf([]uint64{a.EmbeddingLength, nTokens})
+						default:
+							rs = GGMLTypeF32.RowSizeOf([]uint64{a.EmbeddingLength, 1, nTokens, l.Dimensions[l.NDimensions-1]})
+						}
 						ffnInc += rs
 					case strings.HasSuffix(l.Name, ".time_mix_output.weight"):
 						rs := GGMLTypeF32.RowSizeOf([]uint64{a.EmbeddingLength, nBatch + uint64(a.RWKVHeadSize)*nSeq})
@@ -724,11 +1307,13 @@ func (gf *GGUFFile) estimateLLaMACppRunInModel(o *_GGUFRunEstimateOptions, a *GG
 					}
 				}
 				cp := GGUFBytesScalar(attnInc + ffnInc)
+				cp = GGUFBytesScalar(estimateLLaMACppRecurrentComputeFloor(
+					a, tfLs, nTokens, uint64(cp), !fullOffload && nTokens >= _LMCOffloadOpMinBatchSize))
 				for i := range e.Devices[1:] {
 					e.Devices[i+1].Computation.Compute = cp
 				}
 			} else {
-				r := uint64((a.SSMConvolutionKernel - 1) * (a.SSMInnerSize + 2*a.SSMGroupCount*a.SSMStateSize))
+				r := a.ssmConvolutionStateSize()
 				convInc := GGMLTypeF32.RowSizeOf([]uint64{r, nSeq}) // F32 [n_embd_key_gqa, nSeq] reshape
 				for _, l := range tfLs[len(tfLs)-1].Search(regexp.MustCompile(`.*\.\d+\.(attn_norm|ssm_in|ssm_conv1d)\.weight`)) {
 					if !strings.HasSuffix(l.Name, ".ssm_conv1d.weight") {
@@ -752,39 +1337,62 @@ func (gf *GGUFFile) estimateLLaMACppRunInModel(o *_GGUFRunEstimateOptions, a *GG
 					ssmInc += rs
 				}
 				cp := GGUFBytesScalar(convInc + ssmInc)
+				cp = GGUFBytesScalar(estimateLLaMACppRecurrentComputeFloor(
+					a, tfLs, nTokens, uint64(cp), !fullOffload && nTokens >= _LMCOffloadOpMinBatchSize))
 				for i := range e.Devices[1:] {
 					e.Devices[i+1].Computation.Compute = cp
 				}
 			}
-		} else {
+		default:
 			loadAttnInc, offloadAttnInc := uint64(0), uint64(0)
-			{
+			// A memoryless graph has no KV cache rows to stage across a host
+			// boundary.
+			if !a.buildsMemorylessGraph() {
 				rs := o.LMCCacheKeyType.RowSizeOf([]uint64{uint64(a.AttentionKeyLength), nKV, a.AttentionHeadCountKV})
 				loadAttnInc = rs // k-?
 				rs = o.LMCCacheValueType.RowSizeOf([]uint64{uint64(a.AttentionValueLength), nKV, a.AttentionHeadCountKV})
 				loadAttnInc += rs // v-?
 			}
-			if o.FlashAttention {
-				// https://github.com/ggerganov/llama.cpp/blob/172c8256840ffd882ab9992ecedbb587d9b21f15/llama.cpp#L7387.
-				offloadAttnInc = GGMLTypeF16.RowSizeOf([]uint64{nKV, nTokens})
-				for _, l := range tfLs[len(tfLs)-1].Search(regexp.MustCompile(`.*\.\d+\.attn_(norm|q|qkv|q_b)\.weight`)) {
-					if strings.HasSuffix(l.Name, ".attn_norm.weight") {
-						rs := GGMLTypeF32.RowSizeOf([]uint64{l.Dimensions[l.NDimensions-1], nTokens})
-						offloadAttnInc += rs
-						continue
-					}
-					rs := l.Bytes()
-					offloadAttnInc += rs
+			// A graph that adds a relative attention bias prices the quadratic
+			// attention whatever the flag says: build_attn_mha declines the
+			// flash path unless kq_b is null, see
+			// https://github.com/ggml-org/llama.cpp/blob/c841aeeb8/src/llama-graph.cpp#L2564.
+			kqBias := false
+			for _, tl := range tfLs {
+				if len(tl.Search(_LMCRelativeBiasWeightRegex)) != 0 {
+					kqBias = true
+					break
 				}
-				// https://github.com/ggerganov/llama.cpp/blob/172c8256840ffd882ab9992ecedbb587d9b21f15/llama.cpp#L6986-L6992.
-				rs := o.LMCCacheKeyType.RowSizeOf([]uint64{uint64(a.AttentionKeyLength), nKV, a.AttentionHeadCountKV})
-				offloadAttnInc += rs
-				// https://github.com/ggerganov/llama.cpp/blob/172c8256840ffd882ab9992ecedbb587d9b21f15/llama.cpp#L7000-L7007.
-				rs = o.LMCCacheValueType.RowSizeOf([]uint64{uint64(a.AttentionValueLength), nKV, a.AttentionHeadCountKV})
-				offloadAttnInc += rs
+			}
+			flashPricing := o.FlashAttention && !kqBias
+			// The non-flash path keeps sizing the offload device from ffnInc below.
+			offloadFfnInc := uint64(0)
+			if flashPricing {
+				boundary := !fullOffload && nTokens >= _LMCOffloadOpMinBatchSize
+				hostLayers := tfLs[:min(nLoadLayers, uint64(len(tfLs)))]
+				if len(hostLayers) == 0 {
+					// Every block is on the device, so block zero stands in for
+					// the shapes; only the output layer can still hold a boundary.
+					hostLayers = tfLs[:1]
+				}
+				// Gating is a property of the architecture's FFN; a hybrid's
+				// first block can be a recurrent one with no FFN at all.
+				gated := false
+				for _, tl := range tfLs {
+					if len(tl.Search(_LMCGateWeightRegex)) != 0 {
+						gated = true
+						break
+					}
+				}
+				offloadAttnInc, offloadFfnInc = estimateLLaMACppFlashComputeMoments(
+					o, a, hostLayers, tfLs, nKV, nTokens, loadAttnInc, boundary, gated)
+				if a.Architecture == "gemma3n" {
+					offloadAttnInc = max(offloadAttnInc,
+						estimateLLaMACppGemma3nAltupMoment(a, ipLs, tfLs, nKV, nTokens, loadAttnInc, boundary))
+				}
 			} else {
 				offloadAttnInc = uint64(0)
-				for _, l := range tfLs[len(tfLs)-1].Search(regexp.MustCompile(`.*\.\d+\.attn_(norm|q|qkv|q_b)\.weight`)) {
+				for _, l := range searchLastBlock(tfLs, _LMCAttentionNodeWeightRegex) {
 					var rs uint64
 					switch {
 					default: // norm.
@@ -815,9 +1423,16 @@ func (gf *GGUFFile) estimateLLaMACppRunInModel(o *_GGUFRunEstimateOptions, a *GG
 						offloadAttnInc += rs // kq.
 					}
 				}
+				if kqBias {
+					// build_pos_bias holds three kq-sized rows beside the kq
+					// node: the gathered bias rows, their contiguous
+					// permutation, and the biased kq sum.
+					rs := GGMLTypeF32.RowSizeOf([]uint64{nKV, nTokens, a.AttentionHeadCount})
+					offloadAttnInc += 3 * rs
+				}
 			}
 			ffnInc := uint64(0)
-			for _, l := range tfLs[len(tfLs)-1].Search(regexp.MustCompile(`.*\.\d+\.(attn_norm|ffn_norm|ffn_gate|ffn_up)\.weight`)) {
+			for _, l := range searchLastBlock(tfLs, _LMCFeedForwardNodeWeightRegex) {
 				rs := GGMLTypeF32.RowSizeOf([]uint64{l.Dimensions[l.NDimensions-1], nTokens})
 				ffnInc += rs
 			}
@@ -836,10 +1451,30 @@ func (gf *GGUFFile) estimateLLaMACppRunInModel(o *_GGUFRunEstimateOptions, a *GG
 			}
 			{
 				cp := GGUFBytesScalar(max(offloadAttnInc, ffnInc))
+				if flashPricing {
+					// The flash path stages the boundary copies inside its own moments.
+					cp = GGUFBytesScalar(max(offloadAttnInc, offloadFfnInc))
+				}
+				if slices.Contains(_LMCBackendUnholdableArchitectures, a.Architecture) &&
+					nTokens >= _LMCOffloadOpMinBatchSize {
+					// Every layer stays on the CPU, and the batch offload path
+					// streams each layer's weights through the device compute
+					// buffer. The allocator holds close to the whole model, so
+					// the buffer floors at the summed layer weights beside the
+					// moments above. Measured on Nanbeige4.2-3B-Q4_K_M: the
+					// buffer is 1854.23 MiB at every offload depth.
+					var ws uint64
+					for _, tl := range tfLs {
+						for _, l := range tl.Search(_LMCLayerWeightRegex) {
+							ws += l.Bytes()
+						}
+					}
+					cp += GGUFBytesScalar(ws)
+				}
 				for i := range e.Devices[1:] {
 					e.Devices[i+1].Computation.Compute = cp
 				}
-				if nLoadLayers > 1 {
+				if !flashPricing && nLoadLayers > 1 {
 					for i := range e.Devices[1:] {
 						if e.Devices[i+1].Remote {
 							continue
@@ -867,7 +1502,21 @@ func (gf *GGUFFile) estimateLLaMACppRunInModel(o *_GGUFRunEstimateOptions, a *GG
 				rs := GGMLTypeF32.RowSizeOf([]uint64{l.Dimensions[l.NDimensions-1], nTokens})
 				outInc += rs
 			}
-			e.Devices[idxOutputDevice].Computation.Output += GGUFBytesScalar(outInc)
+			// Host, for the same reason as the output buffer above: what the output
+			// projection produces is logits, and llama_context::output_reserve keeps
+			// them in system memory whatever the offload. Charging them to the output
+			// device counted the same bytes a second time, on a card that never holds
+			// them.
+			//
+			// A speculator head is the exception. llama.cpp reserves the graph with
+			// n_outputs = 1 for a normal decoder, so the logits never reach the card,
+			// but a draft head emits logits at every position and the projection runs
+			// on the device that holds it.
+			outDev := 0
+			if a.emitsLogitsAtEveryPosition() {
+				outDev = idxOutputDevice
+			}
+			e.Devices[outDev].Computation.Output += GGUFBytesScalar(outInc)
 		}
 	}
 
@@ -1038,6 +1687,23 @@ func (gf *GGUFFile) estimateLLaMACppRunInProjector(o *_GGUFRunEstimateOptions, a
 			widthMaxSize = heightMaxSize
 		}
 		nPatchSize := uint64(a.ClipVisionPatchSize)
+		// A dynamic-resolution projector reserves its graph for one square warm-up
+		// image whose side llama.cpp derives from a token count it carries itself,
+		// not from anything the file declares: sqrt(tokens) * patch_size * n_merge,
+		// see https://github.com/ggml-org/llama.cpp/blob/b3c3b96a139d4ef1bdec926ac17aa040981cfc5d/tools/mtmd/clip-model.h#L204-L209.
+		// That one image is what the graph is reserved from, see
+		// https://github.com/ggml-org/llama.cpp/blob/b3c3b96a139d4ef1bdec926ac17aa040981cfc5d/tools/mtmd/clip.cpp#L3618-L3639.
+		// A caller's own maximum still wins, the way "--image-max-tokens" does.
+		warmupSized := false
+		if w, ok := _GGUFClipWarmupImages[a.ClipProjectorType]; ok && o.LMCVisualMaxImageSize == nil && nPatchSize > 0 {
+			merge := w.MergeDefault
+			if a.ClipVisionSpatialMergeSize > 0 {
+				merge = uint64(a.ClipVisionSpatialMergeSize)
+			}
+			heightMaxSize = w.TokensPerSide * nPatchSize * merge
+			widthMaxSize = heightMaxSize
+			warmupSized = true
+		}
 		nPatchesHeight := heightMaxSize / nPatchSize
 		nPatchesWidth := widthMaxSize / nPatchSize
 		nPatches = nPatchesHeight * nPatchesWidth
@@ -1096,7 +1762,7 @@ func (gf *GGUFFile) estimateLLaMACppRunInProjector(o *_GGUFRunEstimateOptions, a
 				projectionDim = ti.Dimensions[1]
 			}
 		case "qwen2vl_merger", "qwen2.5vl_merger", "qwen2.5o":
-			nSizePatch := uint64(a.ClipVisionPatchSize * 2)
+			nSizePatch := 2 * uint64(a.ClipVisionPatchSize)
 			heightPatchSize := heightMaxSize / nSizePatch
 			if heightMaxSize%nSizePatch > 0 {
 				heightPatchSize++
@@ -1113,11 +1779,18 @@ func (gf *GGUFFile) estimateLLaMACppRunInProjector(o *_GGUFRunEstimateOptions, a
 			nPerSide := uint64(a.ClipVisionImageSize) / uint64(a.ClipVisionPatchSize)
 			nPerSide2DPool := nPerSide / uint64(a.ClipVisionProjectorScaleFactor)
 			nPatches = nPerSide2DPool * nPerSide2DPool
+			// The average pooling runs after the vision transformer, so nPatches counts
+			// the projector's output tokens while the encoder still attends over the
+			// whole patch grid, see
+			// https://github.com/ggml-org/llama.cpp/blob/b3c3b96a139d4ef1bdec926ac17aa040981cfc5d/tools/mtmd/clip.cpp#L936-L943.
+			if sf := uint64(a.ClipVisionProjectorScaleFactor); sf > 1 {
+				nPatchesMerged = sf * sf
+			}
 			if ti, ok := gf.TensorInfos.Get("mm.input_projection.weight"); ok {
 				projectionDim = ti.Dimensions[0]
 			}
 		case "idefics3", "llama4":
-			nPatches /= uint64(a.ClipVisionProjectorScaleFactor * a.ClipVisionProjectorScaleFactor)
+			nPatches /= uint64(a.ClipVisionProjectorScaleFactor) * uint64(a.ClipVisionProjectorScaleFactor)
 			if ti, ok := gf.TensorInfos.Get("mm.model.fc.weight"); ok {
 				projectionDim = ti.Dimensions[1]
 			}
@@ -1135,7 +1808,7 @@ func (gf *GGUFFile) estimateLLaMACppRunInProjector(o *_GGUFRunEstimateOptions, a
 				projectionDim = ti.Dimensions[0]
 			}
 		case "internvl":
-			nPatches /= uint64(a.ClipVisionProjectorScaleFactor * a.ClipVisionProjectorScaleFactor)
+			nPatches /= uint64(a.ClipVisionProjectorScaleFactor) * uint64(a.ClipVisionProjectorScaleFactor)
 			if ti, ok := gf.TensorInfos.Get("mm.model.mlp.3.weight"); ok {
 				projectionDim = ti.Dimensions[1]
 			}
@@ -1159,12 +1832,14 @@ func (gf *GGUFFile) estimateLLaMACppRunInProjector(o *_GGUFRunEstimateOptions, a
 				// A projector declaring no image size at all is dynamic resolution
 				// (dots_ocr does this); assume the default cap rather than zero-pixel images,
 				// which would charge nothing for the encoder.
-				ms := uint64(ptr.Deref(o.LMCVisualMaxImageSize, 1024))
-				if o.LMCVisualMaxImageSize == nil && heightMaxSize > 0 && heightMaxSize < ms {
-					ms = heightMaxSize
+				if !warmupSized {
+					ms := uint64(ptr.Deref(o.LMCVisualMaxImageSize, 1024))
+					if o.LMCVisualMaxImageSize == nil && heightMaxSize > 0 && heightMaxSize < ms {
+						ms = heightMaxSize
+					}
+					heightMaxSize = ms
+					widthMaxSize = ms
 				}
-				heightMaxSize = ms
-				widthMaxSize = ms
 				heightPatchSize := (heightMaxSize + nPatchSize - 1) / nPatchSize
 				widthPatchSize := (widthMaxSize + nPatchSize - 1) / nPatchSize
 				// Honor the patch reduction the metadata declares,
@@ -1567,6 +2242,16 @@ type (
 		//
 		// Only available when EmbeddingOnly is true.
 		Reranking bool `json:"reranking"`
+		// Decision is the flag to indicate whether the model is used for decision,
+		// i.e. serving the "POST /v1/systemone" endpoint in llama-server,
+		// true for decision.
+		//
+		// It is presence-based: any string-typed "<architecture>.decision.type"
+		// metadata marks the model, mirroring common_get_decision_type in
+		// llama.cpp. It outranks Reranking: a declared decision head carries
+		// classifier tensors and rank pooling that would otherwise read as
+		// reranking.
+		Decision bool `json:"decision"`
 		// Distributable is the flag to indicate whether the model is distributable,
 		// true for distributable.
 		Distributable bool `json:"distributable"`
@@ -1734,6 +2419,7 @@ func (e LLaMACppRunEstimate) Summarize(mmap bool, nonUMARamFootprint, nonUMAVram
 	es.NoMMap = e.NoMMap
 	es.EmbeddingOnly = e.EmbeddingOnly
 	es.Reranking = e.Reranking
+	es.Decision = e.Decision
 	es.LogicalBatchSize = e.LogicalBatchSize
 	es.PhysicalBatchSize = e.PhysicalBatchSize
 	es.Distributable = e.Distributable

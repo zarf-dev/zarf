@@ -22,6 +22,13 @@ const (
 	HostOSUnix    = 4
 	HostOSMacOS   = 5
 	HostOSBeOS    = 6
+
+	LinkTypeNone            = 0
+	LinkTypeUnixSymlink     = 1
+	LinkTypeWindowsSymlink  = 2
+	LinkTypeWindowsJunction = 3
+	LinkTypeHardLink        = 4
+	LinkTypeFileCopy        = 5
 )
 
 const (
@@ -39,20 +46,27 @@ var (
 
 // FileHeader represents a single file in a RAR archive.
 type FileHeader struct {
-	Name             string    // file name using '/' as the directory separator
-	IsDir            bool      // is a directory
-	Solid            bool      // is a solid file
-	Encrypted        bool      // file contents are encrypted
-	HeaderEncrypted  bool      // file header is encrypted
-	HostOS           byte      // Host OS the archive was created on
-	Attributes       int64     // Host OS specific file attributes
-	PackedSize       int64     // packed file size (or first block if the file spans volumes)
-	UnPackedSize     int64     // unpacked file size
-	UnKnownSize      bool      // unpacked file size is not known
-	ModificationTime time.Time // modification time (non-zero if set)
-	CreationTime     time.Time // creation time (non-zero if set)
-	AccessTime       time.Time // access time (non-zero if set)
-	Version          int       // file version
+	Name               string    // file name using '/' as the directory separator
+	IsDir              bool      // is a directory
+	Solid              bool      // is a solid file
+	Encrypted          bool      // file contents are encrypted
+	HeaderEncrypted    bool      // file header is encrypted
+	HostOS             byte      // Host OS the archive was created on
+	Attributes         int64     // Host OS specific file attributes
+	PackedSize         int64     // packed file size (or first block if the file spans volumes)
+	UnPackedSize       int64     // unpacked file size
+	UnKnownSize        bool      // unpacked file size is not known
+	ModificationTime   time.Time // modification time (non-zero if set)
+	CreationTime       time.Time // creation time (non-zero if set)
+	AccessTime         time.Time // access time (non-zero if set)
+	Version            int       // file version
+	LinkType           byte      // the type of redirection link for the file
+	LinkTarget         string    // target path of the LinkType
+	LinkTargetIsDir    bool      // link target is a directory
+	UnixOwnerUserName  *string   // unix owner user name
+	UnixOwnerGroupName *string   // unix owner group name
+	UnixOwnerUserID    *uint64   // unix owner user id
+	UnixOwnerGroupID   *uint64   // unix owner group id
 }
 
 // Mode returns an fs.FileMode for the file, calculated from the Attributes field.
@@ -91,7 +105,7 @@ func (f *FileHeader) Mode() fs.FileMode {
 	}
 
 	// Check for additional file types.
-	if f.Attributes&0xF000 == 0xA000 {
+	if f.Attributes&0xF000 == 0xA000 || f.LinkType == LinkTypeWindowsSymlink || f.LinkType == LinkTypeUnixSymlink {
 		m |= fs.ModeSymlink
 	}
 	return m
@@ -104,6 +118,8 @@ type byteReader interface {
 
 type archiveFile interface {
 	byteReader
+	io.WriterTo
+	writeToN(w io.Writer, n int64) (int64, error)
 	currFile() *fileBlockHeader
 	nextFile() (*fileBlockList, error)
 	newArchiveFile(blocks *fileBlockList) (archiveFile, error)
@@ -130,8 +146,10 @@ type errorFile struct {
 	err error
 }
 
-func (ef *errorFile) ReadByte() (byte, error)    { return 0, ef.err }
-func (ef *errorFile) Read(p []byte) (int, error) { return 0, ef.err }
+func (ef *errorFile) ReadByte() (byte, error)                      { return 0, ef.err }
+func (ef *errorFile) Read(p []byte) (int, error)                   { return 0, ef.err }
+func (ef *errorFile) WriteTo(w io.Writer) (int64, error)           { return 0, ef.err }
+func (ef *errorFile) writeToN(w io.Writer, n int64) (int64, error) { return 0, ef.err }
 
 type fileBlockList struct {
 	mu     sync.RWMutex
@@ -231,13 +249,15 @@ func (f *packedFileReader) nextBlock() error {
 	}
 	h, err := f.v.nextBlock()
 	if err != nil {
-		if err == io.EOF {
+		switch err {
+		case io.EOF:
 			// archive ended, but file hasn't
 			return ErrUnexpectedArcEnd
-		} else if err == errVolumeOrArchiveEnd {
+		case errVolumeOrArchiveEnd:
 			return ErrMultiVolume
+		default:
+			return err
 		}
-		return err
 	}
 	if h.first || h.Name != f.h.Name {
 		return ErrInvalidFileBlock
@@ -311,20 +331,55 @@ func (f *packedFileReader) ReadByte() (byte, error) {
 	}
 }
 
+func (f *packedFileReader) writeToN(w io.Writer, n int64) (int64, error) {
+	if n == 0 {
+		return 0, nil
+	}
+	var err error
+	var tot int64
+	todo := n
+	for todo != 0 && err == nil {
+		var l int64
+		l, err = f.v.writeToAtMost(w, todo)
+		if todo > 0 {
+			todo -= l
+		}
+		tot += int64(l)
+		if err == nil && todo != 0 {
+			err = f.nextBlock()
+		}
+	}
+	if todo <= 0 && err == io.EOF {
+		err = nil
+	}
+	return tot, err
+}
+
+func (f *packedFileReader) WriteTo(w io.Writer) (int64, error) {
+	return f.writeToN(w, -1)
+}
+
 func (pr *packedFileReader) newArchiveFileFrom(r archiveFile, blocks *fileBlockList) (archiveFile, error) {
 	h := blocks.firstBlock()
 	err := pr.init(blocks)
 	if err != nil {
 		return nil, err
 	}
+	if len(h.errs) > 0 {
+		if len(h.errs) == 1 {
+			err = h.errs[0]
+		} else {
+			err = errors.Join(h.errs...)
+		}
+		return &errorFile{archiveFile: r, err: err}, nil
+	}
 	if h.Encrypted {
 		if h.key == nil {
-			r = &errorFile{archiveFile: r, err: ErrArchivedFileEncrypted}
-		} else {
-			r, err = newAesDecryptFileReader(r, h.key, h.iv) // decrypt
-			if err != nil {
-				return nil, err
-			}
+			return &errorFile{archiveFile: r, err: ErrArchivedFileEncrypted}, nil
+		}
+		r, err = newAesDecryptFileReader(r, h.key, h.iv) // decrypt
+		if err != nil {
+			return nil, err
 		}
 	}
 	// check for compression
@@ -333,7 +388,7 @@ func (pr *packedFileReader) newArchiveFileFrom(r archiveFile, blocks *fileBlockL
 			pr.dr = new(decodeReader)
 		}
 		// doesn't make sense for the dictionary to be larger than the file
-		if !h.UnKnownSize && h.winSize > h.UnPackedSize {
+		if !h.Solid && !h.UnKnownSize && h.winSize > h.UnPackedSize {
 			h.winSize = h.UnPackedSize
 		}
 		if h.winSize > maxDictSize || h.winSize > pr.opt.maxDictSize {
@@ -498,6 +553,23 @@ func (l *limitedReader) ReadByte() (byte, error) {
 	return b, nil
 }
 
+func (l *limitedReader) writeToN(w io.Writer, n int64) (int64, error) {
+	diff := l.size - l.offset
+	m, err := l.archiveFile.writeToN(w, min(diff, n))
+	l.offset += m
+	if m < n && err == nil {
+		err = io.EOF
+	}
+	return m, err
+}
+
+func (l *limitedReader) WriteTo(w io.Writer) (int64, error) {
+	diff := l.size - l.offset
+	n, err := l.archiveFile.writeToN(w, diff)
+	l.offset += n
+	return n, err
+}
+
 type limitedReadSeeker struct {
 	limitedReader
 	sr io.Seeker
@@ -593,6 +665,22 @@ func (cr *checksumReader) ReadByte() (byte, error) {
 	return b, err
 }
 
+func (cr *checksumReader) writeToN(w io.Writer, n int64) (int64, error) {
+	panic("checksumReader.writeToN should never be called")
+}
+
+func (cr *checksumReader) WriteTo(w io.Writer) (int64, error) {
+	mw := io.MultiWriter(w, cr.hash)
+	n, err := cr.archiveFile.WriteTo(mw)
+	if err == nil || err == io.EOF {
+		err = cr.eofError()
+	}
+	if err != nil && err != io.EOF {
+		return n, err
+	}
+	return n, nil
+}
+
 func newChecksumReader(f archiveFile, h hash.Hash, success func()) *checksumReader {
 	return &checksumReader{archiveFile: f, hash: h, success: success}
 }
@@ -602,8 +690,9 @@ type Reader struct {
 	f archiveFile
 }
 
-func (r *Reader) Read(p []byte) (int, error) { return r.f.Read(p) }
-func (r *Reader) ReadByte() (byte, error)    { return r.f.ReadByte() }
+func (r *Reader) Read(p []byte) (int, error)         { return r.f.Read(p) }
+func (r *Reader) ReadByte() (byte, error)            { return r.f.ReadByte() }
+func (r *Reader) WriteTo(w io.Writer) (int64, error) { return r.f.WriteTo(w) }
 
 // Next advances to the next file in the archive.
 func (r *Reader) Next() (*FileHeader, error) {

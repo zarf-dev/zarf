@@ -39,6 +39,18 @@ type Controller interface {
 	GetOutput() io.Writer
 }
 
+// TerminalWriter is an output that is not a terminal file itself but whose contents are ultimately rendered to one
+// (e.g. a buffer drawn by a TUI). Formatters use this to decide on terminal-only styling, such as colors.
+//
+// IsTerminal is called for every entry while the logger holds its lock, so it must be cheap, safe for concurrent
+// use, and must never log (doing so will deadlock). Only implement this when everything written ends up on a
+// terminal; a tee that also writes to a file would get ANSI codes in that file. Wrappers such as io.MultiWriter
+// and bufio.Writer do not forward IsTerminal, so wrapping a TerminalWriter drops the signal.
+type TerminalWriter interface {
+	io.Writer
+	IsTerminal() bool
+}
+
 type NestedLogger interface {
 	Nested(fields ...any) Logger
 }
