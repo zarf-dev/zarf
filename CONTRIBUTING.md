@@ -67,13 +67,15 @@ Zarf maintainers will require one (1) core team review before merge. See the (co
 
 Issues primarily move through the following statuses: `triage` → `accepted` → `ready`. Issues begin in `triage`. A Maintainer or Reviewer can move an issue to `accepted` once its scope and value to the project are clear. Once prioritized and assigned, the issue moves to `ready`.
 
-To help move an issue forward, from `triage` to `ready`, ask clarifying questions or clear up undefined behavior. To work on an issue, ask to be assigned. Issues labeled `open-for-contribution` or `good-first-issue` are looking for contributors.
+To help move an issue forward, from `triage` to `ready`, ask clarifying questions or clear up undefined behavior.
 
 When creating or scoping issues, do not use AI to generate project feedback or use cases. Feedback grounded in experience with the project is extremely helpful to maintainers, while AI output can create noise that distracts from higher priorities.
 
 ### Pull Request Requirements
 
 A pull request must reference an issue with `ready` status on the project board and its assignee must be the PR author. Otherwise the PR will be closed.
+
+Issues labeled `open-for-contribution` or `good-first-issue` are looking for contributors. Comment to request assignment to an issue.
 
 ### Developer Workflow
 
