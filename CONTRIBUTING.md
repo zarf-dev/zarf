@@ -67,7 +67,7 @@ Zarf maintainers will require one (1) core team review before merge. See the (co
 
 A pull request must reference an issue with "Ready" status on the project board and its assignee must be the PR author. Otherwise the PR will be closed.
 
-Issues begin in "Triage". A Maintainer or Reviewer can move an issue to "Accepted" once its scope and value to the project are clear. Once prioritized and assigned, the issue moves to "Ready".
+Issues begin in `triage`. A Maintainer or Reviewer can move an issue to `accepted` once its scope and value to the project are clear. Once prioritized and assigned, the issue moves to `ready`.
 
 To help move an issue forward, ask clarifying questions or clear up undefined behavior. If you'd like to work on an issue, ask to be assigned. Issues labeled "open-for-contribution" or "good-first-issue" are looking for contributors.
 
@@ -77,8 +77,8 @@ When creating or scoping issues, do not use AI to generate project feedback or u
 
 :key: == Required by automation
 
-1. Find an issue and follow the [Pull Request Requirements](#pull-request-requirements): ask to be assigned and obtain "Ready" status.
-    - Questions during implementation can be discussed in the [Zarf OpenSSF Slack Channel](https://openssf.slack.com/archives/C07AKUMBDMJ).
+1. Find an issue and follow the [Pull Request Requirements](#pull-request-requirements): ask to be assigned and obtain `ready` status.
+    - Questions during implementation can be discussed in the issue or in the [Zarf OpenSSF Slack Channel](https://openssf.slack.com/archives/C07AKUMBDMJ).
 1. :key: Set up your Git config to GPG sign all commits. [Here's some documentation on how to set it up](https://docs.github.com/en/authentication/managing-commit-signature-verification/signing-commits). You won't be able to merge your PR if you have any unverified commits.
 1. In addition to signing your commits, you will also need to sign-off on commits stating you agree to the contribution terms.
    - This can be done by using `-s` with your git commit - adding "Signed-off-by" line automatically.
