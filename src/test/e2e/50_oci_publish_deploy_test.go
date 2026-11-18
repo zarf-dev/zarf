@@ -10,20 +10,20 @@ import (
 	"testing"
 
 	_ "github.com/distribution/distribution/v3/registry/storage/driver/inmemory" // used for docker test registry
-	"github.com/oras-project/oras-go/v3/registry/remote/properties"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	"github.com/zarf-dev/zarf/src/pkg/oci"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
 
 type PublishDeploySuiteTestSuite struct {
 	suite.Suite
 	*require.Assertions
-	Reference   properties.Reference
+	Reference   oci.Reference
 	PackagesDir string
 }
 
-var badDeployRef = properties.Reference{
+var badDeployRef = oci.Reference{
 	Registry:   "localhost:5000",
 	Repository: "zarf-test",
 	Tag:        "bad-tag",

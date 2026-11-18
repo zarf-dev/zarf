@@ -10,11 +10,11 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/oras-project/oras-go/v3/registry/remote/properties"
 	"github.com/stretchr/testify/require"
 	"sigs.k8s.io/yaml"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/pkg/oci"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/test/testutil"
@@ -81,7 +81,7 @@ func TestPublishFlavor(t *testing.T) {
 	t.Log("E2E: Publish skeleton flavor package")
 	t.Parallel()
 
-	var reg properties.Reference
+	var reg oci.Reference
 	reg.Registry = testutil.SetupInMemoryRegistry(testutil.TestContext(t), t, 31888)
 
 	ref := reg.String()

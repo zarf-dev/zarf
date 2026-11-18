@@ -15,7 +15,6 @@ import (
 	"time"
 
 	"github.com/oras-project/oras-go/v3/registry/remote"
-	"github.com/oras-project/oras-go/v3/registry/remote/properties"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
@@ -35,7 +34,7 @@ import (
 type PublishCopySkeletonSuite struct {
 	suite.Suite
 	*require.Assertions
-	Reference   properties.Reference
+	Reference   oci.Reference
 	PackagesDir string
 }
 

@@ -16,7 +16,6 @@ import (
 	"github.com/oras-project/oras-go/v3/content"
 	"github.com/oras-project/oras-go/v3/content/memory"
 	remote "github.com/oras-project/oras-go/v3/registry/remote"
-	"github.com/oras-project/oras-go/v3/registry/remote/properties"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
@@ -25,7 +24,7 @@ func TestUpdateIndexWithDescriptor(t *testing.T) {
 	t.Parallel()
 
 	ctx := testutil.TestContext(t)
-	ref := properties.Reference{
+	ref := Reference{
 		Registry:   testutil.SetupInMemoryRegistryDynamic(ctx, t),
 		Repository: "components",
 		Tag:        "example",

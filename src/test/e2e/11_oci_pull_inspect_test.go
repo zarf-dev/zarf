@@ -10,19 +10,19 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/oras-project/oras-go/v3/registry/remote/properties"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	"github.com/zarf-dev/zarf/src/pkg/oci"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
 
 type PullInspectTestSuite struct {
 	suite.Suite
 	*require.Assertions
-	Reference properties.Reference
+	Reference oci.Reference
 }
 
-var badPullInspectRef = properties.Reference{
+var badPullInspectRef = oci.Reference{
 	Registry:   "localhost:5000",
 	Repository: "zarf-test",
 	Tag:        "bad-tag",

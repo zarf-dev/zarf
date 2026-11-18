@@ -12,9 +12,9 @@ import (
 
 	_ "github.com/distribution/distribution/v3/registry/storage/driver/inmemory" // used for docker test registry
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
-	"github.com/oras-project/oras-go/v3/registry/remote/properties"
 	"github.com/stretchr/testify/require"
 
+	"github.com/zarf-dev/zarf/src/pkg/oci"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
@@ -34,7 +34,7 @@ func TestIndexImage(t *testing.T) {
 	createdPkgPath := filepath.Join(createDir, "zarf-package-index-image-amd64-0.0.1.tar.zst")
 
 	registryURL := testutil.SetupInMemoryRegistryDynamic(testutil.TestContext(t), t)
-	ref := properties.Reference{
+	ref := oci.Reference{
 		Registry:   registryURL,
 		Repository: "index-image",
 		Tag:        "0.0.1",

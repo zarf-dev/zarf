@@ -11,7 +11,6 @@ import (
 	"github.com/oras-project/oras-go/v3"
 	"github.com/oras-project/oras-go/v3/content"
 	"github.com/oras-project/oras-go/v3/content/memory"
-	"github.com/oras-project/oras-go/v3/registry/remote/properties"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
@@ -20,7 +19,7 @@ func TestCopyToTargetCopiesOnlyRequestedLayers(t *testing.T) {
 	t.Parallel()
 
 	ctx := testutil.TestContext(t)
-	ref := properties.Reference{
+	ref := Reference{
 		Registry:   testutil.SetupInMemoryRegistryDynamic(ctx, t),
 		Repository: "packages",
 		Tag:        "example",

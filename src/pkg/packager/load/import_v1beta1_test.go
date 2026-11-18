@@ -12,7 +12,6 @@ import (
 	"testing"
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
-	"github.com/oras-project/oras-go/v3/registry/remote/properties"
 	"github.com/stretchr/testify/require"
 
 	"github.com/oras-project/oras-go/v3"
@@ -23,6 +22,7 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/packager/requirements"
 	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
+	"github.com/zarf-dev/zarf/src/pkg/oci"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"github.com/zarf-dev/zarf/src/test/testutil"
@@ -55,7 +55,7 @@ func TestRemoteComponentConfigRejectsPlatformVariantMismatch(t *testing.T) {
 	t.Parallel()
 
 	ctx := testutil.TestContext(t)
-	ref := properties.Reference{
+	ref := oci.Reference{
 		Registry:   testutil.SetupInMemoryRegistryDynamic(ctx, t),
 		Repository: "components",
 		Tag:        "mismatch",
@@ -92,7 +92,7 @@ func TestRemoteComponentConfigRejectsOnCreateActions(t *testing.T) {
 	t.Parallel()
 
 	ctx := testutil.TestContext(t)
-	ref := properties.Reference{
+	ref := oci.Reference{
 		Registry:   testutil.SetupInMemoryRegistryDynamic(ctx, t),
 		Repository: "components",
 		Tag:        "on-create",
@@ -139,10 +139,10 @@ func loadV1Beta1Package(t *testing.T, dir string) v1beta1.Package {
 	return pkg
 }
 
-func publishRemoteComponent(ctx context.Context, t *testing.T, reference string, resourcePaths ...string) properties.Reference {
+func publishRemoteComponent(ctx context.Context, t *testing.T, reference string, resourcePaths ...string) oci.Reference {
 	t.Helper()
 
-	ref := properties.Reference{
+	ref := oci.Reference{
 		Registry:   testutil.SetupInMemoryRegistryDynamic(ctx, t),
 		Repository: "components",
 		Tag:        reference,
@@ -150,7 +150,7 @@ func publishRemoteComponent(ctx context.Context, t *testing.T, reference string,
 	return publishRemoteComponentToReference(ctx, t, ref, resourcePaths...)
 }
 
-func publishRemoteComponentToReference(ctx context.Context, t *testing.T, ref properties.Reference, resourcePaths ...string) properties.Reference {
+func publishRemoteComponentToReference(ctx context.Context, t *testing.T, ref oci.Reference, resourcePaths ...string) oci.Reference {
 	t.Helper()
 
 	component := v1beta1.ComponentConfig{
@@ -164,7 +164,7 @@ func publishRemoteComponentToReference(ctx context.Context, t *testing.T, ref pr
 	return publishRemoteComponentConfig(ctx, t, ref, component, resourcePaths...)
 }
 
-func publishRemoteComponentConfig(ctx context.Context, t *testing.T, ref properties.Reference, component v1beta1.ComponentConfig, resourcePaths ...string) properties.Reference {
+func publishRemoteComponentConfig(ctx context.Context, t *testing.T, ref oci.Reference, component v1beta1.ComponentConfig, resourcePaths ...string) oci.Reference {
 	t.Helper()
 
 	store := memory.New()
@@ -205,7 +205,7 @@ func TestPackageDefinitionEnforcesRemoteComponentVersionRequirements(t *testing.
 	config.CLIVersion = "v0.88.0"
 
 	ctx := testutil.TestContext(t)
-	ref := properties.Reference{
+	ref := oci.Reference{
 		Registry:   testutil.SetupInMemoryRegistryDynamic(ctx, t),
 		Repository: "components",
 		Tag:        "requires-newer-cli",
@@ -304,7 +304,7 @@ func TestRemoteImportRejectsUnbundledLocalResources(t *testing.T) {
 				Metadata:   v1beta1.ComponentMetadata{Name: "untrusted"},
 			}
 			tt.set(&component, secret)
-			ref := properties.Reference{
+			ref := oci.Reference{
 				Registry:   testutil.SetupInMemoryRegistryDynamic(ctx, t),
 				Repository: "components",
 				Tag:        "untrusted",
@@ -334,7 +334,7 @@ components:
 func TestRemoteImportRejectsAllowAnyDirectory(t *testing.T) {
 	t.Parallel()
 	ctx := testutil.TestContext(t)
-	ref := properties.Reference{
+	ref := oci.Reference{
 		Registry:   testutil.SetupInMemoryRegistryDynamic(ctx, t),
 		Repository: "components",
 		Tag:        "unrestricted-kustomize",
@@ -406,7 +406,7 @@ func TestRemoteImportResolutionPinsReferencesForOneInvocation(t *testing.T) {
 	t.Parallel()
 
 	ctx := testutil.TestContext(t)
-	ref := properties.Reference{
+	ref := oci.Reference{
 		Registry:   testutil.SetupInMemoryRegistryDynamic(ctx, t),
 		Repository: "components",
 		Tag:        "mutable",
@@ -430,7 +430,7 @@ func TestRemoteImportResolutionPinsReferencesForOneInvocation(t *testing.T) {
 	}
 }
 
-func resolveRemoteImport(ctx context.Context, t *testing.T, ref properties.Reference) v1beta1ImportResolution {
+func resolveRemoteImport(ctx context.Context, t *testing.T, ref oci.Reference) v1beta1ImportResolution {
 	t.Helper()
 
 	dir := t.TempDir()
