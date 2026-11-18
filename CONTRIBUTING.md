@@ -63,13 +63,20 @@ Zarf is a tool used within the United States Government and as such security is 
 
 Zarf maintainers will require one (1) core team review before merge. See the (contributing ladder)[CONTRIBUTING_LADDER.md] for more information.
 
+### Pull Request Requirements
+
+A pull request must reference an issue with "Ready" status on the project board and it's assignee must be the PR author. Otherwise the PR will be closed.
+
+A maintainer or reviewer can set an issue's status to "Ready". To help move an existing issue to "Ready", comment with clarifying questions and propose intended behavior.
+
+When creating or scoping issues, do not use AI to generate project feedback or use cases. Feedback grounded from experience with the project is extremely helpful to maintainers, while AI output can create noise that distracts from higher priorities.
+
 ### Developer Workflow
 
 :key: == Required by automation
 
-1. Create an issue or find a relevant unassigned issue. Before starting implementation, the issue must be assigned to you and its status on the project board must be Ready
-   - If the issue isn't Ready, comment to clarify ambiguous behavior and resolve open questions.
-   - Comment to request assignment.
+1. Find an issue and follow the [Pull Request Requirements](#pull-request-requirements): ask to be assigned and obtain "Ready" status.
+    - Questions during implementation can be discussed in the [Zarf OpenSSF Slack Channel](https://openssf.slack.com/archives/C07AKUMBDMJ).
 1. :key: Set up your Git config to GPG sign all commits. [Here's some documentation on how to set it up](https://docs.github.com/en/authentication/managing-commit-signature-verification/signing-commits). You won't be able to merge your PR if you have any unverified commits.
 1. In addition to signing your commits, you will also need to sign-off on commits stating you agree to the contribution terms.
    - This can be done by using `-s` with your git commit - adding "Signed-off-by" line automatically.
