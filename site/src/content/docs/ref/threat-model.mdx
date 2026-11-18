@@ -1,0 +1,117 @@
+---
+title: Threat Model
+sidebar:
+  order: 95
+---
+
+## Overview
+
+Zarf enables software delivery to disconnected, edge, and highly-regulated Kubernetes environments. Operating securely in air-gapped systems requires a clear understanding of trust boundaries, asset flows, potential attack vectors, and implemented defenses.
+
+This threat model outlines Zarf's security architecture across package authoring, distribution, cluster initialization, and deployment lifecycles to inform security reviews, audits, and contributor decisions.
+
+## System Scope & Core Components
+
+Zarf's operational architecture consists of client-side CLI workflows and optional in-cluster control-plane components:
+
+1. **Zarf CLI**: A statically compiled Go binary that packages applications, validates schemas, verifies cryptographic signatures, pushes resources to registries, and orchestrates deployment.
+2. **Zarf Agent**: A Kubernetes mutating admission webhook running in the target cluster that intercepts pod creation and transparently rewrites container image references to point to the internal or air-gapped registry.
+3. **Zarf Injector**: A temporary bootstrap mechanism using pure Go binaries and Docker registry primitives to seed the internal cluster registry without external dependencies.
+4. **Internal Registry & Git Server**: Cluster-hosted OCI and Git repositories (such as Docker Registry v2 and Gitea) provisioned during `zarf init` to serve workloads locally in air-gapped networks.
+
+## Trust Boundaries & Personas
+
+```text
++-------------------------------------------------------------+
+| UNTRUSTED EXTERNAL ZONE                                     |
+| Public OCI Registries, Upstream Git Repos, Internet Helm    |
++-------------------------------------------------------------+
+                               |
+                        [Package Create]
+                               v
++-------------------------------------------------------------+
+| OPERATOR WORKSTATION / CI-CD RUNNER                         |
+| - Authenticated CLI Execution                               |
+| - Private Key / KMS Signing (Cosign)                        |
+| - Package Archive Creation (tar.zst)                        |
++-------------------------------------------------------------+
+                               |
+                        [Airgap Transfer]
+                               v
++-------------------------------------------------------------+
+| AIR-GAPPED ENVIRONMENT / TARGET CLUSTER                     |
+| - Zarf CLI (Deployer)                                       |
+| - Kubernetes API Server (RBAC & Admission Controls)         |
+| - Zarf Agent (Mutating Webhook)                             |
+| - Internal Registry / Git Server                            |
++-------------------------------------------------------------+
+```
+
+### Actors & Personas
+
+- **Package Author**: Constructs `zarf.yaml` definitions and pulls upstream dependencies. Responsible for dependency supply chain security and signing the generated package.
+- **Operator / Deployer**: Executes `zarf package deploy` within the air-gapped environment. Possesses cluster credentials and controls deployment configuration values.
+- **Cluster Workloads**: Application pods running within the cluster whose lifecycle is managed by Kubernetes controllers and mutated by the Zarf Agent.
+- **Adversary**: Potential threat actors seeking to tamper with package payloads, intercept credentials, exploit mutating webhooks, or gain unauthorized cluster privilege.
+
+## Key Assets & Sensitive Data Flows
+
+| Asset | Description | Sensitivity | Protection Mechanisms |
+| --- | --- | --- | --- |
+| **Cosign Signing Keys** | Private keys or cloud KMS roles used to sign packages. | Critical | Kept offline or stored in KMS/HSM; never bundled in packages. |
+| **Package Payload (`tar.zst`)** | Manifests, container images, Helm charts, and raw files. | High | SHA-256 tree checksums recorded in `zarf.yaml`; Cosign signature bundles (`zarf.bundle.sig`). |
+| **Cluster Credentials** | `kubeconfig` and service account tokens. | Critical | Consumed in-memory by CLI; never exported or saved to disk. |
+| **Internal Registry Credentials** | Basic auth secrets for internal registry and git server. | High | Generated securely via cryptographically strong randomizers and stored in Kubernetes Secrets. |
+| **Component Variables & Values** | Deployment secrets and configuration values. | Medium - High | Masked in CLI logs; passed directly to Helm/Kubernetes without plain-text disk storage. |
+
+## Threat Analysis (STRIDE)
+
+### 1. Spoofing
+
+- **Threat**: An attacker supplies a fraudulent or counterfeit Zarf package disguised as an authentic update.
+- **Mitigation**:
+  - Packages can be cryptographically signed using `zarf package sign` with Cosign (supporting key-based, cloud KMS, and Sigstore OIDC keyless modes).
+  - Deployers can mandate signature verification with `zarf package deploy --key <public-key>` or automated CI/CD policy enforcement.
+
+### 2. Tampering
+
+- **Threat**: Modifying a package archive during transit across an air-gap or man-in-the-middle manipulation of OCI artifacts.
+- **Mitigation**:
+  - `zarf.yaml` contains deterministic SHA-256 digests for all bundled files, charts, and images.
+  - Decompression and unpack routines validate the integrity of each payload against the declared hash before deployment begins.
+
+### 3. Repudiation
+
+- **Threat**: A deployer cannot verify who published a package or what exact dependencies were included.
+- **Mitigation**:
+  - Every Zarf package automatically generates a Software Bill of Materials (SBOM) using Syft during `zarf package create`.
+  - The SBOM is bundled directly inside the package and can be inspected via `zarf package inspect sbom`.
+  - Signature bundles record the signer identity and timestamp.
+
+### 4. Information Disclosure
+
+- **Threat**: Leakage of sensitive tokens, passwords, or internal network topology in logs or error messages.
+- **Mitigation**:
+  - Sensitive variables marked with `sensitive: true` in the package definition are automatically masked in console outputs and terminal logs.
+  - Zarf does not embed cluster credentials or ambient environment variables into generated packages.
+
+### 5. Denial of Service
+
+- **Threat**: Malicious decompression bombs (e.g. zip bombs) or oversized image archives exhausting host memory or cluster storage.
+- **Mitigation**:
+  - Archives use streaming decompression (`zstd`) with bounds-checked buffer sizing.
+  - Image layers and component extraction write directly to disk or registry endpoints without loading entire multi-gigabyte archives into system RAM.
+
+### 6. Elevation of Privilege
+
+- **Threat**: Malicious package hooks (`actions`) running arbitrary host commands, or container escape via the Zarf Agent webhook pod.
+- **Mitigation**:
+  - Interactive confirmation prompts display all actions and components before execution unless `--confirm` is explicitly passed.
+  - Zarf Agent and init pods run with restricted security contexts (`runAsNonRoot: true`, `readOnlyRootFilesystem: true`, and `capabilities.drop: ["ALL"]`).
+  - Webhook communications use mutual TLS with ephemeral certs scoped strictly to the Zarf namespace.
+
+## Security Assumptions & Residual Risks
+
+1. **Host Trust**: The workstation executing `zarf` is assumed to be trusted. If the host machine running `zarf package create` or `zarf package deploy` is compromised, an attacker can manipulate outputs prior to signing.
+2. **Cluster Permissions**: `zarf init` and package deployment inherently require administrative Kubernetes permissions (`cluster-admin` or scoped RBAC). Operators should safeguard access to `kubeconfig`.
+3. **Component Actions**: Zarf supports `actions` that run shell commands. Deployers should inspect package definitions using `zarf package inspect definition` prior to deployment in sensitive environments.
