@@ -18,7 +18,6 @@ import (
 	"testing"
 
 	goyaml "github.com/goccy/go-yaml"
-	"github.com/oras-project/oras-go/v3/registry/remote/properties"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/require"
@@ -28,6 +27,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/feature"
 	"github.com/zarf-dev/zarf/src/pkg/images"
+	"github.com/zarf-dev/zarf/src/pkg/oci"
 	"github.com/zarf-dev/zarf/src/pkg/signing"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
@@ -1002,7 +1002,7 @@ func TestBuildVerifyBlobOptions(t *testing.T) {
 
 func TestSkeletonImportExample(t *testing.T) {
 	t.Parallel()
-	ref := properties.Reference{Registry: "localhost:5000", Repository: "skeletons/test", Tag: "0.0.1"}
+	ref := oci.Reference{Registry: "localhost:5000", Repository: "skeletons/test", Tag: "0.0.1"}
 	pkg := api.Package{Components: []api.Component{{Name: "first"}, {Name: "second", Description: "not copied"}}}
 
 	data, err := goyaml.Marshal(skeletonImportExample(pkg, ref))

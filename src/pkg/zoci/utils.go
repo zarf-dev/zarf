@@ -9,10 +9,38 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/oras-project/oras-go/v3/registry/remote/properties"
+	"github.com/oras-project/oras-go/v3/errdef"
 	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/pkg/helpers"
+	"github.com/zarf-dev/zarf/src/pkg/oci"
+	legacyerrdef "oras.land/oras-go/v2/errdef"
+	"oras.land/oras-go/v2/registry"
 )
+
+// ReferenceFromMetadata returns a registry reference for the given package metadata.
+// FIXME: consider if I want this
+//
+// Deprecated: Use OCIReferenceFromMetadata, which returns an oci.Reference.
+func ReferenceFromMetadata(registryLocation string, pkg api.Package) (registry.Reference, error) {
+	return legacyReferenceResult(OCIReferenceFromMetadata(registryLocation, pkg))
+}
+
+// ReferenceFromMetadataWithOptions returns a registry reference with optional overrides.
+//
+// Deprecated: Use OCIReferenceFromMetadataWithOptions, which returns an oci.Reference.
+func ReferenceFromMetadataWithOptions(registryLocation string, pkg api.Package, opts ReferenceFromMetadataOptions) (registry.Reference, error) {
+	return legacyReferenceResult(OCIReferenceFromMetadataWithOptions(registryLocation, pkg, opts))
+}
+
+func legacyReferenceResult(ref oci.Reference, err error) (registry.Reference, error) {
+	if err != nil {
+		if errors.Is(err, errdef.ErrInvalidReference) {
+			err = fmt.Errorf("%w: %w", legacyerrdef.ErrInvalidReference, err)
+		}
+		return registry.Reference{}, err
+	}
+	return registry.Reference{Registry: ref.Registry, Repository: ref.Repository, Reference: ref.GetReference()}, nil
+}
 
 // NormalizeOCISource adds the OCI scheme to valid registry references.
 func NormalizeOCISource(source string) string {
@@ -23,15 +51,15 @@ func NormalizeOCISource(source string) string {
 		return source
 	}
 
-	if _, err := properties.NewReference(source); err == nil {
+	if _, err := oci.ParseReference(source); err == nil {
 		return helpers.OCIURLPrefix + source
 	}
 	return source
 }
 
-// ReferenceFromMetadata returns a reference for the given metadata.
-func ReferenceFromMetadata(registryLocation string, pkg api.Package) (properties.Reference, error) {
-	return ReferenceFromMetadataWithOptions(registryLocation, pkg, ReferenceFromMetadataOptions{})
+// OCIReferenceFromMetadata returns a reference for the given metadata.
+func OCIReferenceFromMetadata(registryLocation string, pkg api.Package) (oci.Reference, error) {
+	return OCIReferenceFromMetadataWithOptions(registryLocation, pkg, ReferenceFromMetadataOptions{})
 }
 
 // ReferenceFromMetadataOptions provides extensible options
@@ -40,11 +68,11 @@ type ReferenceFromMetadataOptions struct {
 	Tag string
 }
 
-// ReferenceFromMetadataWithOptions returns a reference for the given metadata with optional overrides
-func ReferenceFromMetadataWithOptions(registryLocation string, pkg api.Package, opts ReferenceFromMetadataOptions) (properties.Reference, error) {
+// OCIReferenceFromMetadataWithOptions returns a reference for the given metadata with optional overrides
+func OCIReferenceFromMetadataWithOptions(registryLocation string, pkg api.Package, opts ReferenceFromMetadataOptions) (oci.Reference, error) {
 	// Explicit requirement for version in order to publish
 	if len(pkg.Metadata.Version) == 0 {
-		return properties.Reference{}, errors.New("version is required for publishing")
+		return oci.Reference{}, errors.New("version is required for publishing")
 	}
 	if !strings.HasSuffix(registryLocation, "/") {
 		registryLocation = registryLocation + "/"
@@ -64,9 +92,9 @@ func ReferenceFromMetadataWithOptions(registryLocation string, pkg api.Package, 
 
 	raw := fmt.Sprintf("%s%s:%s", registryLocation, pkg.Metadata.Name, tag)
 
-	ref, err := properties.NewReference(raw)
+	ref, err := oci.ParseReference(raw)
 	if err != nil {
-		return properties.Reference{}, fmt.Errorf("failed to parse %s: %w", raw, err)
+		return oci.Reference{}, fmt.Errorf("failed to parse %s: %w", raw, err)
 	}
 	return ref, nil
 }

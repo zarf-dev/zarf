@@ -52,7 +52,7 @@ func TestPackageDigestOCI(t *testing.T) {
 	pkgLayout, err := layout.LoadFromTar(ctx, testTarball, layout.PackageLayoutOptions{Filter: filters.Empty()})
 	require.NoError(t, err)
 
-	packageRef, err := PublishPackage(ctx, pkgLayout, registryRef, PublishPackageOptions{
+	packageRef, err := PublishPackageToOCI(ctx, pkgLayout, registryRef, PublishPackageOptions{
 		RemoteOptions: defaultTestRemoteOptions(),
 	})
 	require.NoError(t, err)
@@ -105,7 +105,7 @@ func TestPackageDigestSignedConsistency(t *testing.T) {
 	require.NoError(t, pkgLayout.SignPackage(ctx, testSignOpts()))
 	localDigest := pkgLayout.Digest()
 
-	packageRef, err := PublishPackage(ctx, pkgLayout, registryRef, PublishPackageOptions{
+	packageRef, err := PublishPackageToOCI(ctx, pkgLayout, registryRef, PublishPackageOptions{
 		RemoteOptions: defaultTestRemoteOptions(),
 	})
 	require.NoError(t, err)

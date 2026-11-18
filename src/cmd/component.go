@@ -16,6 +16,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/component"
 	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/oci"
 	"github.com/zarf-dev/zarf/src/pkg/signing"
 )
 
@@ -77,7 +78,7 @@ func (o *componentPublishOptions) run(cmd *cobra.Command, args []string) error {
 	}
 
 	parts := strings.Split(strings.TrimPrefix(args[1], helpers.OCIURLPrefix), "/")
-	destination := properties.Reference{
+	destination := oci.Reference{
 		Registry:   parts[0],
 		Repository: path.Join(parts[1:]...),
 	}
@@ -96,7 +97,7 @@ func (o *componentPublishOptions) run(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	_, err = component.Publish(cmd.Context(), args[0], destination, component.PublishOptions{
+	_, err = component.PublishToOCI(cmd.Context(), args[0], destination, component.PublishOptions{
 		CachePath:           cachePath,
 		OCIConcurrency:      o.ociConcurrency,
 		Retries:             o.retries,

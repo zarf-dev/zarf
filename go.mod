@@ -56,6 +56,7 @@ require (
 	k8s.io/klog/v2 v2.140.0
 	k8s.io/kubectl v0.37.2
 	k8s.io/streaming v0.37.2
+	oras.land/oras-go/v2 v2.6.2
 	sigs.k8s.io/cli-utils v0.37.2
 	sigs.k8s.io/kustomize/api v0.21.1
 	sigs.k8s.io/kustomize/kyaml v0.21.1
@@ -256,7 +257,6 @@ require (
 	modernc.org/gc/v3 v3.1.4 // indirect
 	modernc.org/strutil v1.2.1 // indirect
 	modernc.org/token v1.1.0 // indirect
-	oras.land/oras-go/v2 v2.6.2 // indirect
 	sigs.k8s.io/randfill v1.0.0 // indirect
 	sigs.k8s.io/structured-merge-diff/v6 v6.4.2 // indirect
 )

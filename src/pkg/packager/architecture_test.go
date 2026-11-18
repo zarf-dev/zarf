@@ -169,7 +169,7 @@ components:
 	}
 	require.NoError(t, os.WriteFile(filepath.Join(pkg, "leaf", layout.ZarfYAML), []byte(leaf), 0o600))
 	reg := createRegistry(ctx, t)
-	ref, err := PublishSkeleton(ctx, pkg, reg, PublishSkeletonOptions{Architecture: target, CachePath: t.TempDir(), RemoteOptions: defaultTestRemoteOptions()})
+	ref, err := PublishSkeletonToOCI(ctx, pkg, reg, PublishSkeletonOptions{Architecture: target, CachePath: t.TempDir(), RemoteOptions: defaultTestRemoteOptions()})
 	require.NoError(t, err)
 	remote, err := zoci.NewRemote(ctx, ref.String(), zoci.PlatformForSkeleton(), zoci.RemoteClientOptions{RemoteOptions: defaultTestRemoteOptions()})
 	require.NoError(t, err)

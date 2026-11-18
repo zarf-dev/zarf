@@ -17,7 +17,6 @@ import (
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/oras-project/oras-go/v3"
 	"github.com/oras-project/oras-go/v3/registry/remote"
-	"github.com/oras-project/oras-go/v3/registry/remote/properties"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/pkg/images"
@@ -31,9 +30,9 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-func createRegistry(ctx context.Context, t *testing.T) properties.Reference {
+func createRegistry(ctx context.Context, t *testing.T) oci.Reference {
 	t.Helper()
-	return properties.Reference{
+	return oci.Reference{
 		Registry:   testutil.SetupInMemoryRegistryDynamic(ctx, t),
 		Repository: "my-namespace",
 	}
@@ -55,7 +54,7 @@ func publishAndConnect(ctx context.Context, t *testing.T, srcPath string) (*zoci
 	pkgLayout, err := layout.LoadFromTar(ctx, packagePath, layout.PackageLayoutOptions{})
 	require.NoError(t, err)
 
-	packageRef, err := packager.PublishPackage(ctx, pkgLayout, registryRef, packager.PublishPackageOptions{
+	packageRef, err := packager.PublishPackageToOCI(ctx, pkgLayout, registryRef, packager.PublishPackageOptions{
 		RemoteOptions:  types.RemoteOptions{PlainHTTP: true},
 		OCIConcurrency: 3,
 	})
@@ -153,8 +152,8 @@ func publishPackage(ctx context.Context, t *testing.T, packagePath, upstream str
 	require.NoError(t, err)
 	t.Cleanup(func() { os.Remove(pkgLayout.Definition().Metadata.Name) }) //nolint:errcheck
 
-	dstRef := properties.Reference{Registry: upstream, Repository: "zarf-packages"}
-	packageRef, err := packager.PublishPackage(ctx, pkgLayout, dstRef, packager.PublishPackageOptions{
+	dstRef := oci.Reference{Registry: upstream, Repository: "zarf-packages"}
+	packageRef, err := packager.PublishPackageToOCI(ctx, pkgLayout, dstRef, packager.PublishPackageOptions{
 		RemoteOptions:  types.RemoteOptions{PlainHTTP: true},
 		OCIConcurrency: 3,
 	})

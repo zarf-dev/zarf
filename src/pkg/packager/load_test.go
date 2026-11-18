@@ -13,8 +13,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/oras-project/oras-go/v3/registry/remote/properties"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/pkg/oci"
 	"k8s.io/client-go/kubernetes/fake"
 
 	"github.com/zarf-dev/zarf/src/api/convert"
@@ -82,12 +82,12 @@ components:
 				require.Equal(t, wantDigest, digest)
 			})
 			t.Run("copy", func(t *testing.T) {
-				src, err := properties.NewReference(ref)
+				src, err := oci.ParseReference(ref)
 				require.NoError(t, err)
 				dst := src
 				dst.Tag = "copy-" + tt.want
 				dst.Digest = ""
-				require.NoError(t, PublishFromOCI(ctx, src, dst, PublishFromOCIOptions{Architecture: tt.option, RemoteOptions: defaultTestRemoteOptions()}))
+				require.NoError(t, CopyPackage(ctx, src, dst, CopyPackageOptions{Architecture: tt.option, RemoteOptions: defaultTestRemoteOptions()}))
 				copied, err := LoadPackage(ctx, "oci://"+dst.String(), LoadOptions{Architecture: tt.want, CachePath: t.TempDir(), RemoteOptions: defaultTestRemoteOptions()})
 				require.NoError(t, err)
 				t.Cleanup(func() { require.NoError(t, copied.Cleanup()) })
