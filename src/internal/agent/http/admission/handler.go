@@ -108,6 +108,7 @@ func (h *Handler) Serve(ctx context.Context, hook operations.Hook) http.HandlerF
 			if err != nil {
 				l.Error("unable to marshall the json patch", "error", err.Error())
 				http.Error(w, lang.AgentErrMarshallJSONPatch, http.StatusInternalServerError)
+				return
 			}
 			admissionResponse.Response.Patch = patchBytes
 			admissionResponse.Response.PatchType = &jsonPatchType
