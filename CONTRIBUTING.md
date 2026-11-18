@@ -63,21 +63,23 @@ Zarf is a tool used within the United States Government and as such security is 
 
 Zarf maintainers will require one (1) core team review before merge. See the (contributing ladder)[CONTRIBUTING_LADDER.md] for more information.
 
-### Pull Request Requirements
+### Issue Guidelines
 
-A pull request must reference an issue with "Ready" status on the project board and its assignee must be the PR author. Otherwise the PR will be closed.
+Issues primarily move through the following statuses: `triage` → `accepted` → `ready`. Issues begin in `triage`. A Maintainer or Reviewer can move an issue to `accepted` once its scope and value to the project are clear. Once prioritized and assigned, the issue moves to `ready`.
 
-Issues begin in `triage`. A Maintainer or Reviewer can move an issue to `accepted` once its scope and value to the project are clear. Once prioritized and assigned, the issue moves to `ready`.
-
-To help move an issue forward, ask clarifying questions or clear up undefined behavior. If you'd like to work on an issue, ask to be assigned. Issues labeled "open-for-contribution" or "good-first-issue" are looking for contributors.
+To help move an issue forward, from `triage` to `ready`, ask clarifying questions or clear up undefined behavior. To work on an issue, ask to be assigned. Issues labeled "open-for-contribution" or "good-first-issue" are looking for contributors.
 
 When creating or scoping issues, do not use AI to generate project feedback or use cases. Feedback grounded in experience with the project is extremely helpful to maintainers, while AI output can create noise that distracts from higher priorities.
+
+### Pull Request Requirements
+
+A pull request must reference an issue with `ready` status on the project board and its assignee must be the PR author. Otherwise the PR will be closed.
 
 ### Developer Workflow
 
 :key: == Required by automation
 
-1. Find an issue and follow the [Pull Request Requirements](#pull-request-requirements): ask to be assigned and obtain `ready` status.
+1. Find an issue and follow the [Pull Request Requirements](#pull-request-requirements).
     - Questions during implementation can be discussed in the issue or in the [Zarf OpenSSF Slack Channel](https://openssf.slack.com/archives/C07AKUMBDMJ).
 1. :key: Set up your Git config to GPG sign all commits. [Here's some documentation on how to set it up](https://docs.github.com/en/authentication/managing-commit-signature-verification/signing-commits). You won't be able to merge your PR if you have any unverified commits.
 1. In addition to signing your commits, you will also need to sign-off on commits stating you agree to the contribution terms.
