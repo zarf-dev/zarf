@@ -2604,6 +2604,7 @@ github.com/openvex/go-vex/pkg/vex
 ## explicit; go 1.26.0
 github.com/oras-project/oras-go/v3
 github.com/oras-project/oras-go/v3/content
+github.com/oras-project/oras-go/v3/content/cache
 github.com/oras-project/oras-go/v3/content/file
 github.com/oras-project/oras-go/v3/content/memory
 github.com/oras-project/oras-go/v3/content/oci

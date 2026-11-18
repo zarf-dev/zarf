@@ -8,117 +8,29 @@ import (
 	"context"
 	"errors"
 	"io"
-	"sync"
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/oras-project/oras-go/v3"
 	"github.com/oras-project/oras-go/v3/content"
+	orascache "github.com/oras-project/oras-go/v3/content/cache"
 	"github.com/oras-project/oras-go/v3/errdef"
-	"github.com/oras-project/oras-go/v3/registry"
 )
 
-type target struct {
-	oras.ReadOnlyTarget
-	cache content.Storage
+// New wraps source with caching and tolerates concurrent population of storage.
+func New(source oras.ReadOnlyTarget, storage content.Storage) oras.ReadOnlyTarget {
+	return orascache.CacheReadOnlyTarget(source, duplicateTolerantStorage{storage})
 }
 
-// New generates a new target storage with caching.
-func New(source oras.ReadOnlyTarget, cache content.Storage) oras.ReadOnlyTarget {
-	t := &target{
-		ReadOnlyTarget: source,
-		cache:          cache,
-	}
-	if fetcher, ok := source.(registry.ReferenceFetcher); ok {
-		return &referenceTarget{target: t, ReferenceFetcher: fetcher}
-	}
-	return t
+type duplicateTolerantStorage struct {
+	content.Storage
 }
 
-// Fetch fetches the content identified by the descriptor.
-func (target *target) Fetch(ctx context.Context, descriptor ocispec.Descriptor) (io.ReadCloser, error) {
-	reader, err := target.cache.Fetch(ctx, descriptor)
-	if err == nil {
-		return reader, nil
+func (s duplicateTolerantStorage) Push(ctx context.Context, desc ocispec.Descriptor, reader io.Reader) error {
+	err := s.Storage.Push(ctx, desc, reader)
+	if errors.Is(err, errdef.ErrAlreadyExists) {
+		// Another reader populated this blob. Consume the pipe so its producer
+		// can keep streaming to the caller without blocking or losing bytes.
+		_, err = io.Copy(io.Discard, reader)
 	}
-	reader, err = target.ReadOnlyTarget.Fetch(ctx, descriptor)
-	if err != nil {
-		return nil, err
-	}
-	return target.cacheReader(ctx, reader, descriptor), nil
-}
-
-func (target *target) cacheReader(ctx context.Context, reader io.ReadCloser, descriptor ocispec.Descriptor) io.ReadCloser {
-	pipedReader, pipedWriter := io.Pipe()
-	var wg sync.WaitGroup
-	var pushErr error
-	wg.Add(1)
-	wg.Go(func() {
-		defer wg.Done()
-		pushErr = target.cache.Push(ctx, descriptor, pipedReader)
-		if errors.Is(pushErr, errdef.ErrAlreadyExists) {
-			// Another pull populated this digest. Drain the pipe so the source
-			// still reaches the caller even if Push did not consume it.
-			_, pushErr = io.Copy(io.Discard, pipedReader)
-		}
-		if pushErr != nil {
-			_ = pipedReader.CloseWithError(pushErr)
-		}
-	})
-	return &cacheReadCloser{
-		Reader: io.TeeReader(reader, pipedWriter),
-		close: func() error {
-			readerErr := reader.Close()
-			if err := pipedWriter.Close(); err != nil {
-				return err
-			}
-			wg.Wait()
-			if pushErr != nil {
-				return pushErr
-			}
-			return readerErr
-		}}
-}
-
-type cacheReadCloser struct {
-	io.Reader
-	close func() error
-}
-
-func (reader *cacheReadCloser) Close() error { return reader.close() }
-
-// Exists returns true if the described content exists.
-func (target *target) Exists(ctx context.Context, descriptor ocispec.Descriptor) (bool, error) {
-	exists, err := target.cache.Exists(ctx, descriptor)
-	if err == nil && exists {
-		return true, nil
-	}
-	return target.ReadOnlyTarget.Exists(ctx, descriptor)
-}
-
-type referenceTarget struct {
-	*target
-	registry.ReferenceFetcher
-}
-
-// FetchReference fetches the content identified by the reference from the
-// remote and cache the fetched content.
-// Cached content will only be read via Fetch, FetchReference will always fetch
-// From origin.
-func (target *referenceTarget) FetchReference(ctx context.Context, reference string) (ocispec.Descriptor, io.ReadCloser, error) {
-	descriptor, reader, err := target.ReferenceFetcher.FetchReference(ctx, reference)
-	if err != nil {
-		return ocispec.Descriptor{}, nil, err
-	}
-	exists, err := target.cache.Exists(ctx, descriptor)
-	if err != nil {
-		return ocispec.Descriptor{}, nil, err
-	}
-	if !exists {
-		return descriptor, target.cacheReader(ctx, reader, descriptor), nil
-	}
-	if err := reader.Close(); err != nil {
-		return ocispec.Descriptor{}, nil, err
-	}
-	reader, err = target.cache.Fetch(ctx, descriptor)
-	return descriptor, reader, err
+	return err
 }
