@@ -20,6 +20,11 @@ import (
 
 	"github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"github.com/oras-project/oras-go/v3"
+	"github.com/oras-project/oras-go/v3/content"
+	ocistore "github.com/oras-project/oras-go/v3/content/oci"
+	"github.com/oras-project/oras-go/v3/errdef"
+	"github.com/oras-project/oras-go/v3/registry/remote/properties"
 	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/config"
@@ -34,11 +39,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"github.com/zarf-dev/zarf/src/types"
-	"oras.land/oras-go/v2"
-	"oras.land/oras-go/v2/content"
-	ocistore "oras.land/oras-go/v2/content/oci"
-	"oras.land/oras-go/v2/errdef"
-	"oras.land/oras-go/v2/registry"
 )
 
 const componentLayerMediaType = "application/vnd.zarf.component.layer.v1.blob"
@@ -60,33 +60,33 @@ type PublishOptions struct {
 // Publish validates a v1beta1 ZarfComponentConfig and publishes it as an OCI artifact.
 // The component config is stored as the artifact's config blob; later remote-import support can
 // retrieve it without treating it as a Zarf package.
-func Publish(ctx context.Context, componentPath string, destination registry.Reference, opts PublishOptions) (registry.Reference, error) {
+func Publish(ctx context.Context, componentPath string, destination properties.Reference, opts PublishOptions) (properties.Reference, error) {
 	if !feature.IsEnabled(feature.V1Beta1) {
-		return registry.Reference{}, fmt.Errorf("publishing a %s component requires the %q feature. Run again with --features=%s=true",
+		return properties.Reference{}, fmt.Errorf("publishing a %s component requires the %q feature. Run again with --features=%s=true",
 			v1beta1.APIVersion, feature.V1Beta1, feature.V1Beta1)
 	}
 	if err := destination.ValidateRegistry(); err != nil {
-		return registry.Reference{}, fmt.Errorf("invalid registry: %w", err)
+		return properties.Reference{}, fmt.Errorf("invalid registry: %w", err)
 	}
 
 	component, err := load.ComponentConfig(componentPath)
 	if err != nil {
-		return registry.Reference{}, err
+		return properties.Reference{}, err
 	}
 	if component.Metadata.Version == "" {
-		return registry.Reference{}, errors.New("version is required for publishing")
+		return properties.Reference{}, errors.New("version is required for publishing")
 	}
 	resolved, err := load.ResolveComponentConfigImports(ctx, component, componentPath, opts.RemoteOptions, opts.CachePath)
 	if err != nil {
-		return registry.Reference{}, fmt.Errorf("unable to resolve component imports: %w", err)
+		return properties.Reference{}, fmt.Errorf("unable to resolve component imports: %w", err)
 	}
 	component = resolved.Component
 	if err := load.ValidateRemoteKustomizeRestrictions(component.Component); err != nil {
-		return registry.Reference{}, err
+		return properties.Reference{}, err
 	}
 	resourceSet, err := resolved.MaterializeResources(ctx, componentPath)
 	if err != nil {
-		return registry.Reference{}, fmt.Errorf("unable to materialize imported component resources: %w", err)
+		return properties.Reference{}, fmt.Errorf("unable to materialize imported component resources: %w", err)
 	}
 	defer func() {
 		if err := resourceSet.Close(); err != nil {
@@ -96,21 +96,21 @@ func Publish(ctx context.Context, componentPath string, destination registry.Ref
 
 	componentRef, err := componentReference(destination, component)
 	if err != nil {
-		return registry.Reference{}, err
+		return properties.Reference{}, err
 	}
 	component.PublishData.ZarfVersion = config.CLIVersion
 	component, resources, err := normalizeComponentResources(component, resolved.ImportedSchemas, resourceSet)
 	if err != nil {
-		return registry.Reference{}, err
+		return properties.Reference{}, err
 	}
 	componentJSON, err := json.Marshal(component)
 	if err != nil {
-		return registry.Reference{}, fmt.Errorf("unable to marshal component config: %w", err)
+		return properties.Reference{}, fmt.Errorf("unable to marshal component config: %w", err)
 	}
 
 	stagingDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
-		return registry.Reference{}, fmt.Errorf("unable to create component staging directory: %w", err)
+		return properties.Reference{}, fmt.Errorf("unable to create component staging directory: %w", err)
 	}
 	defer func() {
 		if err := os.RemoveAll(stagingDir); err != nil {
@@ -120,15 +120,15 @@ func Publish(ctx context.Context, componentPath string, destination registry.Ref
 
 	store, err := ocistore.NewWithContext(ctx, stagingDir)
 	if err != nil {
-		return registry.Reference{}, fmt.Errorf("unable to create component staging store: %w", err)
+		return properties.Reference{}, fmt.Errorf("unable to create component staging store: %w", err)
 	}
 	configDescriptor := content.NewDescriptorFromBytes(layout.ZarfComponentConfigMediaType, componentJSON)
 	if err := store.Push(ctx, configDescriptor, bytes.NewReader(componentJSON)); err != nil {
-		return registry.Reference{}, fmt.Errorf("unable to stage component config: %w", err)
+		return properties.Reference{}, fmt.Errorf("unable to stage component config: %w", err)
 	}
 	layers, err := stageComponentResources(ctx, store, resources)
 	if err != nil {
-		return registry.Reference{}, err
+		return properties.Reference{}, err
 	}
 	manifest, err := oras.PackManifest(ctx, store, oras.PackManifestVersion1_1, "", oras.PackManifestOptions{
 		ConfigDescriptor: &configDescriptor,
@@ -140,16 +140,16 @@ func Publish(ctx context.Context, componentPath string, destination registry.Ref
 		},
 	})
 	if err != nil {
-		return registry.Reference{}, fmt.Errorf("unable to create component artifact: %w", err)
+		return properties.Reference{}, fmt.Errorf("unable to create component artifact: %w", err)
 	}
 	if err := store.Tag(ctx, manifest, manifest.Digest.String()); err != nil {
-		return registry.Reference{}, fmt.Errorf("unable to stage component artifact: %w", err)
+		return properties.Reference{}, fmt.Errorf("unable to stage component artifact: %w", err)
 	}
 	remote, err := zoci.NewRemote(ctx, componentRef.String(), ocispec.Platform{Architecture: component.Variant.Architecture}, zoci.RemoteClientOptions{
 		RemoteOptions: opts.RemoteOptions,
 	})
 	if err != nil {
-		return registry.Reference{}, fmt.Errorf("unable to connect to component registry: %w", err)
+		return properties.Reference{}, fmt.Errorf("unable to connect to component registry: %w", err)
 	}
 
 	totalSize := configDescriptor.Size + manifest.Size
@@ -158,22 +158,22 @@ func Publish(ctx context.Context, componentPath string, destination registry.Ref
 	}
 	published, err := pushComponentArtifact(ctx, store, manifest.Digest.String(), remote, componentRef, component.Variant.Architecture, totalSize, opts)
 	if err != nil {
-		return registry.Reference{}, err
+		return properties.Reference{}, err
 	}
 	if opts.SignManifestOptions != nil {
 		immutableRef := fmt.Sprintf("%s/%s@%s", componentRef.Registry, componentRef.Repository, published.Digest)
 		if err := signing.SignManifest(ctx, immutableRef, *opts.SignManifestOptions, opts.RemoteOptions); err != nil {
-			return registry.Reference{}, fmt.Errorf("failed to sign published component: %w", err)
+			return properties.Reference{}, fmt.Errorf("failed to sign published component: %w", err)
 		}
 	}
-	if err := remote.Repo().Tag(ctx, published, componentRef.Reference); err != nil {
-		return registry.Reference{}, fmt.Errorf("tag published component: %w", err)
+	if err := remote.Repo().Tag(ctx, published, componentRef.GetReference()); err != nil {
+		return properties.Reference{}, fmt.Errorf("tag published component: %w", err)
 	}
 	logger.From(ctx).Info("published component", "destination", helpers.OCIURLPrefix+componentRef.String())
 	return componentRef, nil
 }
 
-func pushComponentArtifact(ctx context.Context, store oras.ReadOnlyTarget, sourceRef string, remote *zoci.Remote, componentRef registry.Reference, architecture string, totalSize int64, opts PublishOptions) (_ ocispec.Descriptor, err error) {
+func pushComponentArtifact(ctx context.Context, store oras.ReadOnlyTarget, sourceRef string, remote *zoci.Remote, componentRef properties.Reference, architecture string, totalSize int64, opts PublishOptions) (_ ocispec.Descriptor, err error) {
 	l := logger.From(ctx)
 	start := time.Now()
 
@@ -186,7 +186,7 @@ func pushComponentArtifact(ctx context.Context, store oras.ReadOnlyTarget, sourc
 	var published ocispec.Descriptor
 	err = zoci.Retry(ctx, opts.Retries,
 		func() error {
-			existing, err := remote.Repo().Resolve(ctx, componentRef.Reference)
+			existing, err := remote.Repo().Resolve(ctx, componentRef.GetReference())
 			if err != nil && !errors.Is(err, errdef.ErrNotFound) {
 				return err
 			}
@@ -214,7 +214,7 @@ func pushComponentArtifact(ctx context.Context, store oras.ReadOnlyTarget, sourc
 				indexDescriptor, err := zarfoci.UpdateIndexWithDescriptor(
 					ctx,
 					remote.Repo(),
-					componentRef.Reference,
+					componentRef.GetReference(),
 					ocispec.Platform{Architecture: architecture},
 					published,
 				)
@@ -368,10 +368,10 @@ func addComponentImageLayout(ctx context.Context, archives []v1beta1.ImageArchiv
 	return cleanup, nil
 }
 
-func componentReference(destination registry.Reference, component v1beta1.ComponentConfig) (registry.Reference, error) {
+func componentReference(destination properties.Reference, component v1beta1.ComponentConfig) (properties.Reference, error) {
 	tag := component.Metadata.Version
 	if component.Variant.Flavor != "" {
 		tag += "-" + component.Variant.Flavor
 	}
-	return registry.ParseReference(fmt.Sprintf("%s/%s:%s", destination.Registry, path.Join(destination.Repository, component.Metadata.Name), tag))
+	return properties.NewReference(fmt.Sprintf("%s/%s:%s", destination.Registry, path.Join(destination.Repository, component.Metadata.Name), tag))
 }

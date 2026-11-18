@@ -9,9 +9,9 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/oras-project/oras-go/v3/registry/remote/properties"
 	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/pkg/helpers"
-	"oras.land/oras-go/v2/registry"
 )
 
 // NormalizeOCISource adds the OCI scheme to valid registry references.
@@ -23,14 +23,14 @@ func NormalizeOCISource(source string) string {
 		return source
 	}
 
-	if _, err := registry.ParseReference(source); err == nil {
+	if _, err := properties.NewReference(source); err == nil {
 		return helpers.OCIURLPrefix + source
 	}
 	return source
 }
 
 // ReferenceFromMetadata returns a reference for the given metadata.
-func ReferenceFromMetadata(registryLocation string, pkg api.Package) (registry.Reference, error) {
+func ReferenceFromMetadata(registryLocation string, pkg api.Package) (properties.Reference, error) {
 	return ReferenceFromMetadataWithOptions(registryLocation, pkg, ReferenceFromMetadataOptions{})
 }
 
@@ -41,10 +41,10 @@ type ReferenceFromMetadataOptions struct {
 }
 
 // ReferenceFromMetadataWithOptions returns a reference for the given metadata with optional overrides
-func ReferenceFromMetadataWithOptions(registryLocation string, pkg api.Package, opts ReferenceFromMetadataOptions) (registry.Reference, error) {
+func ReferenceFromMetadataWithOptions(registryLocation string, pkg api.Package, opts ReferenceFromMetadataOptions) (properties.Reference, error) {
 	// Explicit requirement for version in order to publish
 	if len(pkg.Metadata.Version) == 0 {
-		return registry.Reference{}, errors.New("version is required for publishing")
+		return properties.Reference{}, errors.New("version is required for publishing")
 	}
 	if !strings.HasSuffix(registryLocation, "/") {
 		registryLocation = registryLocation + "/"
@@ -64,9 +64,9 @@ func ReferenceFromMetadataWithOptions(registryLocation string, pkg api.Package, 
 
 	raw := fmt.Sprintf("%s%s:%s", registryLocation, pkg.Metadata.Name, tag)
 
-	ref, err := registry.ParseReference(raw)
+	ref, err := properties.NewReference(raw)
 	if err != nil {
-		return registry.Reference{}, fmt.Errorf("failed to parse %s: %w", raw, err)
+		return properties.Reference{}, fmt.Errorf("failed to parse %s: %w", raw, err)
 	}
 	return ref, nil
 }

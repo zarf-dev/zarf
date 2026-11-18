@@ -14,17 +14,20 @@ import (
 	"github.com/opencontainers/go-digest"
 	specs "github.com/opencontainers/image-spec/specs-go"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"github.com/oras-project/oras-go/v3/registry/remote"
+	"github.com/oras-project/oras-go/v3/registry/remote/properties"
 	"github.com/stretchr/testify/require"
-	"oras.land/oras-go/v2/registry/remote"
 )
 
 // NewRepo returns a plaintext-HTTP oras-go Repository suitable for pushing fixtures into an
 // in-memory registry during tests.
 func NewRepo(t *testing.T, refStr string) *remote.Repository {
 	t.Helper()
-	repo, err := remote.NewRepository(refStr)
+	ref, err := properties.NewReference(refStr)
 	require.NoError(t, err)
-	repo.PlainHTTP = true
+	repo, err := remote.NewRepository(ref.Registry + "/" + ref.Repository)
+	require.NoError(t, err)
+	repo.Registry.PlainHTTP = true
 	return repo
 }
 

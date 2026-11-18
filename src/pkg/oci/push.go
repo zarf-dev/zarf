@@ -11,19 +11,23 @@ import (
 
 	"github.com/opencontainers/image-spec/specs-go"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
-	"oras.land/oras-go/v2/content"
-	"oras.land/oras-go/v2/errdef"
+	"github.com/oras-project/oras-go/v3/content"
+	"github.com/oras-project/oras-go/v3/errdef"
 )
 
 // UpdateIndex updates the index for the given package.
 func (o *OrasRemote) UpdateIndex(ctx context.Context, tag string, publishedDesc ocispec.Descriptor) error {
 	var index ocispec.Index
 
-	o.repo.Reference.Reference = tag
+	ref, err := o.repo.ParseReference(tag)
+	if err != nil {
+		return err
+	}
+	o.reference = ref
 	// since ref has changed, need to reset root
 	o.root = nil
 
-	_, err := o.repo.Resolve(ctx, o.repo.Reference.Reference)
+	_, err = o.repo.Resolve(ctx, o.reference.GetReference())
 	if err != nil {
 		if errors.Is(err, errdef.ErrNotFound) {
 			index = ocispec.Index{

@@ -8,7 +8,7 @@ import (
 	"fmt"
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
-	"oras.land/oras-go/v2"
+	"github.com/oras-project/oras-go/v3"
 )
 
 // IsEmptyDescriptor returns true if the given descriptor is empty.

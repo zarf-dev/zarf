@@ -4,6 +4,7 @@
 package oci
 
 import (
+	"bufio"
 	"context"
 	"errors"
 	"fmt"
@@ -12,8 +13,8 @@ import (
 	"time"
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
-	"oras.land/oras-go/v2/registry/remote"
-	"oras.land/oras-go/v2/registry/remote/retry"
+	"github.com/oras-project/oras-go/v3/registry/remote"
+	"github.com/oras-project/oras-go/v3/registry/remote/retry"
 )
 
 type retrySource struct {
@@ -131,11 +132,24 @@ func (r *retryReader) resume() error {
 	if !ok {
 		return fmt.Errorf("blob %s cannot resume at %d: %w", r.desc.Digest, r.offset, errors.ErrUnsupported)
 	}
-	// ORAS closes the current response when seeking to the end, freeing its
-	// connection before the next seek opens a range request at the saved offset.
+	// Seeking to the end closes the current response before the range request,
+	// so recovery also works when the transport allows only one connection.
 	if _, err := seeker.Seek(0, io.SeekEnd); err != nil {
 		return err
 	}
-	_, err = seeker.Seek(r.offset, io.SeekStart)
-	return err
+	if _, err := seeker.Seek(r.offset, io.SeekStart); err != nil {
+		return err
+	}
+	// ORAS v3 seeks lazily. Start the request here so a failed range request
+	// terminates recovery after its HTTP retries instead of reentering the
+	// reader's retry loop. Preserve the peeked bytes for the consumer.
+	buffered := bufio.NewReader(r.body)
+	if _, err := buffered.Peek(1); err != nil {
+		return err
+	}
+	r.body = struct {
+		io.Reader
+		io.Closer
+	}{buffered, r.body}
+	return nil
 }

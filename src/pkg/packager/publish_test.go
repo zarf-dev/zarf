@@ -14,6 +14,9 @@ import (
 	"testing"
 
 	goyaml "github.com/goccy/go-yaml"
+	"github.com/oras-project/oras-go/v3"
+	"github.com/oras-project/oras-go/v3/errdef"
+	"github.com/oras-project/oras-go/v3/registry/remote/properties"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/convert"
@@ -25,10 +28,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 	"github.com/zarf-dev/zarf/src/types"
-	"oras.land/oras-go/v2"
-	"oras.land/oras-go/v2/errdef"
-	"oras.land/oras-go/v2/registry"
-	"oras.land/oras-go/v2/registry/remote"
 )
 
 func defaultTestRemoteOptions() types.RemoteOptions {
@@ -58,8 +57,8 @@ func pullFromRemote(ctx context.Context, t *testing.T, packageRef string, archit
 	return pkgLayout
 }
 
-func createRegistry(ctx context.Context, t *testing.T) registry.Reference {
-	return registry.Reference{
+func createRegistry(ctx context.Context, t *testing.T) properties.Reference {
+	return properties.Reference{
 		Registry:   testutil.SetupInMemoryRegistryDynamic(ctx, t),
 		Repository: "my-namespace",
 	}
@@ -69,7 +68,7 @@ func TestPublishError(t *testing.T) {
 	ctx := context.Background()
 
 	registryURL := testutil.SetupInMemoryRegistryDynamic(ctx, t)
-	defaultRef := registry.Reference{
+	defaultRef := properties.Reference{
 		Registry:   registryURL,
 		Repository: "my-namespace",
 	}
@@ -77,7 +76,7 @@ func TestPublishError(t *testing.T) {
 	tt := []struct {
 		name          string
 		packageLayout *layout.PackageLayout
-		ref           registry.Reference
+		ref           properties.Reference
 		opts          PublishPackageOptions
 		expectErr     error
 	}{
@@ -108,38 +107,38 @@ func TestPublishFromOCIValidation(t *testing.T) {
 
 	tt := []struct {
 		name      string
-		src       registry.Reference
-		dst       registry.Reference
+		src       properties.Reference
+		dst       properties.Reference
 		opts      PublishFromOCIOptions
 		expectErr error
 	}{
 		{
 			name: "errors if src is not a valid ref",
-			src: registry.Reference{
+			src: properties.Reference{
 				Registry:   "example.com",
 				Repository: "my-namespace",
 			},
-			dst:       registry.Reference{},
+			dst:       properties.Reference{},
 			opts:      PublishFromOCIOptions{},
 			expectErr: errdef.ErrInvalidReference,
 		},
 		{
 			name: "errors if dst is not a valid ref",
-			src: registry.Reference{
+			src: properties.Reference{
 				Registry:   "example.com",
 				Repository: "my-namespace",
 			},
-			dst:       registry.Reference{},
+			dst:       properties.Reference{},
 			opts:      PublishFromOCIOptions{},
 			expectErr: errdef.ErrInvalidReference,
 		},
 		{
 			name: "errors if src's repo name is not the same as dst's",
-			src: registry.Reference{
+			src: properties.Reference{
 				Registry:   "example.com",
 				Repository: "my-namespace",
 			},
-			dst: registry.Reference{
+			dst: properties.Reference{
 				Registry:   "example.com",
 				Repository: "my-other-namespace",
 			},
@@ -194,7 +193,7 @@ func TestPublishSkeleton(t *testing.T) {
 			// Publish test package
 			ref, err := PublishSkeleton(ctx, tc.path, registryRef, tc.opts)
 			require.NoError(t, err)
-			require.Equal(t, tc.expectedTag, ref.Reference)
+			require.Equal(t, tc.expectedTag, ref.GetReference())
 
 			// Read and unmarshall expected
 			data, err := os.ReadFile(filepath.Join(tc.path, layout.ZarfYAML))
@@ -267,7 +266,7 @@ func TestPublishPackage(t *testing.T) {
 			// Publish test package
 			packageRef, err := PublishPackage(ctx, layoutExpected, registryRef, tc.opts)
 			require.NoError(t, err)
-			require.Equal(t, tc.expectedTag, packageRef.Reference)
+			require.Equal(t, tc.expectedTag, packageRef.GetReference())
 
 			expectedPkg := layoutExpected.Definition()
 			expectedPkg.Build = api.BuildData{}
@@ -425,16 +424,15 @@ func TestPublishCopySHA(t *testing.T) {
 			dstRegistryRef := createRegistry(ctx, t)
 
 			// This gets the test package digest from the first package publish
-			localRepo := &remote.Repository{PlainHTTP: true}
-			localRepo.Reference = srcRef
+			localRepo := testutil.NewRepo(t, srcRef.String())
 			indexDesc, err := oras.Resolve(ctx, localRepo, srcRef.String(), oras.ResolveOptions{})
 			require.NoError(t, err)
 			src := fmt.Sprintf("%s@%s", srcRef, indexDesc.Digest)
-			srcRefWithDigest, err := registry.ParseReference(src)
+			srcRefWithDigest, err := properties.NewReference(src)
 			require.NoError(t, err)
 
 			dst := fmt.Sprintf("%s/%s", dstRegistryRef.String(), "test:0.0.1")
-			dstRef, err := registry.ParseReference(dst)
+			dstRef, err := properties.NewReference(dst)
 			require.NoError(t, err)
 
 			opts := PublishFromOCIOptions{
@@ -458,6 +456,54 @@ func TestPublishCopySHA(t *testing.T) {
 	}
 }
 
+func TestPublishCopyPinnedReferencePreservesTag(t *testing.T) {
+	t.Parallel()
+
+	ctx := testutil.TestContext(t)
+	expected, err := layout.LoadFromTar(ctx, filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst"), layout.PackageLayoutOptions{})
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, expected.Cleanup()) })
+	sourceRef, err := PublishPackage(ctx, expected, createRegistry(ctx, t), PublishPackageOptions{RemoteOptions: defaultTestRemoteOptions()})
+	require.NoError(t, err)
+	sourceRepo := testutil.NewRepo(t, sourceRef.String())
+	root, err := sourceRepo.Resolve(ctx, sourceRef.Tag)
+	require.NoError(t, err)
+	sourceRef.Digest = root.Digest.String()
+
+	// Moving the tag must not change the content selected by the pinned digest.
+	other := testutil.PushSinglePlatformImage(ctx, t, sourceRepo, "amd64")
+	require.NoError(t, sourceRepo.Tag(ctx, other, sourceRef.Tag))
+	for _, tc := range []struct {
+		name       string
+		tag        string
+		digest     string
+		publishTag string
+	}{
+		{name: "same tag", tag: sourceRef.Tag, digest: sourceRef.Digest, publishTag: sourceRef.Tag},
+		{name: "different tag", tag: "copy", digest: sourceRef.Digest, publishTag: "copy"},
+		{name: "repository only", publishTag: sourceRef.Tag},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			destinationRef := properties.Reference{
+				Registry:   testutil.SetupInMemoryRegistryDynamic(ctx, t),
+				Repository: sourceRef.Repository,
+				Tag:        tc.tag,
+				Digest:     tc.digest,
+			}
+			require.NoError(t, PublishFromOCI(ctx, sourceRef, destinationRef, PublishFromOCIOptions{
+				Architecture:  expected.Definition().Build.Architecture,
+				RemoteOptions: defaultTestRemoteOptions(),
+			}))
+
+			destinationRef.Tag = tc.publishTag
+			destinationRef.Digest = ""
+			actual := pullFromRemote(ctx, t, destinationRef.String(), expected.Definition().Build.Architecture, "", t.TempDir(), defaultTestRemoteOptions())
+			t.Cleanup(func() { require.NoError(t, actual.Cleanup()) })
+			require.Equal(t, expected.Definition(), actual.Definition())
+		})
+	}
+}
+
 func TestPublishFromOCITransportNegotiation(t *testing.T) {
 	const (
 		username = "source-user"
@@ -472,7 +518,7 @@ func TestPublishFromOCITransportNegotiation(t *testing.T) {
 	layoutExpected, err := layout.LoadFromTar(ctx, filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst"), layout.PackageLayoutOptions{})
 	require.NoError(t, err)
 
-	sourceRef, err := PublishPackage(ctx, layoutExpected, registry.Reference{
+	sourceRef, err := PublishPackage(ctx, layoutExpected, properties.Reference{
 		Registry:   sourceAddress,
 		Repository: "my-namespace",
 	}, PublishPackageOptions{
@@ -480,10 +526,10 @@ func TestPublishFromOCITransportNegotiation(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	destinationRef := registry.Reference{
+	destinationRef := properties.Reference{
 		Registry:   destinationAddress,
 		Repository: sourceRef.Repository,
-		Reference:  sourceRef.Reference,
+		Tag:        sourceRef.GetReference(),
 	}
 	remoteOptions := types.RemoteOptions{
 		PlainHTTP:             true,
@@ -512,7 +558,7 @@ func TestSignOCITransportNegotiation(t *testing.T) {
 	layoutExpected, err := layout.LoadFromTar(ctx, filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst"), layout.PackageLayoutOptions{})
 	require.NoError(t, err)
 
-	sourceRef, err := PublishPackage(ctx, layoutExpected, registry.Reference{
+	sourceRef, err := PublishPackage(ctx, layoutExpected, properties.Reference{
 		Registry:   sourceAddress,
 		Repository: "my-namespace",
 	}, PublishPackageOptions{
@@ -546,7 +592,7 @@ func TestSignOCITransportNegotiation(t *testing.T) {
 	signOpts.Password = "password"
 	require.NoError(t, sourceLayout.SignPackage(ctx, &signOpts))
 
-	destinationRef, err := PublishPackage(ctx, sourceLayout, registry.Reference{
+	destinationRef, err := PublishPackage(ctx, sourceLayout, properties.Reference{
 		Registry:   destinationAddress,
 		Repository: sourceRef.Repository,
 	}, PublishPackageOptions{
@@ -671,7 +717,7 @@ func TestPublishCopyTag(t *testing.T) {
 			dstRegistryRef := createRegistry(ctx, t)
 
 			dst := fmt.Sprintf("%s/%s:%s", dstRegistryRef.String(), "test", tc.dstTag)
-			dstRegistry, err := registry.ParseReference(dst)
+			dstRegistry, err := properties.NewReference(dst)
 			require.NoError(t, err)
 
 			opts := PublishFromOCIOptions{
@@ -687,7 +733,7 @@ func TestPublishCopyTag(t *testing.T) {
 			// This verifies that publish deletes the manifest that is auto created by oras
 			require.NoFileExists(t, layoutExpected.Definition().Metadata.Name)
 
-			require.Equal(t, tc.dstTag, dstRegistry.Reference)
+			require.Equal(t, tc.dstTag, dstRegistry.GetReference())
 
 			layoutActual := pullFromRemote(ctx, t, dstRegistry.String(), layoutExpected.Definition().Build.Architecture, "", t.TempDir(), defaultTestRemoteOptions())
 

@@ -9,10 +9,10 @@ import (
 	"testing"
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"github.com/oras-project/oras-go/v3/content"
+	"github.com/oras-project/oras-go/v3/registry/remote"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/test/testutil"
-	"oras.land/oras-go/v2/content"
-	"oras.land/oras-go/v2/registry/remote"
 )
 
 func fetchAll(ctx context.Context, t *testing.T, fetcher content.Fetcher, desc ocispec.Descriptor) []byte {

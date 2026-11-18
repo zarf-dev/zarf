@@ -20,12 +20,12 @@ import (
 	"time"
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"github.com/oras-project/oras-go/v3/content"
+	"github.com/oras-project/oras-go/v3/registry/remote"
+	"github.com/oras-project/oras-go/v3/registry/remote/credentials"
+	"github.com/oras-project/oras-go/v3/registry/remote/retry"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"oras.land/oras-go/v2/content"
-	"oras.land/oras-go/v2/registry/remote"
-	"oras.land/oras-go/v2/registry/remote/auth"
-	"oras.land/oras-go/v2/registry/remote/retry"
 )
 
 func TestRetryReader(t *testing.T) {
@@ -117,7 +117,7 @@ func TestRetryReader(t *testing.T) {
 				policy = nil
 			}
 			remote, err := NewOrasRemote(strings.TrimPrefix(server.URL, "http://")+"/source", ocispec.Platform{},
-				WithPlainHTTP(true), WithCredentialFunc(auth.StaticCredential("", auth.EmptyCredential)), WithRetryPolicy(policy),
+				WithPlainHTTP(true), WithCredentialFunc(credentials.StaticCredentialFunc("", credentials.EmptyCredential)), WithRetryPolicy(policy),
 				WithTransport(&http.Transport{MaxConnsPerHost: tt.maxConns}))
 			require.NoError(t, err)
 			ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
@@ -158,7 +158,7 @@ func TestRetryIndependentReaders(t *testing.T) {
 		return &http.Response{StatusCode: status, ContentLength: int64(size), Header: http.Header{"Accept-Ranges": {"bytes"}}, Body: body, Request: r}, nil
 	})
 	remote, err := NewOrasRemote("registry.example.com/source", ocispec.Platform{},
-		WithCredentialFunc(auth.StaticCredential("", auth.EmptyCredential)), WithRetryPolicy(testRetryPolicy(1)),
+		WithCredentialFunc(credentials.StaticCredentialFunc("", credentials.EmptyCredential)), WithRetryPolicy(testRetryPolicy(1)),
 		func(o *OrasRemote) { o.progTransport.Base = transport })
 	require.NoError(t, err)
 	first, err := remote.Fetch(t.Context(), desc)
@@ -190,7 +190,7 @@ func TestRetryNativeHTTPPolicy(t *testing.T) {
 		policy := testRetryPolicy(1)
 		policy.Backoff, policy.MaxWait = retry.DefaultBackoff, time.Minute
 		remote, err := NewOrasRemote("registry.example.com/source", ocispec.Platform{},
-			WithCredentialFunc(auth.StaticCredential("", auth.EmptyCredential)), WithRetryPolicy(policy),
+			WithCredentialFunc(credentials.StaticCredentialFunc("", credentials.EmptyCredential)), WithRetryPolicy(policy),
 			func(o *OrasRemote) { o.progTransport.Base = transport })
 		require.NoError(t, err)
 		start := time.Now()
@@ -256,11 +256,11 @@ func TestRetryStreamingSinglePUT(t *testing.T) {
 	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
 	defer cancel()
 	src, err := NewOrasRemote(strings.TrimPrefix(source.URL, "http://")+"/source", ocispec.Platform{},
-		WithPlainHTTP(true), WithCredentialFunc(auth.StaticCredential("", auth.EmptyCredential)), WithRetryPolicy(testRetryPolicy(1)))
+		WithPlainHTTP(true), WithCredentialFunc(credentials.StaticCredentialFunc("", credentials.EmptyCredential)), WithRetryPolicy(testRetryPolicy(1)))
 	require.NoError(t, err)
 	dst, err := remote.NewRepository(strings.TrimPrefix(destination.URL, "http://") + "/destination")
 	require.NoError(t, err)
-	dst.PlainHTTP, dst.Client = true, destination.Client()
+	dst.Registry.PlainHTTP, dst.Registry.Client = true, destination.Client()
 	reader, err := src.Fetch(ctx, desc)
 	require.NoError(t, err)
 	defer func() { require.NoError(t, reader.Close()) }()
@@ -296,7 +296,7 @@ func TestRetryCancellation(t *testing.T) {
 				policy.MaxWait = time.Hour
 			}
 			remote, err := NewOrasRemote(strings.TrimPrefix(server.URL, "http://")+"/source", ocispec.Platform{},
-				WithPlainHTTP(true), WithCredentialFunc(auth.StaticCredential("", auth.EmptyCredential)), WithRetryPolicy(policy))
+				WithPlainHTTP(true), WithCredentialFunc(credentials.StaticCredentialFunc("", credentials.EmptyCredential)), WithRetryPolicy(policy))
 			require.NoError(t, err)
 			reader, err := remote.Fetch(ctx, content.NewDescriptorFromBytes(ocispec.MediaTypeImageLayer, make([]byte, 20)))
 			require.NoError(t, err)

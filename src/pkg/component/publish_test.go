@@ -14,6 +14,10 @@ import (
 
 	goyaml "github.com/goccy/go-yaml"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"github.com/oras-project/oras-go/v3"
+	"github.com/oras-project/oras-go/v3/errdef"
+	registryremote "github.com/oras-project/oras-go/v3/registry/remote"
+	"github.com/oras-project/oras-go/v3/registry/remote/properties"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
@@ -26,10 +30,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 	"github.com/zarf-dev/zarf/src/types"
-	"oras.land/oras-go/v2"
-	"oras.land/oras-go/v2/errdef"
-	"oras.land/oras-go/v2/registry"
-	registryremote "oras.land/oras-go/v2/registry/remote"
 )
 
 func defaultTestRemoteOptions() types.RemoteOptions {
@@ -40,9 +40,9 @@ func localComponentResourceSet(componentPath string) *load.ResourceSet {
 	return load.NewResourceSet(filepath.Dir(componentPath))
 }
 
-func createRegistry(ctx context.Context, t *testing.T) registry.Reference {
+func createRegistry(ctx context.Context, t *testing.T) properties.Reference {
 	t.Helper()
-	return registry.Reference{
+	return properties.Reference{
 		Registry:   testutil.SetupInMemoryRegistryDynamic(ctx, t),
 		Repository: "my-namespace",
 	}
@@ -329,7 +329,7 @@ func TestPublishComponentDoesNotTagOnSigningFailure(t *testing.T) {
 		RemoteOptions: defaultTestRemoteOptions(),
 	})
 	require.NoError(t, err)
-	_, err = remote.Repo().Resolve(ctx, componentRef.Reference)
+	_, err = remote.Repo().Resolve(ctx, componentRef.GetReference())
 	require.ErrorIs(t, err, errdef.ErrNotFound)
 }
 
@@ -339,7 +339,7 @@ func TestPublishComponentFlavor(t *testing.T) {
 	ctx := context.Background()
 	published, err := Publish(ctx, filepath.Join("testdata", "publish-component-v1beta1", "component-flavor.yaml"), createRegistry(ctx, t), PublishOptions{RemoteOptions: defaultTestRemoteOptions()})
 	require.NoError(t, err)
-	require.Equal(t, "0.0.1-test", published.Reference)
+	require.Equal(t, "0.0.1-test", published.GetReference())
 
 	component, _ := getPublishedComponent(ctx, t, published)
 	require.Equal(t, "test", component.Variant.Flavor)
@@ -695,15 +695,15 @@ component:
 			RemoteOptions:       defaultTestRemoteOptions(),
 		})
 		require.NoError(t, err)
-		require.Equal(t, "0.0.1-hardened", published.Reference)
+		require.Equal(t, "0.0.1-hardened", published.GetReference())
 	}
 
-	published, err := registry.ParseReference(fmt.Sprintf("%s/%s/architecture-variant:0.0.1-%s", destination.Registry, destination.Repository, flavor))
+	published, err := properties.NewReference(fmt.Sprintf("%s/%s/architecture-variant:0.0.1-%s", destination.Registry, destination.Repository, flavor))
 	require.NoError(t, err)
 	repo, err := registryremote.NewRepository(published.Registry + "/" + published.Repository)
 	require.NoError(t, err)
-	repo.PlainHTTP = true
-	rootDescriptor, err := repo.Resolve(ctx, published.Reference)
+	repo.Registry.PlainHTTP = true
+	rootDescriptor, err := repo.Resolve(ctx, published.GetReference())
 	require.NoError(t, err)
 	require.Equal(t, ocispec.MediaTypeImageIndex, rootDescriptor.MediaType)
 
@@ -889,20 +889,20 @@ component:
 	require.ErrorContains(t, err, `manifest "app" uses kustomize.allowAnyDirectory`)
 }
 
-func getPublishedComponent(ctx context.Context, t *testing.T, published registry.Reference) (v1beta1.ComponentConfig, ocispec.Manifest) {
+func getPublishedComponent(ctx context.Context, t *testing.T, published properties.Reference) (v1beta1.ComponentConfig, ocispec.Manifest) {
 	return getPublishedComponentForArchitecture(ctx, t, published, "")
 }
 
-func getPublishedComponentForArchitecture(ctx context.Context, t *testing.T, published registry.Reference, architecture string) (v1beta1.ComponentConfig, ocispec.Manifest) {
+func getPublishedComponentForArchitecture(ctx context.Context, t *testing.T, published properties.Reference, architecture string) (v1beta1.ComponentConfig, ocispec.Manifest) {
 	t.Helper()
 
 	repo, err := registryremote.NewRepository(published.Registry + "/" + published.Repository)
 	require.NoError(t, err)
-	repo.PlainHTTP = true
-	descriptor, err := repo.Resolve(ctx, published.Reference)
+	repo.Registry.PlainHTTP = true
+	descriptor, err := repo.Resolve(ctx, published.GetReference())
 	require.NoError(t, err)
 	if descriptor.MediaType == ocispec.MediaTypeImageIndex {
-		descriptor, err = oras.Resolve(ctx, repo, published.Reference, oras.ResolveOptions{TargetPlatform: &ocispec.Platform{Architecture: architecture}})
+		descriptor, err = oras.Resolve(ctx, repo, published.GetReference(), oras.ResolveOptions{TargetPlatform: &ocispec.Platform{Architecture: architecture}})
 		require.NoError(t, err)
 	}
 	require.Equal(t, ocispec.MediaTypeImageManifest, descriptor.MediaType)

@@ -17,13 +17,13 @@ import (
 	"time"
 
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
+	"github.com/oras-project/oras-go/v3"
+	"github.com/oras-project/oras-go/v3/registry/remote"
+	orasRetry "github.com/oras-project/oras-go/v3/registry/remote/retry"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/test/testutil"
-	"oras.land/oras-go/v2"
-	"oras.land/oras-go/v2/registry/remote"
-	orasRetry "oras.land/oras-go/v2/registry/remote/retry"
 )
 
 const (

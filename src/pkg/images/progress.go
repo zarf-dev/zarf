@@ -14,8 +14,8 @@ import (
 	"time"
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"github.com/oras-project/oras-go/v3"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
-	"oras.land/oras-go/v2"
 )
 
 // Report defines a function to log progress

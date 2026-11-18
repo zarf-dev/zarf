@@ -8,8 +8,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/oras-project/oras-go/v3"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"oras.land/oras-go/v2"
 )
 
 // CopyPackage copies a zarf package from one OCI registry to another using ORAS with retry.
@@ -28,7 +28,11 @@ func CopyPackage(ctx context.Context, src *Remote, dst *Remote, opts PublishOpti
 	copyOpts := dst.OrasRemote.GetDefaultCopyOpts()
 	copyOpts.Concurrency = opts.OCIConcurrency
 
-	tag := src.Repo().Reference.Reference // keep the source tag on the destination
+	// A combined reference pins the source digest but publishes under its tag.
+	tag := src.Reference().Tag
+	if tag == "" {
+		tag = src.Reference().GetReference()
+	}
 	if opts.Tag != "" {
 		tag = opts.Tag
 	}
@@ -36,8 +40,8 @@ func CopyPackage(ctx context.Context, src *Remote, dst *Remote, opts PublishOpti
 	err = Retry(ctx, opts.Retries,
 		func() error {
 			logger.From(ctx).Info("copying package",
-				"src", src.Repo().Reference.String(),
-				"dst", dst.Repo().Reference.String(),
+				"src", src.Reference().String(),
+				"dst", dst.Reference().String(),
 				"ref", srcRef,
 			)
 
@@ -59,8 +63,8 @@ func CopyPackage(ctx context.Context, src *Remote, dst *Remote, opts PublishOpti
 	}
 
 	logger.From(ctx).Info("package copied successfully",
-		"source", src.Repo().Reference.String(),
-		"destination", dst.Repo().Reference.String(),
+		"source", src.Reference().String(),
+		"destination", dst.Reference().String(),
 		"tag", tag,
 	)
 	return nil

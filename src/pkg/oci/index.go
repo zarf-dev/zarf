@@ -12,9 +12,9 @@ import (
 
 	"github.com/opencontainers/image-spec/specs-go"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
-	"oras.land/oras-go/v2/content"
-	"oras.land/oras-go/v2/errdef"
-	registryremote "oras.land/oras-go/v2/registry/remote"
+	"github.com/oras-project/oras-go/v3/content"
+	"github.com/oras-project/oras-go/v3/errdef"
+	registryremote "github.com/oras-project/oras-go/v3/registry/remote"
 )
 
 // UpdateIndexWithDescriptor updates the index referenced by tag for platform and

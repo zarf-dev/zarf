@@ -12,6 +12,7 @@ import (
 
 	fluxmeta "github.com/fluxcd/pkg/apis/meta"
 	flux "github.com/fluxcd/source-controller/api/v1"
+	"github.com/oras-project/oras-go/v3"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/agent/http/admission"
@@ -23,7 +24,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"oras.land/oras-go/v2"
 )
 
 func createFluxOCIRepoAdmissionRequest(t *testing.T, op v1.Operation, fluxOCIRepo *flux.OCIRepository) *v1.AdmissionRequest {

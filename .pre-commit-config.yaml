@@ -12,7 +12,8 @@ repos:
         exclude: |
             (?x)^(
                 src/test/e2e/29_config_file_test\.go|
-                examples/longhorn/values\.yaml
+                examples/longhorn/values\.yaml|
+                vendor/github\.com/ProtonMail/go-crypto/openpgp/read_write_test_data\.go
             )$
       - id: end-of-file-fixer
         exclude: |

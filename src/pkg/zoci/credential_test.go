@@ -14,15 +14,15 @@ import (
 
 	"github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"github.com/oras-project/oras-go/v3/registry/remote/credentials"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/pkg/oci"
-	"oras.land/oras-go/v2/registry/remote/auth"
 )
 
 func TestNewRemoteCredentialFunc(t *testing.T) {
 	t.Parallel()
 
-	credential := auth.Credential{Username: "registry-user", Password: "registry-password"}
+	credential := credentials.Credential{Username: "registry-user", Password: "registry-password"}
 	manifest := []byte(`{"schemaVersion":2,"mediaType":"application/vnd.oci.image.index.v1+json","manifests":[]}`)
 	manifestDigest := digest.FromBytes(manifest)
 	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -51,7 +51,7 @@ func TestNewRemoteCredentialFunc(t *testing.T) {
 	require.True(t, ok)
 
 	remote, err := NewRemote(context.Background(), host+"/test:latest", oci.PlatformForArch("amd64"), RemoteClientOptions{
-		CredentialFunc: auth.StaticCredential(host, credential),
+		CredentialFunc: credentials.StaticCredentialFunc(host, credential),
 		Transport:      transport,
 	})
 	require.NoError(t, err)

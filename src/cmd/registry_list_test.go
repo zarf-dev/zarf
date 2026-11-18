@@ -12,12 +12,10 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/oras-project/oras-go/v3"
+	"github.com/oras-project/oras-go/v3/registry/remote/auth"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/test/testutil"
-	"oras.land/oras-go/v2"
-	"oras.land/oras-go/v2/registry"
-	orasRemote "oras.land/oras-go/v2/registry/remote"
-	"oras.land/oras-go/v2/registry/remote/auth"
 )
 
 func TestListRegistryTags(t *testing.T) {
@@ -26,13 +24,8 @@ func TestListRegistryTags(t *testing.T) {
 	address := testutil.SetupInMemoryRegistryDynamic(ctx, t)
 	repoRef := fmt.Sprintf("%s/test-repo", address)
 
-	seedRepo := &orasRemote.Repository{
-		Client:    &auth.Client{Client: http.DefaultClient},
-		PlainHTTP: true,
-	}
-	var err error
-	seedRepo.Reference, err = registry.ParseReference(repoRef)
-	require.NoError(t, err)
+	seedRepo := testutil.NewRepo(t, repoRef)
+	seedRepo.Registry.Client = &auth.Client{Client: http.DefaultClient}
 
 	desc, err := oras.PackManifest(ctx, seedRepo, oras.PackManifestVersion1_1, "application/vnd.test.artifact", oras.PackManifestOptions{})
 	require.NoError(t, err)
@@ -183,13 +176,8 @@ func TestListRegistryTagsUsesKnownPlainHTTP(t *testing.T) {
 	address := testutil.SetupInMemoryRegistryDynamic(ctx, t)
 	repoRef := fmt.Sprintf("%s/plain-http-known", address)
 
-	seedRepo := &orasRemote.Repository{
-		Client:    &auth.Client{Client: http.DefaultClient},
-		PlainHTTP: true,
-	}
-	var err error
-	seedRepo.Reference, err = registry.ParseReference(repoRef)
-	require.NoError(t, err)
+	seedRepo := testutil.NewRepo(t, repoRef)
+	seedRepo.Registry.Client = &auth.Client{Client: http.DefaultClient}
 	desc, err := oras.PackManifest(ctx, seedRepo, oras.PackManifestVersion1_1, "application/vnd.test.artifact", oras.PackManifestOptions{})
 	require.NoError(t, err)
 	_, err = oras.Tag(ctx, seedRepo, desc.Digest.String(), "1.0.0")

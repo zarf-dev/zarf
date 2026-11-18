@@ -12,6 +12,7 @@ import (
 
 	"github.com/fluxcd/pkg/apis/meta"
 	flux "github.com/fluxcd/source-controller/api/v1"
+	orasRetry "github.com/oras-project/oras-go/v3/registry/remote/retry"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/agent/operations"
@@ -22,7 +23,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	v1 "k8s.io/api/admission/v1"
-	orasRetry "oras.land/oras-go/v2/registry/remote/retry"
 )
 
 const (

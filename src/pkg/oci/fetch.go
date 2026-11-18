@@ -10,15 +10,15 @@ import (
 	"io"
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"github.com/oras-project/oras-go/v3"
+	"github.com/oras-project/oras-go/v3/content"
 	"github.com/zarf-dev/zarf/src/pkg/oci/cache"
-	"oras.land/oras-go/v2"
-	"oras.land/oras-go/v2/content"
 )
 
 // ResolveRoot returns the root descriptor for the remote repository
 func (o *OrasRemote) ResolveRoot(ctx context.Context) (ocispec.Descriptor, error) {
 	// first try to resolve the reference into an OCI descriptor directly
-	desc, err := o.repo.Resolve(ctx, o.repo.Reference.Reference)
+	desc, err := o.repo.Resolve(ctx, o.reference.GetReference())
 	// if we succeeded and it's not an index, return it
 	// otherwise we will use oras.Resolve which will fetch the index, then resolve the manifest
 	// w/ the target platform
@@ -29,14 +29,14 @@ func (o *OrasRemote) ResolveRoot(ctx context.Context) (ocispec.Descriptor, error
 	}
 
 	if o.targetPlatform == nil && desc.MediaType == ocispec.MediaTypeImageIndex {
-		return ocispec.Descriptor{}, fmt.Errorf("%q resolved to an image index, but no target platform was specified", o.repo.Reference.Reference)
+		return ocispec.Descriptor{}, fmt.Errorf("%q resolved to an image index, but no target platform was specified", o.reference.GetReference())
 	}
 
 	resolveOpts := oras.ResolveOptions{
 		TargetPlatform: o.targetPlatform,
 	}
 	// if the first attempt failed to resolve, or returned an index, try again with oras.Resolve
-	return oras.Resolve(ctx, o.repo, o.repo.Reference.Reference, resolveOpts)
+	return oras.Resolve(ctx, o.repo, o.reference.GetReference(), resolveOpts)
 }
 
 // FetchRoot fetches the root manifest from the remote repository.

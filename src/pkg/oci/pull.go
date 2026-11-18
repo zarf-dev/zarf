@@ -7,7 +7,7 @@ import (
 	"context"
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
-	"oras.land/oras-go/v2"
+	"github.com/oras-project/oras-go/v3"
 )
 
 // CopyToTarget copies the given layers from the remote repository to the given target
@@ -33,7 +33,7 @@ func (o *OrasRemote) CopyToTarget(ctx context.Context, layers []ocispec.Descript
 		return oras.SkipNode
 	}
 
-	_, err := oras.Copy(ctx, o.src(), o.repo.Reference.String(), target, o.repo.Reference.String(), copyOpts)
+	_, err := oras.Copy(ctx, o.src(), o.reference.String(), target, o.reference.String(), copyOpts)
 	if err != nil {
 		return err
 	}

@@ -19,13 +19,13 @@ import (
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"github.com/oras-project/oras-go/v3/content"
+	orasRemote "github.com/oras-project/oras-go/v3/registry/remote"
+	"github.com/oras-project/oras-go/v3/registry/remote/auth"
+	"github.com/oras-project/oras-go/v3/registry/remote/credentials"
+	"github.com/oras-project/oras-go/v3/registry/remote/retry"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/state"
-	"oras.land/oras-go/v2/content"
-	orasRemote "oras.land/oras-go/v2/registry/remote"
-	"oras.land/oras-go/v2/registry/remote/auth"
-	"oras.land/oras-go/v2/registry/remote/credentials"
-	"oras.land/oras-go/v2/registry/remote/retry"
 )
 
 // RegistryOverride describes an override for a specific registry.
@@ -128,7 +128,7 @@ func addNameAnnotationsToDesc(desc ocispec.Descriptor, ref string) ocispec.Descr
 
 // NewAuthClientFromDocker creates an ORAS auth client from the default Docker credentials store.
 func NewAuthClientFromDocker(ctx context.Context, insecureSkipTLSVerify bool, responseHeaderTimeout time.Duration, preAuthHosts map[string]struct{}) (_ *auth.Client, err error) {
-	credStore, err := credentials.NewStoreFromDocker(credentials.StoreOptions{})
+	credStore, err := credentials.NewStoreFromDocker(credentials.StoreOptions{IgnoreDefaultNativeStore: true})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get credentials: %w", err)
 	}
@@ -142,8 +142,8 @@ func NewAuthClientFromDocker(ctx context.Context, insecureSkipTLSVerify bool, re
 		Client: &http.Client{
 			Transport: transport,
 		},
-		Cache:      auth.NewCache(),
-		Credential: credentials.Credential(credStore),
+		Cache:          auth.NewCache(),
+		CredentialFunc: orasRemote.NewCredentialFunc(credStore),
 	}
 
 	logger.From(ctx).Debug("gathering credentials from default Docker config file", "credentialsConfigured", credStore.IsAuthConfigured())
