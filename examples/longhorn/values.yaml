@@ -99,7 +99,9 @@ persistence:
   removeSnapshotsDuringFilesystemTrim: ignored # "enabled" or "disabled" otherwise
 
 csi:
-  kubeletRootDir: "/var/lib/rancher/k3s/agent/kubelet"
+  # Longhorn automatically detects the kubelet root directory. If detection fails,
+  # set this to the kubelet root directory used by your cluster.
+  kubeletRootDir: ~
   attacherReplicaCount: ~
   provisionerReplicaCount: ~
   resizerReplicaCount: ~

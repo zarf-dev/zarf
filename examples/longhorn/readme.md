@@ -6,10 +6,4 @@ You will need [open-iscsi](https://longhorn.io/docs/latest/deploy/install/#insta
 
 If you wish to support RWX access modes you'll need to install an [NFSv4 client](https://longhorn.io/docs/latest/deploy/install/#installing-nfsv4-client) on each node.
 
-If you're working with K3s, there is extra setup required. See [Longhorn CSI on K3s](https://longhorn.io/docs/latest/advanced-resources/os-distro-specific/csi-on-k3s/).
-
-The values file from this example was pulled using the directions at [Customizing Default Settings](https://longhorn.io/docs/latest/advanced-resources/deploy/customizing-default-settings/#using-helm) as the path for kubelet needs to be set for K3s as per [Longhorn CSI on K3s](https://longhorn.io/docs/latest/advanced-resources/os-distro-specific/csi-on-k3s/)
-
-Set the kubelet path in `values.yaml` to match your Kubernetes distribution.
-
 The `global.imageRegistry` value in `values.yaml` is set to Zarf's `{{ .State.Registry.Address }}` runtime template, with `enableTemplating: true` on the chart values file. Zarf's mutating webhook already rewrites container image references on admission, so this value isn't needed for images to be pulled correctly. The webhook redirects any pod's image regardless of this setting. However, `longhorn-manager` is also passed its own expected image as a `--manager-image` command-line flag (rendered from this same `global.imageRegistry` value, independent of the webhook), which it compares against its own running pod's image to detect stale manager instances during upgrades. If `global.imageRegistry` is left unset, that flag never matches the webhook-rewritten pod image, and `longhorn-manager` gets stuck permanently treating its own fresh pod as stale. So this value is required for `longhorn-manager`'s own bootstrap logic, not just image resolution, and should not be removed.
