@@ -11,5 +11,5 @@ Relates to #
 
 ## Checklist before merging
 
-- [ ] Test and docs added or updated as needed
+- [ ] Tests and docs added or updated as needed
 - [ ] [Contributor Guide Steps](https://docs.zarf.dev/contribute/contributor-guide/#developer-workflow) followed

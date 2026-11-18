@@ -65,13 +65,13 @@ Zarf maintainers will require one (1) core team review before merge. See the (co
 
 ### Pull Request Requirements
 
-A pull request must reference an issue with "Ready" status on the project board and it's assignee must be the PR author. Otherwise the PR will be closed.
+A pull request must reference an issue with "Ready" status on the project board and its assignee must be the PR author. Otherwise the PR will be closed.
 
 Issues begin in "Triage". A Maintainer or Reviewer can move an issue to "Accepted" once its scope and value to the project are clear. Once prioritized and assigned, the issue moves to "Ready".
 
 To help move an issue forward, ask clarifying questions or clear up undefined behavior. If you'd like to work on an issue, ask to be assigned. Issues labeled "open-for-contribution" or "good-first-issue" are looking for contributors.
 
-When creating or scoping issues, do not use AI to generate project feedback or use cases. Feedback grounded from experience with the project is extremely helpful to maintainers, while AI output can create noise that distracts from higher priorities.
+When creating or scoping issues, do not use AI to generate project feedback or use cases. Feedback grounded in experience with the project is extremely helpful to maintainers, while AI output can create noise that distracts from higher priorities.
 
 ### Developer Workflow
 
