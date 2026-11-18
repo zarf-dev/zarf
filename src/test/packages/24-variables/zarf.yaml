@@ -1,7 +1,7 @@
 kind: ZarfPackageConfig
 metadata:
   name: variables
-  description: Example nginx package to demonstrate Zarf variables
+  description: Test nginx package for Zarf variables
 
 # Constants are defined on package create and do not change on deploy
 # This demonstrates setting the nginx version to bake into the package using a package variable (PKG_TMPL)
@@ -87,6 +87,3 @@ components:
           - nginx-extra-configmap.yaml
           - nginx-deployment.yaml
           - nginx-service.yaml
-
-documentation:
-  readme: readme.md

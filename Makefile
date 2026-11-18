@@ -218,8 +218,6 @@ build-examples: ## Build all of the example packages
 
 	@test -s ./build/zarf-package-component-actions-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/component-actions -o build -a $(ARCH)
 
-	@test -s ./build/zarf-package-variables-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/variables --set NGINX_VERSION=1.23.3 -o build -a $(ARCH)
-
 	@test -s ./build/zarf-package-kiwix-$(ARCH)-3.5.0.tar || $(ZARF_BIN) package create examples/kiwix -o build -a $(ARCH)
 
 	@test -s ./build/zarf-package-git-data-$(ARCH)-0.0.1.tar.zst || $(ZARF_BIN) package create examples/git-data -o build -a $(ARCH)
@@ -294,7 +292,10 @@ scan-govulncheck: ## Scan source for vulnerabilities with reachable code paths u
 
 scan-grype: build ## Scan the Zarf binary for CVEs using grype + VEX suppression (must `brew install grype` first); fails on High+
 	@test -d ./build || mkdir ./build
-	$(GRYPE) file:$(ZARF_BIN) --config .grype.yaml -o json > build/grype.json --fail-on high
+	$(GRYPE) file:$(ZARF_BIN) --config .grype.yaml --fail-on high \
+		-o json=build/grype.json \
+		-o sarif=build/grype.sarif \
+		-o template=build/grype-summary.md --template hack/grype-summary.tmpl
 
 vex-lint: ## Check for orphaned VEX statements in .vex/zarf.cli.openvex.json (requires: run scan-grype first)
 	@test -f build/grype.json || (echo "ERROR: build/grype.json not found — run 'make scan-grype' first" && exit 1)
