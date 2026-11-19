@@ -44,7 +44,6 @@ func (r *Remote) PushPackage(ctx context.Context, pkgLayout *layout.PackageLayou
 		"size", utils.ByteFormat(float64(totalSize), 2),
 		"manifestSize", utils.ByteFormat(float64(manifestDesc.Size), 2))
 
-	var publishedDesc ocispec.Descriptor
 	err = Retry(ctx, opts.Retries, func() error {
 		trackedRemote := images.NewTrackedTarget(
 			r.Repo(),
@@ -54,13 +53,13 @@ func (r *Remote) PushPackage(ctx context.Context, pkgLayout *layout.PackageLayou
 		trackedRemote.StartReporting(ctx)
 		defer trackedRemote.StopReporting()
 
-		var copyErr error
-		publishedDesc, copyErr = oras.Copy(ctx, pkgLayout, pkgLayout.Digest(), trackedRemote, "", copyOpts)
-		if copyErr != nil {
-			return copyErr
+		// Copy by descriptor to avoid tagging the manifest with its own digest,
+		// which reads it back before an eventually consistent registry may serve it.
+		if err := oras.CopyGraph(ctx, pkgLayout, trackedRemote, manifestDesc, copyOpts.CopyGraphOptions); err != nil {
+			return err
 		}
 
-		return r.OrasRemote.UpdateIndex(ctx, r.Repo().Reference.Reference, publishedDesc)
+		return r.OrasRemote.UpdateIndex(ctx, r.Repo().Reference.Reference, manifestDesc)
 	},
 	)
 	if err != nil {
@@ -70,5 +69,5 @@ func (r *Remote) PushPackage(ctx context.Context, pkgLayout *layout.PackageLayou
 	l.Info("completed package publish", "destination", r.Repo().Reference.String(),
 		"duration", time.Since(start).Round(100*time.Millisecond))
 
-	return publishedDesc, nil
+	return manifestDesc, nil
 }
