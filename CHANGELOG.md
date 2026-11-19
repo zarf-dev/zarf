@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.1.0](https://github.com/zarf-dev/zarf/compare/v1.0.1...v1.1.0) (2026-11-19)
+
+
+### Features
+
+* add grype SARIF upload step to nightly CVE scan workflow ([#5630](https://github.com/zarf-dev/zarf/issues/5630)) ([a339814](https://github.com/zarf-dev/zarf/commit/a339814911178e7f68f637587033e586002001a1))
+
+
+### Bug Fixes
+
+* count node items when sizing registry HPA replicas ([#5641](https://github.com/zarf-dev/zarf/issues/5641)) ([6f444bd](https://github.com/zarf-dev/zarf/commit/6f444bd568a2999856e97d08096d6f5bdb675d8e))
+* paginate registry tag listings ([#5676](https://github.com/zarf-dev/zarf/issues/5676)) ([d9c2a2f](https://github.com/zarf-dev/zarf/commit/d9c2a2fe78dff2c6ab85b92e943001a5d0855121))
+
 ## [1.0.1](https://github.com/zarf-dev/zarf/compare/v1.0.0...v1.0.1) (2026-11-11)
 
 
