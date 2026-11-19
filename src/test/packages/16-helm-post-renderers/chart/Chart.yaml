@@ -1,0 +1,4 @@
+apiVersion: v2
+name: post-render-app
+description: Local chart for exercising Helm chart post-renderers
+version: 0.1.0

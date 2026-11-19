@@ -1,0 +1,10 @@
+# Example deploy-time values for a cluster where Velero runs on tainted, dedicated nodes.
+# Use with: zarf package deploy <package> --values tainted-nodes-values.yaml
+scheduling:
+  nodeSelector:
+    kubernetes.io/os: linux
+  tolerations:
+    - key: dedicated
+      operator: Equal
+      value: backup
+      effect: NoSchedule

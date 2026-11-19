@@ -251,6 +251,22 @@ func TestFindImages(t *testing.T) {
 			},
 		},
 		{
+			name:        "post-renderers retarget chart images",
+			packagePath: "./testdata/find-images/post-renderers",
+			opts: FindImagesOptions{
+				SkipCosign: true,
+				Values:     value.Values{"team": "blue"},
+			},
+			expectedImages: []ComponentImageScan{
+				{
+					ComponentName: "baseline",
+					Matches: []ImageMatch{
+						{Image: api.Image{Name: "registry.example.com/mirror/nginx:1.27.0"}, MatchType: MatchDefinite},
+					},
+				},
+			},
+		},
+		{
 			name:        "pod volume image",
 			packagePath: "./testdata/find-images/pod-volume-image",
 			opts: FindImagesOptions{

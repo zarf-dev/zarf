@@ -9,10 +9,14 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
+	"github.com/zarf-dev/zarf/src/internal/packager/template"
 	"github.com/zarf-dev/zarf/src/pkg/packager/assemble"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
+	"github.com/zarf-dev/zarf/src/pkg/state"
+	tmpl "github.com/zarf-dev/zarf/src/pkg/template"
 	"github.com/zarf-dev/zarf/src/pkg/value"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
@@ -392,5 +396,73 @@ func TestInspectDefinitionResources_Errors(t *testing.T) {
 			require.Error(t, err)
 			require.Nil(t, resources)
 		})
+	}
+}
+
+func TestInspectResources_postRenderers(t *testing.T) {
+	t.Parallel()
+	ctx := testutil.TestContext(t)
+	packageDir, err := filepath.Abs(filepath.Join("testdata", "find-images", "post-renderers"))
+	require.NoError(t, err)
+	vals := value.Values{"team": "blue"}
+
+	check := func(t *testing.T, resources []Resource) {
+		t.Helper()
+		var chart string
+		for _, r := range resources {
+			if r.ResourceType == ChartResource {
+				chart = r.Content
+			}
+		}
+		require.Contains(t, chart, "replicas: 4")
+		require.Contains(t, chart, "image: registry.example.com/mirror/nginx:1.27.0")
+		require.Contains(t, chart, "team: blue")
+		require.NotContains(t, chart, "nginx:1.25.0")
+	}
+
+	resources, err := InspectDefinitionResources(ctx, packageDir, InspectDefinitionResourcesOptions{Values: vals})
+	require.NoError(t, err)
+	check(t, resources)
+
+	// The templated post-renderer references a value that is not set.
+	_, err = InspectDefinitionResources(ctx, packageDir, InspectDefinitionResourcesOptions{})
+	require.ErrorContains(t, err, `chart "web": post-renderer at index 1: kustomize patch at index 0: templating failed`)
+
+	// Post-renderers must survive package assembly to apply when inspecting a built package.
+	loaded, err := load.Package(ctx, packageDir, load.PackageOptions{})
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, loaded.Close()) })
+	pkgLayout, err := assemble.AssemblePackage(ctx, loaded, assemble.AssembleOptions{SkipSBOM: true})
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, pkgLayout.Cleanup()) })
+	resources, err = InspectPackageResources(ctx, pkgLayout, InspectPackageResourcesOptions{Values: vals})
+	require.NoError(t, err)
+	check(t, resources)
+}
+
+func TestChartTemplateObjects(t *testing.T) {
+	t.Parallel()
+	ctx := testutil.TestContext(t)
+	pkg := api.Package{APIVersion: v1beta1.APIVersion, Metadata: api.PackageMetadata{Name: "pkg"}}
+	vc := template.GetZarfVariableConfig(ctx, false)
+	access := tmpl.StateAccess{State: &state.State{RegistryInfo: state.RegistryInfo{Address: "registry.example.com"}}}
+	vals := value.Values{"team": "blue"}
+
+	objs, err := chartTemplateObjects(api.Chart{
+		ValuesFiles:   []api.ValuesFile{{}},
+		PostRenderers: []api.PostRenderer{{Kustomize: &api.KustomizePostRenderer{}}},
+	}, vals, pkg, vc, access)
+	require.NoError(t, err)
+	require.Nil(t, objs, "objects are only built when something enables templating")
+
+	for _, chart := range []api.Chart{
+		{ValuesFiles: []api.ValuesFile{{EnableTemplating: true}}},
+		{PostRenderers: []api.PostRenderer{{Kustomize: &api.KustomizePostRenderer{EnableTemplating: true}}}},
+	} {
+		objs, err := chartTemplateObjects(chart, vals, pkg, vc, access)
+		require.NoError(t, err)
+		rendered, err := tmpl.Apply(ctx, "{{ .Values.team }} {{ .Pkg.Metadata.Name }} {{ .State.Registry.Address }}", objs)
+		require.NoError(t, err)
+		require.Equal(t, "blue pkg registry.example.com", rendered)
 	}
 }

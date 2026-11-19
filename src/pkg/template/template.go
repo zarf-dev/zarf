@@ -87,6 +87,15 @@ func (o Objects) WithVariables(vars variables.SetVariableMap) Objects {
 	return o
 }
 
+// WithVariableConfig makes vc's set variables and constants available as WithVariables and WithConstants do. A nil vc
+// contributes none.
+func (o Objects) WithVariableConfig(vc *variables.VariableConfig) Objects {
+	if vc == nil {
+		return o.WithVariables(nil).WithConstants(nil)
+	}
+	return o.WithVariables(vc.GetSetVariableMap()).WithConstants(vc.GetConstants())
+}
+
 // WithPackage makes the package available on the Objects map using its authored API version.
 func (o Objects) WithPackage(pkg api.Package) Objects {
 	switch pkg.GetAPIVersion() {

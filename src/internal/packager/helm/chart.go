@@ -33,6 +33,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/zarf-dev/zarf/src/internal/healthchecks"
+	"github.com/zarf-dev/zarf/src/internal/packager/postrender"
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
 )
 
@@ -59,6 +60,8 @@ type InstallUpgradeOptions struct {
 	ForceConflicts bool
 	// VariableConfig is used to template the variables in the chart
 	VariableConfig *variables.VariableConfig
+	// PostRenderer is the chart's post-renderers, run before Zarf's own post-rendering; nil when it has none.
+	PostRenderer *postrender.Renderer
 	// State is used to update the registry / git server secrets
 	State   *state.State
 	Cluster *cluster.Cluster
@@ -86,10 +89,7 @@ func InstallOrUpgradeChart(ctx context.Context, zarfChart api.Chart, chart *char
 	}
 	l.Info("processing Helm chart", "name", zarfChart.Name, "source", source)
 
-	// If no release name is specified, use the chart name.
-	if zarfChart.ReleaseName == "" {
-		zarfChart.ReleaseName = zarfChart.Name
-	}
+	zarfChart.ReleaseName = zarfChart.GetReleaseName()
 	if opts.VariableConfig == nil {
 		opts.VariableConfig = template.GetZarfVariableConfig(ctx, opts.IsInteractive)
 	}
@@ -100,7 +100,7 @@ func InstallOrUpgradeChart(ctx context.Context, zarfChart api.Chart, chart *char
 		return nil, zarfChart.ReleaseName, fmt.Errorf("unable to initialize the K8s client: %w", err)
 	}
 
-	postRender, err := newRenderer(ctx, zarfChart, opts.TakeOwnership, opts.Cluster, opts.ConnectedDeploy, opts.State, actionConfig, opts.VariableConfig, opts.PkgName, opts.NamespaceOverride)
+	postRender, err := newRenderer(ctx, zarfChart, opts.TakeOwnership, opts.Cluster, opts.ConnectedDeploy, opts.State, actionConfig, opts.VariableConfig, opts.PostRenderer, opts.PkgName, opts.NamespaceOverride)
 	if err != nil {
 		return nil, zarfChart.ReleaseName, fmt.Errorf("unable to create helm renderer: %w", err)
 	}
@@ -290,7 +290,7 @@ func UpdateReleaseValues(ctx context.Context, zarfChart api.Chart, updatedValues
 		opts.VariableConfig = template.GetZarfVariableConfig(ctx, opts.IsInteractive)
 	}
 
-	postRender, err := newRenderer(ctx, zarfChart, opts.TakeOwnership, opts.Cluster, opts.ConnectedDeploy, opts.State, actionConfig, opts.VariableConfig, opts.PkgName, opts.NamespaceOverride)
+	postRender, err := newRenderer(ctx, zarfChart, opts.TakeOwnership, opts.Cluster, opts.ConnectedDeploy, opts.State, actionConfig, opts.VariableConfig, opts.PostRenderer, opts.PkgName, opts.NamespaceOverride)
 	if err != nil {
 		return fmt.Errorf("unable to create helm renderer: %w", err)
 	}

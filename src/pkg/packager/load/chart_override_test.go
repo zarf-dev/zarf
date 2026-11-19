@@ -20,16 +20,20 @@ func TestChartOverridesInheritSource(t *testing.T) {
 	t.Parallel()
 
 	for _, kind := range []string{"package", "component config"} {
-		for _, field := range []string{"namespace", "releaseName", "valuesFiles", "values", "nested import"} {
+		for _, field := range []string{"namespace", "releaseName", "valuesFiles", "values", "postRenderStrategy", "postRenderers", "nested import"} {
 			t.Run(kind+"/"+field, func(t *testing.T) {
 				t.Parallel()
 				dir := t.TempDir()
 
 				baseChart := v1beta1.Chart{
 					Name: "app", Namespace: "original", ReleaseName: "original",
-					Local:       &v1beta1.LocalSource{Path: "app-chart"},
-					ValuesFiles: []v1beta1.ValuesFile{{Path: "base-values.yaml"}},
-					Values:      []v1beta1.ChartValue{{SourcePath: ".base", TargetPath: ".base"}},
+					Local:              &v1beta1.LocalSource{Path: "app-chart"},
+					ValuesFiles:        []v1beta1.ValuesFile{{Path: "base-values.yaml"}},
+					Values:             []v1beta1.ChartValue{{SourcePath: ".base", TargetPath: ".base"}},
+					PostRenderStrategy: v1beta1.PostRenderStrategySeparate,
+					PostRenderers: []v1beta1.PostRenderer{{Kustomize: &v1beta1.KustomizePostRenderer{
+						Images: []v1beta1.KustomizeImage{{Name: "base", NewTag: "1.0.0"}},
+					}}},
 				}
 				writeChartComponent(t, filepath.Join(dir, "base", "component.yaml"), v1beta1.ComponentSpec{
 					Charts: []v1beta1.Chart{baseChart},
@@ -53,6 +57,14 @@ func TestChartOverridesInheritSource(t *testing.T) {
 				case "values":
 					override.Values = []v1beta1.ChartValue{{SourcePath: ".override", TargetPath: ".override"}}
 					expected.Values = append(expected.Values, override.Values...)
+				case "postRenderStrategy":
+					override.PostRenderStrategy = v1beta1.PostRenderStrategyCombined
+					expected.PostRenderStrategy = v1beta1.PostRenderStrategyCombined
+				case "postRenderers":
+					override.PostRenderers = []v1beta1.PostRenderer{{Kustomize: &v1beta1.KustomizePostRenderer{
+						Patches: []v1beta1.KustomizePatch{{Patch: "apiVersion: v1\nkind: Service\nmetadata:\n  name: app\n"}},
+					}}}
+					expected.PostRenderers = append(expected.PostRenderers, override.PostRenderers...)
 				case "nested import":
 					importPath = "middle.yaml"
 					writeChartComponent(t, filepath.Join(dir, importPath), v1beta1.ComponentSpec{

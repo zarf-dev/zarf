@@ -100,6 +100,89 @@ To use a private Helm repository the repo must be added to Helm. You can add a r
 
 <ExampleYAML src={import("../../../../../examples/helm-charts/zarf.yaml?raw")} component="demo-helm-charts" />
 
+#### Post-Renderers
+
+Post-renderers patch a chart's rendered manifests before Zarf deploys them. Use them for changes that the chart's values do not expose, such as a `securityContext` on a hook Job, extra tolerations, or a different image. They follow the same model as Flux [`HelmRelease` post-renderers](https://fluxcd.io/flux/components/helm/helmreleases/#post-renderers). Each entry runs an inline Kustomize build over the chart's output, so you don't need to fork the chart.
+
+:::note
+
+Post-renderers are only available in `zarf.dev/v1beta1` packages. Packages that use them require Zarf `v1.1.0` or later to deploy. Zarf adds this requirement to the package automatically.
+
+:::
+
+Prefer chart values whenever the chart exposes a setting. Use post-renderers for the gaps. The [helm-post-renderers example](/ref/examples/helm-post-renderers/) hardens the Velero chart through values, then uses post-renderers for a hook Job that the values can't reach:
+
+<ExampleYAML src={import("../../../../../examples/helm-post-renderers/zarf.yaml?raw")} component="velero" />
+
+| Field | Description |
+| --- | --- |
+| `postRenderers` | Ordered list of post-renderers. Each entry receives the output of the previous entry. |
+| `postRenderers[].kustomize.patches[].patch` | Required. An inline strategic merge patch (a YAML object) or JSON 6902 patch (a YAML list of operations). |
+| `postRenderers[].kustomize.patches[].target` | Optional. Selects the resources to patch by `group`, `version`, `kind`, `name`, `namespace`, `labelSelector`, and `annotationSelector`. `name` and `namespace` accept regular expressions. JSON 6902 patches require a `target`. |
+| `postRenderers[].kustomize.images[]` | Overrides container images by `name`, setting at least one of `newName`, `newTag`, or `digest`. |
+| `postRenderers[].kustomize.enableTemplating` | Renders this entry's patches and image fields with [Zarf templating](/ref/package-values/#templating) when the chart is rendered. Defaults to `false`. |
+| `postRenderStrategy` | Selects which documents post-renderers receive: `nohooks` (default), `combined`, or `separate`. |
+
+A post-renderer entry must have at least one patch or image. Every strategic merge patch document must set `kind` and `metadata.name`, even when the patch has a `target`, and a patch with a `target` can contain only one document.
+
+Always set a `target` when you can:
+
+- A patch with a `target` is silently skipped when the target selects nothing, as in Kustomize and Flux. Double-check the kind, name, and namespace you select, and run [`zarf dev inspect manifests`](/commands/zarf_dev_inspect_manifests/) to confirm that the patch applied.
+- A strategic merge patch without a `target` patches the resource that matches its `apiVersion`, `kind`, and `metadata.name`. It must match a resource in every pass it runs in, or rendering fails. With `separate`, that includes the hooks pass when the chart has hooks. With `nohooks`, it can't match a hook.
+
+##### Helm Hooks
+
+Charts often run [Helm hooks](https://helm.sh/docs/topics/charts_hooks/), such as migration or CRD upgrade Jobs. `postRenderStrategy` controls whether post-renderers see them:
+
+- `nohooks` (default): post-renderers receive only the chart's regular resources. Hooks are deployed unchanged.
+- `combined`: hooks and regular resources pass through each post-renderer together, in one Kustomize build. Kustomize requires unique resources, so this fails when a hook and a regular resource share the same kind, name, and namespace, such as a ServiceAccount declared both ways.
+- `separate`: hooks and regular resources each pass through the full post-renderer chain on their own. Use this to patch hooks in charts that `combined` can't handle. Every post-renderer runs on both passes, so give hook patches a `target` to make them a no-op in the regular-resources pass.
+
+Choose `nohooks` unless you need to patch a hook. Choose `combined` when a patch must see hooks and regular resources together. Otherwise, choose `separate`.
+
+With `combined` and `separate`, Kustomize receives every hook in the chart, including `helm test` hooks. Kustomize can't process resources that set only `metadata.generateName`, so they can't be post-rendered. Charts with such hooks must use `nohooks`.
+
+##### Order of Operations
+
+Your post-renderers run before Zarf's own processing of the chart, so Zarf handles patched resources exactly like the rest of the chart. For example, a namespace or `zarf connect` Service label set by a patch gets Zarf's usual handling. In the cluster, the Zarf agent still rewrites patched image and Git references to the Zarf registry and Git server.
+
+Zarf applies post-renderers everywhere it renders a chart: `zarf package deploy`, `zarf dev deploy`, `zarf package inspect manifests`, `zarf dev inspect manifests`, and `zarf dev find-images`.
+
+##### Templating
+
+When `enableTemplating: true` is set, Zarf renders that entry's `patch` strings and image `name`, `newName`, `newTag`, and `digest` strings whenever it renders the chart. Templates can use `.Values`, `.Pkg`, `.State`, and the [template functions](/ref/package-values/#templating) available to templated manifests. Sensitive `.State` fields require the component's `stateAccess`. With templating disabled (the default), Zarf uses the strings as written, so a literal `{{` passes through safely. When you create the package, Zarf checks that non-templated patches are valid YAML that Kustomize can load, and that JSON 6902 patches set a `target`. Templated patches are checked only after they are rendered.
+
+Rendering values as JSON keeps them on one line, which avoids YAML indentation problems inside a patch:
+
+```yaml
+- kustomize:
+    enableTemplating: true
+    patches:
+      - target:
+          kind: Deployment
+          name: my-app
+        patch: |
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: my-app
+          spec:
+            template:
+              spec:
+                tolerations: {{ .Values.tolerations | toJson }}
+```
+
+##### Caveats
+
+- Helm usually renders resources without `metadata.namespace`. Kustomize treats a missing namespace as `default`, so `target.namespace` only matches resources whose manifests set a namespace explicitly. Select resources by kind, name, or labels instead.
+- Helm installs CRDs from a chart's `crds/` directory directly, so post-renderers never see them. CRDs in `templates/` are post-rendered like any other resource.
+- The component's `images` must list every image the post-rendered manifests use. That means the new references for any images that `images` overrides or patches replace. [`zarf dev find-images`](/commands/zarf_dev_find-images/) runs your post-renderers, so it reports the images the deployed chart will actually use.
+- Post-renderers can't add new resources. To deploy extra resources next to a chart, use a [manifests](#kubernetes-manifests) entry.
+- Kustomize drops resources annotated `config.kubernetes.io/local-config: "true"`, so post-rendered charts don't deploy them.
+- When a component [imports](#merge-strategies) a chart and overrides it, the importing component's post-renderers run after the imported chart's, and its `postRenderStrategy`, if set, applies to all of them.
+- Zarf CLIs older than `v1.1.0` refuse to deploy packages that use post-renderers. However, `zarf package inspect manifests` in an older CLI renders the charts without post-renderers.
+- `zarf tools update-creds` re-applies the deployed post-renderers when it upgrades init package charts. Templated post-renderers only see the value overrides given at deploy time there, because Zarf doesn't record the package's default values. Templates that rely on package default values fail during `update-creds`.
+
 ### Kubernetes Manifests
 
 <Properties apiVersion="v1beta1" item="Component" include={["manifests"]} />
@@ -281,7 +364,7 @@ When merging components together Zarf will adopt the following strategies depend
 | Images | `images` | Images match by a nonempty `id` first, then by `name`. Matching images take nonempty fields from the importing component; unmatched images are appended |
 | 'name'd Primitive Arrays | `charts`, `manifests` | Elements match by `name`. Matching elements merge their arrays and take nonempty settings from the importing component; unmatched elements are appended. Boolean options are enabled when either component sets them to `true` |
 
-An importing component can override a chart source's version or reference, but cannot change its source type, URL, chart name, or path.
+An importing component can override a chart source's version or reference, but cannot change its source type, URL, chart name, or path. When it overrides a chart, its [`postRenderers`](#post-renderers) are appended after the imported chart's, so they run last. Its `postRenderStrategy`, if set, replaces the imported one and applies to all of the chart's post-renderers.
 
 Some package level fields from imported components will also be merged with the importing package.  These fields will be processed from the first component to the last component in a Zarf package definition.
 

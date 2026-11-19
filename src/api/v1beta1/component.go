@@ -204,6 +204,76 @@ type Chart struct {
 	SkipSchemaValidation bool `json:"skipSchemaValidation,omitempty"`
 	// Controls whether Helm uses Server-Side Apply (SSA) or client-side apply (CSA) when deploying this chart. Defaults to "auto" when omitted.
 	ServerSideApply ServerSideApplyMode `json:"serverSideApply,omitempty" jsonschema:"enum=true,enum=false,enum=auto,default=auto"`
+	// Selects which rendered resources postRenderers receive: "nohooks" transforms regular resources only and passes Helm hooks through unchanged, "combined" transforms hooks and regular resources together, and "separate" transforms hooks and regular resources in independent passes. Defaults to "nohooks" when omitted. Has no effect without postRenderers.
+	PostRenderStrategy PostRenderStrategy `json:"postRenderStrategy,omitempty" jsonschema:"enum=nohooks,enum=combined,enum=separate,default=nohooks"`
+	// Ordered list of transformations applied to the rendered chart manifests at deploy time, before Zarf's own processing; the output of each post-renderer is the input of the next. CRDs in the chart's crds/ directory are never post-rendered. Requires Zarf v1.1.0+ to deploy.
+	PostRenderers []PostRenderer `json:"postRenderers,omitempty"`
+}
+
+// PostRenderStrategy controls which rendered chart resources are passed to post-renderers.
+type PostRenderStrategy string
+
+const (
+	// PostRenderStrategyNoHooks post-renders regular resources only; Helm hooks pass through unchanged.
+	PostRenderStrategyNoHooks PostRenderStrategy = "nohooks"
+	// PostRenderStrategyCombined post-renders Helm hooks and regular resources together in a single pass.
+	PostRenderStrategyCombined PostRenderStrategy = "combined"
+	// PostRenderStrategySeparate post-renders Helm hooks and regular resources in independent passes.
+	PostRenderStrategySeparate PostRenderStrategy = "separate"
+)
+
+// PostRenderer is a single post-rendering step applied to rendered chart manifests.
+type PostRenderer struct {
+	// Applies inline Kustomize patches and image overrides to the rendered chart manifests. Must include at least one patch or image.
+	Kustomize *KustomizePostRenderer `json:"kustomize,omitempty" jsonschema:"required"`
+}
+
+// KustomizePostRenderer applies Kustomize patches and image overrides to rendered chart manifests.
+type KustomizePostRenderer struct {
+	// Render Zarf template values in this post-renderer's patches and images at deploy time before Kustomize runs. When false, values are used verbatim.
+	EnableTemplating bool `json:"enableTemplating,omitempty"`
+	// Inline strategic merge or JSON 6902 patches to apply to the rendered manifests.
+	Patches []KustomizePatch `json:"patches,omitempty"`
+	// Container image name, tag, and digest overrides to apply to the rendered manifests. Each image must set at least one of newName, newTag, or digest.
+	Images []KustomizeImage `json:"images,omitempty"`
+}
+
+// KustomizePatch is an inline strategic merge or JSON 6902 patch with an optional target selector.
+type KustomizePatch struct {
+	// An inline strategic merge patch or JSON 6902 patch.
+	Patch string `json:"patch" jsonschema:"minLength=1"`
+	// Selects the resources to patch. Required for JSON 6902 patches; strategic merge patches match on their own identity when omitted.
+	Target *KustomizeSelector `json:"target,omitempty"`
+}
+
+// KustomizeSelector selects the resources a Kustomize patch applies to. Empty fields match any value.
+type KustomizeSelector struct {
+	// The API group of the resources to select.
+	Group string `json:"group,omitempty"`
+	// The API version of the resources to select.
+	Version string `json:"version,omitempty"`
+	// The kind of the resources to select.
+	Kind string `json:"kind,omitempty"`
+	// The name of the resources to select; may be a regular expression.
+	Name string `json:"name,omitempty"`
+	// The namespace of the resources to select; may be a regular expression. Rendered chart resources often omit metadata.namespace, which Kustomize treats as "default", so this only matches resources with an explicit namespace.
+	Namespace string `json:"namespace,omitempty"`
+	// A Kubernetes label selector the resources must match.
+	LabelSelector string `json:"labelSelector,omitempty"`
+	// A Kubernetes label selector expression evaluated against the resources' annotations.
+	AnnotationSelector string `json:"annotationSelector,omitempty"`
+}
+
+// KustomizeImage overrides the name, tag, or digest of matching container images. At least one of NewName, NewTag, or Digest must be set.
+type KustomizeImage struct {
+	// The image name to match, without a tag or digest.
+	Name string `json:"name" jsonschema:"minLength=1,example=ghcr.io/stefanprodan/podinfo"`
+	// The replacement image name.
+	NewName string `json:"newName,omitempty"`
+	// The replacement image tag.
+	NewTag string `json:"newTag,omitempty"`
+	// The replacement image digest, in the form sha256:<sha>; takes precedence over newTag.
+	Digest string `json:"digest,omitempty"`
 }
 
 // ValuesFile is a values file merged into a Helm chart on deploy.

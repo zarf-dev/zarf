@@ -14,6 +14,7 @@ import (
 
 	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/internal/packager/postrender"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/variables"
@@ -31,6 +32,8 @@ import (
 
 type renderer struct {
 	chart api.Chart
+	// user is the chart's post-renderers, run before Zarf's processing; nil when it has none.
+	user *postrender.Renderer
 
 	takeOwnership   bool
 	cluster         *cluster.Cluster
@@ -45,7 +48,7 @@ type renderer struct {
 	namespaceOverride string
 }
 
-func newRenderer(ctx context.Context, chart api.Chart, takeOwnership bool, c *cluster.Cluster, connectedDeploy bool, s *state.State, actionConfig *action.Configuration, variableConfig *variables.VariableConfig, pkgName string, namespaceOverride string) (*renderer, error) {
+func newRenderer(ctx context.Context, chart api.Chart, takeOwnership bool, c *cluster.Cluster, connectedDeploy bool, s *state.State, actionConfig *action.Configuration, variableConfig *variables.VariableConfig, user *postrender.Renderer, pkgName string, namespaceOverride string) (*renderer, error) {
 	if actionConfig == nil {
 		return nil, fmt.Errorf("action configuration required to run post renderer")
 	}
@@ -58,6 +61,7 @@ func newRenderer(ctx context.Context, chart api.Chart, takeOwnership bool, c *cl
 	// Update secrets when not in connected mode, as connected packages in hybrid / air-gap clusters could rely on pulling from the registry with ###ZARF_REGISTRY###
 	rend := &renderer{
 		chart:             chart,
+		user:              user,
 		takeOwnership:     takeOwnership,
 		cluster:           c,
 		connectedDeploy:   connectedDeploy,
@@ -85,8 +89,14 @@ func newRenderer(ctx context.Context, chart api.Chart, takeOwnership bool, c *cl
 	return rend, nil
 }
 
-// Run satisfies the Helm post-renderer interface. It templates the Zarf variables, finds connect strings, adopts namespaces, and applies Zarf state secrets
+// Run satisfies the Helm post-renderer interface. It applies the chart's user post-renderers, then templates the Zarf
+// variables, finds connect strings, adopts namespaces, and applies Zarf state secrets
 func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
+	// User post-renderers run first so resources they add or change still get Zarf's processing below.
+	renderedManifests, err := r.user.Run(renderedManifests)
+	if err != nil {
+		return nil, err
+	}
 	// This is very low cost and consistent for how we replace elsewhere, also good for debugging
 	hooks, resources, err := getTemplatedManifests(renderedManifests, r.variableConfig, r.actionConfig)
 	if err != nil {
