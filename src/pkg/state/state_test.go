@@ -1208,3 +1208,85 @@ func TestMergeStateAgentMutationPolicy(t *testing.T) {
 		})
 	}
 }
+
+func TestSupportedStateFormatUpgrades(t *testing.T) {
+	t.Parallel()
+
+	t.Run("deserializes pre-v1.0 State with legacy fields", func(t *testing.T) {
+		t.Parallel()
+
+		// In v1.0, fields like distro and storageClass were removed from State.
+		// Older cluster state secrets may contain extra legacy keys.
+		// json.Unmarshal must cleanly ignore unknown legacy keys without failing.
+		legacyStateJSON := []byte(`{
+			"zarfAppliance": false,
+			"distro": "k3s",
+			"storageClass": "local-path",
+			"agentInfo": {
+				"mutationPolicy": "all"
+			},
+			"gitServer": {
+				"pushUsername": "zarf-git-user"
+			},
+			"registryInfo": {
+				"pushUsername": "zarf-push",
+				"registryMode": "nodeport"
+			}
+		}`)
+
+		var s State
+		err := json.Unmarshal(legacyStateJSON, &s)
+		require.NoError(t, err)
+		require.False(t, s.ZarfAppliance)
+		require.Equal(t, MutationPolicyAll, s.AgentInfo.MutationPolicy)
+		require.Equal(t, "zarf-git-user", s.GitServer.PushUsername)
+		require.Equal(t, "zarf-push", s.RegistryInfo.PushUsername)
+		require.Equal(t, RegistryModeNodePort, s.RegistryInfo.RegistryMode)
+	})
+
+	t.Run("deserializes pre-v1.0 DeployedPackage state without DeployConfig", func(t *testing.T) {
+		t.Parallel()
+
+		// Legacy packages deployed before v1.0 only have Data (v1alpha1) and no DeployConfig or PackageData.
+		legacyPackageJSON := []byte(`{
+			"name": "legacy-app",
+			"digest": "sha256:1234567890abcdef",
+			"cliVersion": "v0.32.0",
+			"generation": 1,
+			"packageConnectivity": "airgap",
+			"data": {
+				"apiVersion": "zarf.dev/v1alpha1",
+				"kind": "ZarfPackageConfig",
+				"metadata": {
+					"name": "legacy-app",
+					"version": "0.1.0"
+				}
+			}
+		}`)
+
+		var dp DeployedPackage
+		err := json.Unmarshal(legacyPackageJSON, &dp)
+		require.NoError(t, err)
+		require.Equal(t, "legacy-app", dp.Name)
+		require.Equal(t, "v0.32.0", dp.CLIVersion)
+		require.Equal(t, PackageConnectivityAirGap, dp.GetPackageConnectivity())
+
+		// DeployConfig is not synthesized from legacy state
+		_, hasConfig := dp.GetDeployConfig()
+		require.False(t, hasConfig)
+
+		// Definition() falls back gracefully to Data
+		def, err := dp.Definition()
+		require.NoError(t, err)
+		require.Equal(t, "legacy-app", def.Metadata.Name)
+		require.Equal(t, "0.1.0", def.Metadata.Version)
+	})
+
+	t.Run("rejects completely corrupted state json", func(t *testing.T) {
+		t.Parallel()
+
+		var s State
+		err := json.Unmarshal([]byte(`{not valid json}`), &s)
+		require.Error(t, err)
+	})
+}
