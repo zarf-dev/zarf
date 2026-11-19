@@ -53,8 +53,8 @@ func (r *Remote) PushPackage(ctx context.Context, pkgLayout *layout.PackageLayou
 		trackedRemote.StartReporting(ctx)
 		defer trackedRemote.StopReporting()
 
-		// Copy by descriptor to avoid tagging the manifest with its own digest,
-		// which reads it back before an eventually consistent registry may serve it.
+		// Copy the manifest and its dependencies without tagging
+		// UpdateIndex publishes the index under the destination tag
 		if err := oras.CopyGraph(ctx, pkgLayout, trackedRemote, manifestDesc, copyOpts.CopyGraphOptions); err != nil {
 			return err
 		}
