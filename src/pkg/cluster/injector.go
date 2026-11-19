@@ -47,6 +47,14 @@ type ZarfInjectorOptions struct {
 	Image string
 	// IPFamily determines the injector listen address; defaults to IPv4 when unset
 	IPFamily state.IPFamily
+	// Tolerations are the tolerations applied to the injector pod to allow scheduling on tainted nodes.
+	Tolerations []corev1.Toleration
+	// NodeSelector defines labels that candidate nodes must match for injector pod scheduling.
+	NodeSelector map[string]string
+	// PodTemplate is an optional declarative Pod manifest used to mutate the injector pod.
+	PodTemplate *corev1.Pod
+	// ServiceTemplate is an optional declarative Service manifest used to mutate the injector service.
+	ServiceTemplate *corev1.Service
 }
 
 // StartInjection initializes a Zarf injection into the cluster.
@@ -64,9 +72,24 @@ func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, 
 		return "", 0, err
 	}
 
+	podTemplate := opts.PodTemplate
+	serviceTemplate := opts.ServiceTemplate
+	if podTemplate == nil || serviceTemplate == nil {
+		loadedPod, loadedSvc, err := loadInjectionTemplates(tmpDir)
+		if err != nil {
+			return "", 0, err
+		}
+		if podTemplate == nil {
+			podTemplate = loadedPod
+		}
+		if serviceTemplate == nil {
+			serviceTemplate = loadedSvc
+		}
+	}
+
 	l.Info("creating Zarf injector resources")
 
-	svc, err := c.createInjectorNodeportService(ctx, pkgName, opts)
+	svc, err := c.createInjectorNodeportService(ctx, pkgName, opts, serviceTemplate)
 	if err != nil {
 		return "", 0, err
 	}
@@ -85,17 +108,41 @@ func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, 
 			corev1.ResourceCPU:    resource.MustParse("1"),
 			corev1.ResourceMemory: resource.MustParse("256Mi"),
 		})
+	resReq = injectionTemplateResources(podTemplate, resReq)
+
+	tolerations := opts.Tolerations
+	nodeSelector := opts.NodeSelector
+	if podTemplate != nil {
+		if len(podTemplate.Spec.Tolerations) > 0 {
+			tolerations = append(tolerations, podTemplate.Spec.Tolerations...)
+		}
+		if len(podTemplate.Spec.NodeSelector) > 0 {
+			if nodeSelector == nil {
+				nodeSelector = map[string]string{}
+			}
+			for k, v := range podTemplate.Spec.NodeSelector {
+				nodeSelector[k] = v
+			}
+		}
+	}
+
 	injectorImage := opts.Image
 	injectorNodeName := ""
 	if injectorImage == "" {
 		var err error
-		injectorImage, injectorNodeName, err = c.getInjectorImageAndNode(ctx, resReq, architecture)
+		injectorImage, injectorNodeName, err = c.getInjectorImageAndNode(ctx, resReq, architecture, tolerations, nodeSelector)
 		if err != nil {
 			return "", 0, err
 		}
 	}
 
-	pod := buildInjectionPod(injectorNodeName, injectorImage, payloadCmNames, shasum, resReq, pkgName, opts.IPFamily)
+	pod := buildInjectionPod(injectorNodeName, injectorImage, payloadCmNames, shasum, resReq, pkgName, opts.IPFamily, tolerations, nodeSelector)
+	if podTemplate != nil {
+		pod, err = mergeInjectionPodTemplate(pod, podTemplate)
+		if err != nil {
+			return "", 0, err
+		}
+	}
 	_, err = c.Clientset.CoreV1().Pods(*pod.Namespace).Apply(ctx, pod, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
 	if err != nil {
 		return "", 0, fmt.Errorf("error creating pod in cluster: %w", err)
@@ -267,7 +314,7 @@ func (c *Cluster) createPayloadConfigMaps(ctx context.Context, tmpDir, imagesDir
 }
 
 // getImagesAndNodesForInjection checks for images on schedulable nodes within a cluster.
-func (c *Cluster) getInjectorImageAndNode(ctx context.Context, resReq *v1ac.ResourceRequirementsApplyConfiguration, architecture string) (string, string, error) {
+func (c *Cluster) getInjectorImageAndNode(ctx context.Context, resReq *v1ac.ResourceRequirementsApplyConfiguration, architecture string, tolerations []corev1.Toleration, nodeSelector map[string]string) (string, string, error) {
 	l := logger.From(ctx)
 
 	// List all nodes and running pods once
@@ -300,7 +347,12 @@ func (c *Cluster) getInjectorImageAndNode(ctx context.Context, resReq *v1ac.Reso
 	var fallback *nodeFallback
 
 	for _, node := range nodeList.Items {
-		if hasBlockingTaints(node.Spec.Taints) {
+		if !matchesNodeSelector(node.Labels, nodeSelector) {
+			l.Debug("skipping node: does not match nodeSelector", "node", node.Name)
+			continue
+		}
+
+		if hasBlockingTaints(node.Spec.Taints, tolerations) {
 			l.Debug("skipping node: blocking taints", "node", node.Name)
 			continue
 		}
@@ -396,16 +448,52 @@ func (c *Cluster) getInjectorImageAndNode(ctx context.Context, resReq *v1ac.Reso
 	return "", "", fmt.Errorf("no suitable injector image or node exists")
 }
 
-func hasBlockingTaints(taints []corev1.Taint) bool {
+// matchesNodeSelector verifies if all key/value pairs in selector match nodeLabels.
+func matchesNodeSelector(nodeLabels map[string]string, selector map[string]string) bool {
+	for k, v := range selector {
+		if nodeLabels[k] != v {
+			return false
+		}
+	}
+	return true
+}
+
+// hasBlockingTaints returns true if any taint with NoSchedule or NoExecute effect is not tolerated by tolerations.
+func hasBlockingTaints(taints []corev1.Taint, tolerations []corev1.Toleration) bool {
 	for _, taint := range taints {
-		if taint.Effect == corev1.TaintEffectNoSchedule || taint.Effect == corev1.TaintEffectNoExecute {
+		if taint.Effect != corev1.TaintEffectNoSchedule && taint.Effect != corev1.TaintEffectNoExecute {
+			continue
+		}
+		if !toleratesTaint(tolerations, taint) {
 			return true
 		}
 	}
 	return false
 }
 
-func buildInjectionPod(nodeName, image string, payloadCmNames []string, shasum string, resReq *v1ac.ResourceRequirementsApplyConfiguration, pkgName string, ipFamily state.IPFamily) *v1ac.PodApplyConfiguration {
+// toleratesTaint evaluates whether any of the tolerations match the given taint according to Kubernetes scheduling semantics.
+func toleratesTaint(tolerations []corev1.Toleration, taint corev1.Taint) bool {
+	for _, toleration := range tolerations {
+		if toleration.Effect != "" && toleration.Effect != taint.Effect {
+			continue
+		}
+		if toleration.Operator == corev1.TolerationOpExists {
+			if toleration.Key == "" || toleration.Key == taint.Key {
+				return true
+			}
+			continue
+		}
+		// Default operator is Equal when unset
+		if (toleration.Operator == corev1.TolerationOpEqual || toleration.Operator == "") &&
+			toleration.Key == taint.Key &&
+			toleration.Value == taint.Value {
+			return true
+		}
+	}
+	return false
+}
+
+func buildInjectionPod(nodeName, image string, payloadCmNames []string, shasum string, resReq *v1ac.ResourceRequirementsApplyConfiguration, pkgName string, ipFamily state.IPFamily, tolerations []corev1.Toleration, nodeSelector map[string]string) *v1ac.PodApplyConfiguration {
 	listenHost := "0.0.0.0"
 	if ipFamily == state.IPFamilyIPv6 {
 		listenHost = "[::]"
@@ -451,66 +539,82 @@ func buildInjectionPod(nodeName, image string, payloadCmNames []string, shasum s
 			WithSubPath(filename))
 	}
 
+	podSpec := v1ac.PodSpec().
+		// The injector doesn't handle sigterm to avoid extra dependencies, so we set it to 1
+		WithTerminationGracePeriodSeconds(1).
+		WithAutomountServiceAccountToken(false).
+		WithNodeName(nodeName).
+		WithRestartPolicy(corev1.RestartPolicyNever).
+		WithSecurityContext(
+			v1ac.PodSecurityContext().
+				WithRunAsUser(userID).
+				WithRunAsGroup(groupID).
+				WithFSGroup(fsGroupID).
+				WithSeccompProfile(
+					v1ac.SeccompProfile().
+						WithType(corev1.SeccompProfileTypeRuntimeDefault),
+				),
+		).
+		WithContainers(
+			v1ac.Container().
+				WithName("injector").
+				WithImage(image).
+				WithImagePullPolicy(corev1.PullIfNotPresent).
+				WithWorkingDir("/zarf-init").
+				WithCommand("/zarf-init/zarf-injector", shasum, listenAddr).
+				WithVolumeMounts(volumeMounts...).
+				WithSecurityContext(
+					v1ac.SecurityContext().
+						WithReadOnlyRootFilesystem(true).
+						WithAllowPrivilegeEscalation(false).
+						WithPrivileged(false).
+						WithRunAsNonRoot(true).
+						WithCapabilities(v1ac.Capabilities().WithDrop(corev1.Capability("ALL"))),
+				).
+				WithReadinessProbe(
+					v1ac.Probe().
+						WithPeriodSeconds(2).
+						WithSuccessThreshold(1).
+						WithFailureThreshold(10).
+						WithHTTPGet(
+							v1ac.HTTPGetAction().
+								WithPath("/v2/").
+								WithPort(intstr.FromInt(5000)),
+						),
+				).
+				WithResources(resReq),
+		).
+		WithVolumes(volumes...)
+
+	if len(nodeSelector) > 0 {
+		podSpec.WithNodeSelector(nodeSelector)
+	}
+
+	for _, tol := range tolerations {
+		tolApply := v1ac.Toleration().
+			WithKey(tol.Key).
+			WithOperator(tol.Operator).
+			WithValue(tol.Value).
+			WithEffect(tol.Effect)
+		if tol.TolerationSeconds != nil {
+			tolApply.WithTolerationSeconds(*tol.TolerationSeconds)
+		}
+		podSpec.WithTolerations(tolApply)
+	}
+
 	pod := v1ac.Pod("injector", state.ZarfNamespaceName).
 		WithLabels(map[string]string{
 			"app":        "zarf-injector",
 			AgentLabel:   "ignore",
 			PackageLabel: pkgName,
 		}).
-		WithSpec(
-			v1ac.PodSpec().
-				// The injector doesn't handle sigterm to avoid extra dependencies, so we set it to 1
-				WithTerminationGracePeriodSeconds(1).
-				WithAutomountServiceAccountToken(false).
-				WithNodeName(nodeName).
-				WithRestartPolicy(corev1.RestartPolicyNever).
-				WithSecurityContext(
-					v1ac.PodSecurityContext().
-						WithRunAsUser(userID).
-						WithRunAsGroup(groupID).
-						WithFSGroup(fsGroupID).
-						WithSeccompProfile(
-							v1ac.SeccompProfile().
-								WithType(corev1.SeccompProfileTypeRuntimeDefault),
-						),
-				).
-				WithContainers(
-					v1ac.Container().
-						WithName("injector").
-						WithImage(image).
-						WithImagePullPolicy(corev1.PullIfNotPresent).
-						WithWorkingDir("/zarf-init").
-						WithCommand("/zarf-init/zarf-injector", shasum, listenAddr).
-						WithVolumeMounts(volumeMounts...).
-						WithSecurityContext(
-							v1ac.SecurityContext().
-								WithReadOnlyRootFilesystem(true).
-								WithAllowPrivilegeEscalation(false).
-								WithPrivileged(false).
-								WithRunAsNonRoot(true).
-								WithCapabilities(v1ac.Capabilities().WithDrop(corev1.Capability("ALL"))),
-						).
-						WithReadinessProbe(
-							v1ac.Probe().
-								WithPeriodSeconds(2).
-								WithSuccessThreshold(1).
-								WithFailureThreshold(10).
-								WithHTTPGet(
-									v1ac.HTTPGetAction().
-										WithPath("/v2/").
-										WithPort(intstr.FromInt(5000)),
-								),
-						).
-						WithResources(resReq),
-				).
-				WithVolumes(volumes...),
-		)
+		WithSpec(podSpec)
 
 	return pod
 }
 
 // createInjectorNodeportService creates the injector service on an available port different than the registryNodePort service
-func (c *Cluster) createInjectorNodeportService(ctx context.Context, pkgName string, opts ZarfInjectorOptions) (*corev1.Service, error) {
+func (c *Cluster) createInjectorNodeportService(ctx context.Context, pkgName string, opts ZarfInjectorOptions, template *corev1.Service) (*corev1.Service, error) {
 	l := logger.From(ctx)
 	var svc *corev1.Service
 	timeoutCtx, cancel := context.WithTimeout(ctx, time.Second*30)
@@ -530,6 +634,13 @@ func (c *Cluster) createInjectorNodeportService(ctx context.Context, pkgName str
 			})).WithLabels(map[string]string{
 			PackageLabel: pkgName,
 		})
+		if template != nil {
+			var mergeErr error
+			svcAc, mergeErr = mergeInjectionServiceTemplate(svcAc, template, opts, pkgName)
+			if mergeErr != nil {
+				return mergeErr
+			}
+		}
 
 		var err error
 		svc, err = c.Clientset.CoreV1().Services(*svcAc.Namespace).Apply(ctx, svcAc, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})

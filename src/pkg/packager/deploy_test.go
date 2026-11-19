@@ -814,3 +814,143 @@ func TestDeployLegacyBuiltinsByAPIVersion(t *testing.T) {
 		})
 	}
 }
+
+func TestResolveInjectorOptions_FromDeployOptions(t *testing.T) {
+	t.Parallel()
+
+	d := deployer{
+		s: &state.State{
+			InjectorInfo: state.InjectorInfo{Port: 32001},
+			RegistryInfo: state.RegistryInfo{Port: 31999},
+			IPFamily:     state.IPFamilyIPv4,
+		},
+	}
+
+	podTemplate := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{"foo": "bar"}},
+	}
+	svcTemplate := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{"baz": "qux"}},
+	}
+
+	opts := DeployOptions{
+		InjectorImage: "my-custom-image:v1",
+		InjectorNodeSelector: map[string]string{
+			"disk": "ssd",
+		},
+		InjectorTolerations: []corev1.Toleration{{
+			Key:      "control-plane",
+			Operator: corev1.TolerationOpExists,
+		}},
+		InjectorPodTemplate:     podTemplate,
+		InjectorServiceTemplate: svcTemplate,
+	}
+
+	injOpts, err := d.resolveInjectorOptions(opts)
+	require.NoError(t, err)
+
+	require.Equal(t, uint16(32001), injOpts.InjectorNodePort)
+	require.Equal(t, uint16(31999), injOpts.RegistryNodePort)
+	require.Equal(t, state.IPFamilyIPv4, injOpts.IPFamily)
+	require.Equal(t, "my-custom-image:v1", injOpts.Image)
+	require.Equal(t, map[string]string{"disk": "ssd"}, injOpts.NodeSelector)
+	require.Len(t, injOpts.Tolerations, 1)
+	require.Equal(t, "control-plane", injOpts.Tolerations[0].Key)
+	require.Equal(t, podTemplate, injOpts.PodTemplate)
+	require.Equal(t, svcTemplate, injOpts.ServiceTemplate)
+}
+
+func TestResolveInjectorOptions_FromPackageValues(t *testing.T) {
+	t.Parallel()
+
+	d := deployer{
+		s: &state.State{
+			InjectorInfo: state.InjectorInfo{Port: 32001},
+			RegistryInfo: state.RegistryInfo{Port: 31999},
+			IPFamily:     state.IPFamilyIPv4,
+		},
+		vals: value.Values{
+			"injector": map[string]any{
+				"nodeSelector": map[string]any{
+					"topology.kubernetes.io/zone": "us-east-1a",
+				},
+				"tolerations": []any{
+					map[string]any{
+						"key":      "node-role.kubernetes.io/control-plane",
+						"operator": "Exists",
+						"effect":   "NoSchedule",
+					},
+				},
+				"podTemplate": map[string]any{
+					"metadata": map[string]any{
+						"annotations": map[string]any{
+							"sidecar.istio.io/inject": "false",
+						},
+					},
+				},
+				"serviceTemplate": map[string]any{
+					"metadata": map[string]any{
+						"annotations": map[string]any{
+							"service.beta.kubernetes.io/aws-load-balancer-internal": "true",
+						},
+					},
+				},
+			},
+		},
+	}
+
+	injOpts, err := d.resolveInjectorOptions(DeployOptions{})
+	require.NoError(t, err)
+
+	require.Equal(t, map[string]string{"topology.kubernetes.io/zone": "us-east-1a"}, injOpts.NodeSelector)
+	require.Len(t, injOpts.Tolerations, 1)
+	require.Equal(t, "node-role.kubernetes.io/control-plane", injOpts.Tolerations[0].Key)
+	require.Equal(t, corev1.TolerationOpExists, injOpts.Tolerations[0].Operator)
+	require.Equal(t, corev1.TaintEffectNoSchedule, injOpts.Tolerations[0].Effect)
+	require.NotNil(t, injOpts.PodTemplate)
+	require.Equal(t, "false", injOpts.PodTemplate.Annotations["sidecar.istio.io/inject"])
+	require.NotNil(t, injOpts.ServiceTemplate)
+	require.Equal(t, "true", injOpts.ServiceTemplate.Annotations["service.beta.kubernetes.io/aws-load-balancer-internal"])
+}
+
+func TestResolveInjectorOptions_Precedence(t *testing.T) {
+	t.Parallel()
+
+	d := deployer{
+		vals: value.Values{
+			"injector": map[string]any{
+				"nodeSelector": map[string]any{
+					"env":  "from-values",
+					"tier": "backend",
+				},
+				"podTemplate": map[string]any{
+					"metadata": map[string]any{
+						"annotations": map[string]any{"source": "values"},
+					},
+				},
+			},
+		},
+	}
+
+	cliPodTemplate := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Annotations: map[string]string{"source": "cli"},
+		},
+	}
+
+	opts := DeployOptions{
+		InjectorNodeSelector: map[string]string{
+			"env": "from-cli", // CLI overrides values
+		},
+		InjectorPodTemplate: cliPodTemplate, // CLI overrides values
+	}
+
+	injOpts, err := d.resolveInjectorOptions(opts)
+	require.NoError(t, err)
+
+	// CLI takes precedence for existing keys, but other keys from values are preserved
+	require.Equal(t, "from-cli", injOpts.NodeSelector["env"])
+	require.Equal(t, "backend", injOpts.NodeSelector["tier"])
+	// PodTemplate from CLI takes precedence over values
+	require.Equal(t, "cli", injOpts.PodTemplate.Annotations["source"])
+}
