@@ -16,7 +16,6 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/fatih/color"
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/goccy/go-yaml/lexer"
 	"github.com/goccy/go-yaml/printer"
@@ -29,9 +28,18 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/message"
 )
 
-const yamlEscape = "\x1b"
+const (
+	yamlEscape = "\x1b"
 
-func yamlFormat(attr color.Attribute) string {
+	ansiReset     = 0
+	ansiFgHiBlack = 90
+	ansiFgHiYellow = 93
+	ansiFgHiMagenta = 95
+	ansiFgHiCyan   = 96
+	ansiFgHiWhite  = 97
+)
+
+func yamlFormat(attr int) string {
 	return fmt.Sprintf("%s[%dm", yamlEscape, attr)
 }
 
@@ -55,38 +63,38 @@ func ColorPrintYAML(data any, hints map[string]string, spaceRootLists bool) erro
 	var p printer.Printer
 	p.Bool = func() *printer.Property {
 		return &printer.Property{
-			Prefix: yamlFormat(color.FgHiWhite),
-			Suffix: yamlFormat(color.Reset),
+			Prefix: yamlFormat(ansiFgHiWhite),
+			Suffix: yamlFormat(ansiReset),
 		}
 	}
 	p.Number = func() *printer.Property {
 		return &printer.Property{
-			Prefix: yamlFormat(color.FgHiWhite),
-			Suffix: yamlFormat(color.Reset),
+			Prefix: yamlFormat(ansiFgHiWhite),
+			Suffix: yamlFormat(ansiReset),
 		}
 	}
 	p.MapKey = func() *printer.Property {
 		return &printer.Property{
-			Prefix: yamlFormat(color.FgHiCyan),
-			Suffix: yamlFormat(color.Reset),
+			Prefix: yamlFormat(ansiFgHiCyan),
+			Suffix: yamlFormat(ansiReset),
 		}
 	}
 	p.Anchor = func() *printer.Property {
 		return &printer.Property{
-			Prefix: yamlFormat(color.FgHiYellow),
-			Suffix: yamlFormat(color.Reset),
+			Prefix: yamlFormat(ansiFgHiYellow),
+			Suffix: yamlFormat(ansiReset),
 		}
 	}
 	p.Alias = func() *printer.Property {
 		return &printer.Property{
-			Prefix: yamlFormat(color.FgHiYellow),
-			Suffix: yamlFormat(color.Reset),
+			Prefix: yamlFormat(ansiFgHiYellow),
+			Suffix: yamlFormat(ansiReset),
 		}
 	}
 	p.String = func() *printer.Property {
 		return &printer.Property{
-			Prefix: yamlFormat(color.FgHiMagenta),
-			Suffix: yamlFormat(color.Reset),
+			Prefix: yamlFormat(ansiFgHiMagenta),
+			Suffix: yamlFormat(ansiReset),
 		}
 	}
 
@@ -110,8 +118,8 @@ func ColorPrintYAML(data any, hints map[string]string, spaceRootLists bool) erro
 
 // AddRootListHint adds a hint string for a given root list key and value.
 func AddRootListHint(hints map[string]string, listKey string, listValue string, hintText string) map[string]string {
-	key := fmt.Sprintf("-%s %s%s:%s %s%s", yamlFormat(color.FgHiCyan), listKey, yamlFormat(color.Reset), yamlFormat(color.FgHiMagenta), listValue, yamlFormat(color.Reset))
-	hint := fmt.Sprintf("%s  %s%s", yamlFormat(color.FgHiBlack), hintText, yamlFormat(color.Reset))
+	key := fmt.Sprintf("-%s %s%s:%s %s%s", yamlFormat(ansiFgHiCyan), listKey, yamlFormat(ansiReset), yamlFormat(ansiFgHiMagenta), listValue, yamlFormat(ansiReset))
+	hint := fmt.Sprintf("%s  %s%s", yamlFormat(ansiFgHiBlack), hintText, yamlFormat(ansiReset))
 	hints[key] = fmt.Sprintf("%s%s", key, hint)
 
 	return hints

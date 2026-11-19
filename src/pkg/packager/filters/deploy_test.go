@@ -304,3 +304,40 @@ func TestDeployFilterRejectsInvalidSelectors(t *testing.T) {
 		})
 	}
 }
+
+func TestLevenshteinDistance(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		s1   string
+		s2   string
+		want int
+	}{
+		{"", "", 0},
+		{"a", "", 1},
+		{"", "abc", 3},
+		{"kitten", "sitting", 3},
+		{"zarf", "zarf", 0},
+		{"dos-game", "dos-games", 1},
+		{"manifest", "manifests", 1},
+		{"hello", "world", 4},
+	}
+
+	for _, tt := range tests {
+		t.Run(fmt.Sprintf("%s_%s", tt.s1, tt.s2), func(t *testing.T) {
+			got := levenshteinDistance(tt.s1, tt.s2)
+			require.Equal(t, tt.want, got)
+		})
+	}
+
+	// Verify suggestion behavior on unknown component
+	pkg := api.Package{Components: []api.Component{
+		{Name: "dos-games"},
+		{Name: "manifests"},
+		{Name: "logging"},
+	}}
+	_, err := ForDeploy("dos-game").Apply(pkg)
+	require.Error(t, err)
+	require.ErrorIs(t, err, ErrNotFound)
+	require.Contains(t, err.Error(), "suggestions (dos-games)")
+}
