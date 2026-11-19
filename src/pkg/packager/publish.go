@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/oras-project/oras-go/v3/errdef"
 	internalv1alpha1 "github.com/zarf-dev/zarf/src/internal/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -21,14 +22,65 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/packager/assemble"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
-
+	legacyerrdef "oras.land/oras-go/v2/errdef"
 	"oras.land/oras-go/v2/registry"
 )
 
 const defaultPublishRetries = 1
 
-// PublishFromOCIOptions declares the parameters to publish a package.
-type PublishFromOCIOptions struct {
+// PublishFromOCI copies a package between registry references.
+//
+// Deprecated: Use CopyPackage with oci.Reference values.
+func PublishFromOCI(ctx context.Context, src registry.Reference, dst registry.Reference, opts PublishFromOCIOptions) error {
+	return legacyReferenceError(CopyPackage(ctx, referenceFromLegacy(src), referenceFromLegacy(dst), opts))
+}
+
+// PublishPackage pushes a package to a registry namespace and returns its full reference.
+//
+// Deprecated: Use PublishPackageToOCI with an oci.Reference destination.
+func PublishPackage(ctx context.Context, pkgLayout *layout.PackageLayout, dst registry.Reference, opts PublishPackageOptions) (registry.Reference, error) {
+	return legacyReferenceResult(PublishPackageToOCI(ctx, pkgLayout, referenceFromLegacy(dst), opts))
+}
+
+// PublishSkeleton publishes a legacy skeleton package to a registry namespace.
+//
+// Deprecated: Use PublishSkeletonToOCI with an oci.Reference destination.
+// Only supported by deprecated v1alpha1 packages.
+func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, opts PublishSkeletonOptions) (registry.Reference, error) {
+	return legacyReferenceResult(PublishSkeletonToOCI(ctx, path, referenceFromLegacy(ref), opts))
+}
+
+func referenceFromLegacy(ref registry.Reference) oci.Reference {
+	result := oci.Reference{Registry: ref.Registry, Repository: ref.Repository}
+	if strings.Contains(ref.Reference, ":") {
+		result.Digest = ref.Reference
+	} else {
+		result.Tag = ref.Reference
+	}
+	return result
+}
+
+func legacyReferenceResult(ref oci.Reference, err error) (registry.Reference, error) {
+	if err != nil {
+		return registry.Reference{}, legacyReferenceError(err)
+	}
+	return registry.Reference{Registry: ref.Registry, Repository: ref.Repository, Reference: ref.GetReference()}, nil
+}
+
+func legacyReferenceError(err error) error {
+	if errors.Is(err, errdef.ErrInvalidReference) {
+		return fmt.Errorf("%w: %w", legacyerrdef.ErrInvalidReference, err)
+	}
+	return err
+}
+
+// PublishFromOCIOptions declares the parameters to copy a package.
+//
+// Deprecated: Use CopyPackageOptions.
+type PublishFromOCIOptions = CopyPackageOptions
+
+// CopyPackageOptions configures copying a package between OCI registries.
+type CopyPackageOptions struct {
 	// OCIConcurrency configures the amount of layers to push in parallel
 	OCIConcurrency int
 	// Architecture is the architecture we are publishing to
@@ -38,10 +90,9 @@ type PublishFromOCIOptions struct {
 	types.RemoteOptions
 }
 
-// PublishFromOCI takes a source and destination registry reference and a PublishFromOCIOpts and copies the package from the source to the destination.
-// src and dst are references to the full package ref, e.g. my-registry.com/my-namespace/my-package:0.0.1
-// therefore any tag manipulation happens from the calling logic
-func PublishFromOCI(ctx context.Context, src registry.Reference, dst registry.Reference, opts PublishFromOCIOptions) (err error) {
+// CopyPackage copies a package between OCI registries.
+// References identify the package repositories, including any source digest and destination tag.
+func CopyPackage(ctx context.Context, src oci.Reference, dst oci.Reference, opts CopyPackageOptions) (err error) {
 	l := logger.From(ctx)
 	start := time.Now()
 
@@ -91,10 +142,10 @@ func PublishFromOCI(ctx context.Context, src registry.Reference, dst registry.Re
 	publishOptions := zoci.PublishOptions{
 		OCIConcurrency: opts.OCIConcurrency,
 		Retries:        opts.Retries,
+		Tag:            dst.Tag,
 	}
-
-	if src.Reference != dst.Reference {
-		publishOptions.Tag = dst.Reference
+	if publishOptions.Tag == "" {
+		publishOptions.Tag = dst.Digest
 	}
 
 	// Execute copy
@@ -118,15 +169,15 @@ type PublishPackageOptions struct {
 	Tag string
 }
 
-// PublishPackage takes a package layout and pushes the package to the given registry.
-// dst is the path to the registry namespace, e.g. my-registry.com/my-namespace. The full package ref is created using the package name and returned
-func PublishPackage(ctx context.Context, pkgLayout *layout.PackageLayout, dst registry.Reference, opts PublishPackageOptions) (registry.Reference, error) {
+// PublishPackageToOCI pushes a package to a registry namespace.
+// It appends the package name to dst and returns the full published reference.
+func PublishPackageToOCI(ctx context.Context, pkgLayout *layout.PackageLayout, dst oci.Reference, opts PublishPackageOptions) (oci.Reference, error) {
 	l := logger.From(ctx)
 
 	// disallow infinite or negative
 	if opts.Retries <= 0 {
 		if opts.Retries < 0 {
-			return registry.Reference{}, fmt.Errorf("retries cannot be negative")
+			return oci.Reference{}, fmt.Errorf("retries cannot be negative")
 		}
 		l.Debug("retries set to default", "retries", defaultPublishRetries)
 		opts.Retries = defaultPublishRetries
@@ -135,10 +186,10 @@ func PublishPackage(ctx context.Context, pkgLayout *layout.PackageLayout, dst re
 	// Validate inputs
 	l.Debug("validating PublishOpts")
 	if err := dst.ValidateRegistry(); err != nil {
-		return registry.Reference{}, fmt.Errorf("invalid registry: %w", err)
+		return oci.Reference{}, fmt.Errorf("invalid registry: %w", err)
 	}
 	if pkgLayout == nil {
-		return registry.Reference{}, fmt.Errorf("package layout must be specified")
+		return oci.Reference{}, fmt.Errorf("package layout must be specified")
 	}
 
 	internalv1alpha1.WarnIfDeprecated(ctx, pkgLayout.Definition())
@@ -147,13 +198,13 @@ func PublishPackage(ctx context.Context, pkgLayout *layout.PackageLayout, dst re
 		Tag: opts.Tag,
 	}
 	// Build Reference for remote from registry location and pkg
-	pkgRef, err := zoci.ReferenceFromMetadataWithOptions(dst.String(), pkgLayout.Definition(), referenceOptions)
+	pkgRef, err := zoci.OCIReferenceFromMetadataWithOptions(dst.String(), pkgLayout.Definition(), referenceOptions)
 	if err != nil {
-		return registry.Reference{}, err
+		return oci.Reference{}, err
 	}
 
 	if err := pushToRemote(ctx, pkgLayout, pkgRef, opts.OCIConcurrency, opts.Retries, opts.RemoteOptions); err != nil {
-		return registry.Reference{}, err
+		return oci.Reference{}, err
 	}
 
 	return pkgRef, nil
@@ -180,17 +231,17 @@ type PublishSkeletonOptions struct {
 	Tag string
 }
 
-// PublishSkeleton takes a Path to the package definition and uploads a skeleton package to the given a registry.
-// dst is the path to the registry namespace, e.g. my-registry.com/my-namespace. The full package ref is created using the package name and returned
+// PublishSkeletonToOCI publishes a skeleton package to a registry namespace.
+// It appends the package name to ref and returns the full published reference.
 //
 // Deprecated: Only supported by deprecated v1alpha1 packages.
-func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, opts PublishSkeletonOptions) (_ registry.Reference, err error) {
+func PublishSkeletonToOCI(ctx context.Context, path string, ref oci.Reference, opts PublishSkeletonOptions) (_ oci.Reference, err error) {
 	l := logger.From(ctx)
 
 	// disallow infinite or negative
 	if opts.Retries <= 0 {
 		if opts.Retries < 0 {
-			return registry.Reference{}, fmt.Errorf("retries cannot be negative")
+			return oci.Reference{}, fmt.Errorf("retries cannot be negative")
 		}
 		l.Debug("retries set to default", "retries", defaultPublishRetries)
 		opts.Retries = defaultPublishRetries
@@ -198,17 +249,17 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 
 	cachePath, err := utils.ResolveCachePath(opts.CachePath)
 	if err != nil {
-		return registry.Reference{}, err
+		return oci.Reference{}, err
 	}
 	opts.CachePath = cachePath
 
 	// Validate inputs
 	l.Debug("validating PublishOpts")
 	if err := ref.ValidateRegistry(); err != nil {
-		return registry.Reference{}, fmt.Errorf("invalid registry: %w", err)
+		return oci.Reference{}, fmt.Errorf("invalid registry: %w", err)
 	}
 	if path == "" {
-		return registry.Reference{}, fmt.Errorf("path must be specified")
+		return oci.Reference{}, fmt.Errorf("path must be specified")
 	}
 
 	// Load package layout
@@ -223,7 +274,7 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 		},
 	})
 	if err != nil {
-		return registry.Reference{}, err
+		return oci.Reference{}, err
 	}
 	defer func() {
 		err = errors.Join(err, loaded.Close())
@@ -232,7 +283,7 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 	internalv1alpha1.WarnAuthorIfDeprecated(ctx, pkg)
 	for _, comp := range pkg.Components {
 		if comp.ImageArchives != nil {
-			return registry.Reference{}, fmt.Errorf("cannot publish skeleton package with image archives")
+			return oci.Reference{}, fmt.Errorf("cannot publish skeleton package with image archives")
 		}
 	}
 	// Create skeleton buildpath
@@ -242,25 +293,25 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 	}
 	pkgLayout, err := assemble.AssembleSkeleton(ctx, loaded, createOpts)
 	if err != nil {
-		return registry.Reference{}, fmt.Errorf("unable to create skeleton: %w", err)
+		return oci.Reference{}, fmt.Errorf("unable to create skeleton: %w", err)
 	}
 	referenceOptions := zoci.ReferenceFromMetadataOptions{
 		Tag: opts.Tag,
 	}
 	// Build Reference for remote from registry location and pkg
-	pkgRef, err := zoci.ReferenceFromMetadataWithOptions(ref.String(), pkgLayout.Definition(), referenceOptions)
+	pkgRef, err := zoci.OCIReferenceFromMetadataWithOptions(ref.String(), pkgLayout.Definition(), referenceOptions)
 	if err != nil {
-		return registry.Reference{}, err
+		return oci.Reference{}, err
 	}
 	err = pushToRemote(ctx, pkgLayout, pkgRef, opts.OCIConcurrency, opts.Retries, opts.RemoteOptions)
 	if err != nil {
-		return registry.Reference{}, err
+		return oci.Reference{}, err
 	}
 	return pkgRef, nil
 }
 
 // pushToRemote pushes a package to the given reference
-func pushToRemote(ctx context.Context, layout *layout.PackageLayout, ref registry.Reference, concurrency int, retries int, remoteOpts types.RemoteOptions) error {
+func pushToRemote(ctx context.Context, layout *layout.PackageLayout, ref oci.Reference, concurrency int, retries int, remoteOpts types.RemoteOptions) error {
 	arch := layout.Definition().Metadata.Architecture
 	// Set platform
 	platform := oci.PlatformForArch(arch)

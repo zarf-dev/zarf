@@ -14,10 +14,14 @@ import (
 
 	goyaml "github.com/goccy/go-yaml"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"github.com/oras-project/oras-go/v3"
+	"github.com/oras-project/oras-go/v3/errdef"
+	registryremote "github.com/oras-project/oras-go/v3/registry/remote"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
+	"github.com/zarf-dev/zarf/src/pkg/oci"
 	"github.com/zarf-dev/zarf/src/pkg/packager/assemble"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
@@ -26,11 +30,21 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 	"github.com/zarf-dev/zarf/src/types"
-	"oras.land/oras-go/v2"
-	"oras.land/oras-go/v2/errdef"
 	"oras.land/oras-go/v2/registry"
-	registryremote "oras.land/oras-go/v2/registry/remote"
 )
+
+func TestPublishComponentLegacyReference(t *testing.T) {
+	t.Parallel()
+	ctx := testutil.TestContext(t)
+	destination := registry.Reference{Registry: testutil.SetupInMemoryRegistryDynamic(ctx, t), Repository: "components"}
+	published, err := Publish(ctx, filepath.Join("testdata", "publish-component-v1beta1", "component.yaml"), destination, PublishOptions{RemoteOptions: defaultTestRemoteOptions()})
+	require.NoError(t, err)
+	require.Equal(t, "0.0.1", published.Reference)
+	ref, err := oci.ParseReference(published.String())
+	require.NoError(t, err)
+	component, _ := getPublishedComponent(ctx, t, ref)
+	require.Equal(t, "0.0.1", component.Metadata.Version)
+}
 
 func defaultTestRemoteOptions() types.RemoteOptions {
 	return types.RemoteOptions{PlainHTTP: true}
@@ -40,9 +54,9 @@ func localComponentResourceSet(componentPath string) *load.ResourceSet {
 	return load.NewResourceSet(filepath.Dir(componentPath))
 }
 
-func createRegistry(ctx context.Context, t *testing.T) registry.Reference {
+func createRegistry(ctx context.Context, t *testing.T) oci.Reference {
 	t.Helper()
-	return registry.Reference{
+	return oci.Reference{
 		Registry:   testutil.SetupInMemoryRegistryDynamic(ctx, t),
 		Repository: "my-namespace",
 	}
@@ -92,7 +106,7 @@ func TestPublishComponentAndAssembleRepeatedRemoteImportResources(t *testing.T) 
 	componentPath := filepath.Join(componentDir, "component.yaml")
 	require.NoError(t, os.WriteFile(componentPath, componentYAML, 0o600))
 
-	published, err := Publish(ctx, componentPath, createRegistry(ctx, t), PublishOptions{RemoteOptions: defaultTestRemoteOptions()})
+	published, err := PublishToOCI(ctx, componentPath, createRegistry(ctx, t), PublishOptions{RemoteOptions: defaultTestRemoteOptions()})
 	require.NoError(t, err)
 
 	packageDir := t.TempDir()
@@ -200,7 +214,7 @@ func TestPublishComponentChartRevisionOverrides(t *testing.T) {
 	}
 	path := filepath.Join(dir, "component.yaml")
 	writeConfig(path, parent)
-	published, err := Publish(ctx, path, createRegistry(ctx, t), PublishOptions{RemoteOptions: defaultTestRemoteOptions()})
+	published, err := PublishToOCI(ctx, path, createRegistry(ctx, t), PublishOptions{RemoteOptions: defaultTestRemoteOptions()})
 	require.NoError(t, err)
 	config, _ := getPublishedComponent(ctx, t, published)
 	base.Component.Charts[0].HelmRepository.Version = "2.0.0"
@@ -210,13 +224,13 @@ func TestPublishComponentChartRevisionOverrides(t *testing.T) {
 
 	parent.Component.Charts[0].HelmRepository.URL = "https://example.com/other-charts"
 	writeConfig(path, parent)
-	_, err = Publish(ctx, path, createRegistry(ctx, t), PublishOptions{RemoteOptions: defaultTestRemoteOptions()})
+	_, err = PublishToOCI(ctx, path, createRegistry(ctx, t), PublishOptions{RemoteOptions: defaultTestRemoteOptions()})
 	require.ErrorContains(t, err, "cannot override helmRepository.url")
 
 	parent.Component.Charts[0].HelmRepository.URL = ""
 	parent.Component.Charts[0].OCI = &v1beta1.OCISource{URL: "oci://example.com/chart", Ref: v1beta1.OCIRef{Tag: "v2"}}
 	writeConfig(path, parent)
-	_, err = Publish(ctx, path, createRegistry(ctx, t), PublishOptions{RemoteOptions: defaultTestRemoteOptions()})
+	_, err = PublishToOCI(ctx, path, createRegistry(ctx, t), PublishOptions{RemoteOptions: defaultTestRemoteOptions()})
 	require.ErrorContains(t, err, `chart "helm" must include exactly one source`)
 }
 
@@ -224,7 +238,7 @@ func TestPublishComponent(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	published, err := Publish(ctx, filepath.Join("testdata", "publish-component-v1beta1", "component.yaml"), createRegistry(ctx, t), PublishOptions{
+	published, err := PublishToOCI(ctx, filepath.Join("testdata", "publish-component-v1beta1", "component.yaml"), createRegistry(ctx, t), PublishOptions{
 		SignManifestOptions: nil,
 		RemoteOptions:       defaultTestRemoteOptions(),
 	})
@@ -284,7 +298,7 @@ func TestPublishComponentRequiresChartNamespace(t *testing.T) {
 	ctx := t.Context()
 	_, err = load.ComponentDefinition(ctx, componentPath, load.ComponentOptions{})
 	require.ErrorContains(t, err, `chart "local-chart" must include a namespace`)
-	_, err = Publish(ctx, componentPath, createRegistry(ctx, t), PublishOptions{RemoteOptions: defaultTestRemoteOptions()})
+	_, err = PublishToOCI(ctx, componentPath, createRegistry(ctx, t), PublishOptions{RemoteOptions: defaultTestRemoteOptions()})
 	require.ErrorContains(t, err, `chart "local-chart" must include a namespace`)
 }
 
@@ -295,7 +309,7 @@ func TestPublishComponentSignsManifest(t *testing.T) {
 	signOpts := signing.DefaultSignManifestOptions()
 	signOpts.Key = filepath.Join("..", "signing", "testdata", "cosign.key")
 	signOpts.Password = "test"
-	published, err := Publish(ctx, filepath.Join("testdata", "publish-component-v1beta1", "component.yaml"), createRegistry(ctx, t), PublishOptions{
+	published, err := PublishToOCI(ctx, filepath.Join("testdata", "publish-component-v1beta1", "component.yaml"), createRegistry(ctx, t), PublishOptions{
 		SignManifestOptions: &signOpts,
 		RemoteOptions:       defaultTestRemoteOptions(),
 	})
@@ -315,7 +329,7 @@ func TestPublishComponentDoesNotTagOnSigningFailure(t *testing.T) {
 	signOpts := signing.DefaultSignManifestOptions()
 	signOpts.Key = filepath.Join(t.TempDir(), "missing.key")
 
-	_, err := Publish(ctx, componentPath, destination, PublishOptions{
+	_, err := PublishToOCI(ctx, componentPath, destination, PublishOptions{
 		SignManifestOptions: &signOpts,
 		RemoteOptions:       defaultTestRemoteOptions(),
 	})
@@ -329,7 +343,7 @@ func TestPublishComponentDoesNotTagOnSigningFailure(t *testing.T) {
 		RemoteOptions: defaultTestRemoteOptions(),
 	})
 	require.NoError(t, err)
-	_, err = remote.Repo().Resolve(ctx, componentRef.Reference)
+	_, err = remote.Repo().Resolve(ctx, componentRef.GetReference())
 	require.ErrorIs(t, err, errdef.ErrNotFound)
 }
 
@@ -337,9 +351,9 @@ func TestPublishComponentFlavor(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	published, err := Publish(ctx, filepath.Join("testdata", "publish-component-v1beta1", "component-flavor.yaml"), createRegistry(ctx, t), PublishOptions{RemoteOptions: defaultTestRemoteOptions()})
+	published, err := PublishToOCI(ctx, filepath.Join("testdata", "publish-component-v1beta1", "component-flavor.yaml"), createRegistry(ctx, t), PublishOptions{RemoteOptions: defaultTestRemoteOptions()})
 	require.NoError(t, err)
-	require.Equal(t, "0.0.1-test", published.Reference)
+	require.Equal(t, "0.0.1-test", published.GetReference())
 
 	component, _ := getPublishedComponent(ctx, t, published)
 	require.Equal(t, "test", component.Variant.Flavor)
@@ -348,7 +362,7 @@ func TestPublishComponentFlavor(t *testing.T) {
 func TestPublishComponentRejectsNegativeRetries(t *testing.T) {
 	t.Parallel()
 
-	_, err := Publish(context.Background(), filepath.Join("testdata", "publish-component-v1beta1", "component.yaml"), createRegistry(context.Background(), t), PublishOptions{
+	_, err := PublishToOCI(context.Background(), filepath.Join("testdata", "publish-component-v1beta1", "component.yaml"), createRegistry(context.Background(), t), PublishOptions{
 		Retries:       -1,
 		RemoteOptions: defaultTestRemoteOptions(),
 	})
@@ -373,7 +387,7 @@ component:
     - source: remote-file.txt
       destination: /tmp/remote-file.txt
 `), 0o600))
-	remote, err := Publish(ctx, remoteComponentPath, destination, PublishOptions{RemoteOptions: defaultTestRemoteOptions()})
+	remote, err := PublishToOCI(ctx, remoteComponentPath, destination, PublishOptions{RemoteOptions: defaultTestRemoteOptions()})
 	require.NoError(t, err)
 
 	childDir := filepath.Join(root, "child")
@@ -400,7 +414,7 @@ component:
       - path: child/component.yaml
 `), 0o600))
 
-	published, err := Publish(ctx, componentPath, destination, PublishOptions{RemoteOptions: defaultTestRemoteOptions()})
+	published, err := PublishToOCI(ctx, componentPath, destination, PublishOptions{RemoteOptions: defaultTestRemoteOptions()})
 	require.NoError(t, err)
 
 	component, manifest := getPublishedComponent(ctx, t, published)
@@ -432,7 +446,7 @@ component:
 `, archivePath))
 	require.NoError(t, os.WriteFile(componentPath, componentYAML, 0o600))
 
-	published, err := Publish(ctx, componentPath, createRegistry(ctx, t), PublishOptions{RemoteOptions: defaultTestRemoteOptions()})
+	published, err := PublishToOCI(ctx, componentPath, createRegistry(ctx, t), PublishOptions{RemoteOptions: defaultTestRemoteOptions()})
 	require.NoError(t, err)
 
 	component, manifest := getPublishedComponent(ctx, t, published)
@@ -504,7 +518,7 @@ component:
       - path: child/component.yaml
 `), 0o600))
 
-	published, err := Publish(ctx, componentPath, createRegistry(ctx, t), PublishOptions{RemoteOptions: defaultTestRemoteOptions()})
+	published, err := PublishToOCI(ctx, componentPath, createRegistry(ctx, t), PublishOptions{RemoteOptions: defaultTestRemoteOptions()})
 	require.NoError(t, err)
 
 	component, manifest := getPublishedComponent(ctx, t, published)
@@ -589,7 +603,7 @@ component:
       - path: child/component.yaml
 `)
 
-	published, err := Publish(ctx, componentPath, createRegistry(ctx, t), PublishOptions{RemoteOptions: defaultTestRemoteOptions()})
+	published, err := PublishToOCI(ctx, componentPath, createRegistry(ctx, t), PublishOptions{RemoteOptions: defaultTestRemoteOptions()})
 	require.NoError(t, err)
 
 	packageDir := t.TempDir()
@@ -653,7 +667,7 @@ component:
       - path: arm64.yaml
 `), 0o600))
 
-	published, err := Publish(ctx, componentPath, createRegistry(ctx, t), PublishOptions{RemoteOptions: defaultTestRemoteOptions()})
+	published, err := PublishToOCI(ctx, componentPath, createRegistry(ctx, t), PublishOptions{RemoteOptions: defaultTestRemoteOptions()})
 	require.NoError(t, err)
 
 	component, _ := getPublishedComponentForArchitecture(ctx, t, published, "arm64")
@@ -690,20 +704,20 @@ component:
       destination: /tmp/variant.txt
 `, flavor, architecture, architecture)
 		require.NoError(t, os.WriteFile(componentPath, []byte(componentYAML), 0o600))
-		published, err := Publish(ctx, componentPath, destination, PublishOptions{
+		published, err := PublishToOCI(ctx, componentPath, destination, PublishOptions{
 			SignManifestOptions: &signOpts,
 			RemoteOptions:       defaultTestRemoteOptions(),
 		})
 		require.NoError(t, err)
-		require.Equal(t, "0.0.1-hardened", published.Reference)
+		require.Equal(t, "0.0.1-hardened", published.GetReference())
 	}
 
-	published, err := registry.ParseReference(fmt.Sprintf("%s/%s/architecture-variant:0.0.1-%s", destination.Registry, destination.Repository, flavor))
+	published, err := oci.ParseReference(fmt.Sprintf("%s/%s/architecture-variant:0.0.1-%s", destination.Registry, destination.Repository, flavor))
 	require.NoError(t, err)
 	repo, err := registryremote.NewRepository(published.Registry + "/" + published.Repository)
 	require.NoError(t, err)
-	repo.PlainHTTP = true
-	rootDescriptor, err := repo.Resolve(ctx, published.Reference)
+	repo.Registry.PlainHTTP = true
+	rootDescriptor, err := repo.Resolve(ctx, published.GetReference())
 	require.NoError(t, err)
 	require.Equal(t, ocispec.MediaTypeImageIndex, rootDescriptor.MediaType)
 
@@ -763,9 +777,9 @@ metadata:
 
 	generic := writeComponent(t, "generic.yaml", "")
 	arm64 := writeComponent(t, "arm64.yaml", "arm64")
-	_, err := Publish(ctx, generic, destination, PublishOptions{RemoteOptions: defaultTestRemoteOptions()})
+	_, err := PublishToOCI(ctx, generic, destination, PublishOptions{RemoteOptions: defaultTestRemoteOptions()})
 	require.NoError(t, err)
-	_, err = Publish(ctx, arm64, destination, PublishOptions{RemoteOptions: defaultTestRemoteOptions()})
+	_, err = PublishToOCI(ctx, arm64, destination, PublishOptions{RemoteOptions: defaultTestRemoteOptions()})
 	require.ErrorContains(t, err, "architecture-generic artifact")
 }
 
@@ -815,7 +829,7 @@ func TestPublishComponentNormalizesExternalResources(t *testing.T) {
 	componentPath := filepath.Join(componentDir, "component.yaml")
 	require.NoError(t, os.WriteFile(componentPath, componentYAML, 0o600))
 
-	published, err := Publish(ctx, componentPath, createRegistry(ctx, t), PublishOptions{RemoteOptions: defaultTestRemoteOptions()})
+	published, err := PublishToOCI(ctx, componentPath, createRegistry(ctx, t), PublishOptions{RemoteOptions: defaultTestRemoteOptions()})
 	require.NoError(t, err)
 
 	publishedComponent, manifest := getPublishedComponent(ctx, t, published)
@@ -861,7 +875,7 @@ component:
 `)
 	require.NoError(t, os.WriteFile(componentPath, componentYAML, 0o600))
 
-	_, err := Publish(context.Background(), componentPath, createRegistry(context.Background(), t), PublishOptions{RemoteOptions: defaultTestRemoteOptions()})
+	_, err := PublishToOCI(context.Background(), componentPath, createRegistry(context.Background(), t), PublishOptions{RemoteOptions: defaultTestRemoteOptions()})
 	require.EqualError(t, err, "onCreate actions are not supported for published remote components")
 }
 
@@ -885,24 +899,24 @@ component:
 	require.NoError(t, os.WriteFile(componentPath, componentYAML, 0o600))
 
 	ctx := context.Background()
-	_, err := Publish(ctx, componentPath, createRegistry(ctx, t), PublishOptions{RemoteOptions: defaultTestRemoteOptions()})
+	_, err := PublishToOCI(ctx, componentPath, createRegistry(ctx, t), PublishOptions{RemoteOptions: defaultTestRemoteOptions()})
 	require.ErrorContains(t, err, `manifest "app" uses kustomize.allowAnyDirectory`)
 }
 
-func getPublishedComponent(ctx context.Context, t *testing.T, published registry.Reference) (v1beta1.ComponentConfig, ocispec.Manifest) {
+func getPublishedComponent(ctx context.Context, t *testing.T, published oci.Reference) (v1beta1.ComponentConfig, ocispec.Manifest) {
 	return getPublishedComponentForArchitecture(ctx, t, published, "")
 }
 
-func getPublishedComponentForArchitecture(ctx context.Context, t *testing.T, published registry.Reference, architecture string) (v1beta1.ComponentConfig, ocispec.Manifest) {
+func getPublishedComponentForArchitecture(ctx context.Context, t *testing.T, published oci.Reference, architecture string) (v1beta1.ComponentConfig, ocispec.Manifest) {
 	t.Helper()
 
 	repo, err := registryremote.NewRepository(published.Registry + "/" + published.Repository)
 	require.NoError(t, err)
-	repo.PlainHTTP = true
-	descriptor, err := repo.Resolve(ctx, published.Reference)
+	repo.Registry.PlainHTTP = true
+	descriptor, err := repo.Resolve(ctx, published.GetReference())
 	require.NoError(t, err)
 	if descriptor.MediaType == ocispec.MediaTypeImageIndex {
-		descriptor, err = oras.Resolve(ctx, repo, published.Reference, oras.ResolveOptions{TargetPlatform: &ocispec.Platform{Architecture: architecture}})
+		descriptor, err = oras.Resolve(ctx, repo, published.GetReference(), oras.ResolveOptions{TargetPlatform: &ocispec.Platform{Architecture: architecture}})
 		require.NoError(t, err)
 	}
 	require.Equal(t, ocispec.MediaTypeImageManifest, descriptor.MediaType)

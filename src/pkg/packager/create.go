@@ -132,7 +132,7 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 	var packageLocation string
 	if helpers.IsOCIURL(output) {
 		pkg := pkgLayout.Definition()
-		ref, err := zoci.ReferenceFromMetadata(output, pkg)
+		ref, err := zoci.OCIReferenceFromMetadata(output, pkg)
 		if err != nil {
 			return "", err
 		}

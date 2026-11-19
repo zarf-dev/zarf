@@ -14,11 +14,11 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/internal/checksum"
+	"github.com/zarf-dev/zarf/src/pkg/oci"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 	"github.com/zarf-dev/zarf/src/types"
-	"oras.land/oras-go/v2/registry"
 )
 
 type nilComponentFilter struct{}
@@ -83,11 +83,11 @@ components:
 	})
 	require.NoError(t, err)
 
-	registryRef := registry.Reference{
+	registryRef := oci.Reference{
 		Registry:   testutil.SetupInMemoryRegistryDynamic(ctx, t),
 		Repository: "granular-resources",
 	}
-	packageRef, err := PublishPackage(ctx, sourceLayout, registryRef, PublishPackageOptions{
+	packageRef, err := PublishPackageToOCI(ctx, sourceLayout, registryRef, PublishPackageOptions{
 		OCIConcurrency: 3,
 		RemoteOptions:  types.RemoteOptions{PlainHTTP: true},
 	})

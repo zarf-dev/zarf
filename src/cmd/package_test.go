@@ -27,13 +27,13 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/feature"
 	"github.com/zarf-dev/zarf/src/pkg/images"
+	"github.com/zarf-dev/zarf/src/pkg/oci"
 	"github.com/zarf-dev/zarf/src/pkg/signing"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
-	"oras.land/oras-go/v2/registry"
 )
 
 func TestPackageList(t *testing.T) {
@@ -1002,7 +1002,7 @@ func TestBuildVerifyBlobOptions(t *testing.T) {
 
 func TestSkeletonImportExample(t *testing.T) {
 	t.Parallel()
-	ref := registry.Reference{Registry: "localhost:5000", Repository: "skeletons/test", Reference: "0.0.1"}
+	ref := oci.Reference{Registry: "localhost:5000", Repository: "skeletons/test", Tag: "0.0.1"}
 	pkg := api.Package{Components: []api.Component{{Name: "first"}, {Name: "second", Description: "not copied"}}}
 
 	data, err := goyaml.Marshal(skeletonImportExample(pkg, ref))

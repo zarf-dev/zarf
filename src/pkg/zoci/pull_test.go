@@ -15,6 +15,8 @@ import (
 	"testing"
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"github.com/oras-project/oras-go/v3"
+	"github.com/oras-project/oras-go/v3/registry/remote"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/pkg/images"
@@ -26,14 +28,11 @@ import (
 	"github.com/zarf-dev/zarf/src/test/testutil"
 	"github.com/zarf-dev/zarf/src/types"
 	_ "modernc.org/sqlite"
-	"oras.land/oras-go/v2"
-	"oras.land/oras-go/v2/registry"
-	"oras.land/oras-go/v2/registry/remote"
 )
 
-func createRegistry(ctx context.Context, t *testing.T) registry.Reference {
+func createRegistry(ctx context.Context, t *testing.T) oci.Reference {
 	t.Helper()
-	return registry.Reference{
+	return oci.Reference{
 		Registry:   testutil.SetupInMemoryRegistryDynamic(ctx, t),
 		Repository: "my-namespace",
 	}
@@ -55,7 +54,7 @@ func publishAndConnect(ctx context.Context, t *testing.T, srcPath string) (*zoci
 	pkgLayout, err := layout.LoadFromTar(ctx, packagePath, layout.PackageLayoutOptions{})
 	require.NoError(t, err)
 
-	packageRef, err := packager.PublishPackage(ctx, pkgLayout, registryRef, packager.PublishPackageOptions{
+	packageRef, err := packager.PublishPackageToOCI(ctx, pkgLayout, registryRef, packager.PublishPackageOptions{
 		RemoteOptions:  types.RemoteOptions{PlainHTTP: true},
 		OCIConcurrency: 3,
 	})
@@ -153,8 +152,8 @@ func publishPackage(ctx context.Context, t *testing.T, packagePath, upstream str
 	require.NoError(t, err)
 	t.Cleanup(func() { os.Remove(pkgLayout.Definition().Metadata.Name) }) //nolint:errcheck
 
-	dstRef := registry.Reference{Registry: upstream, Repository: "zarf-packages"}
-	packageRef, err := packager.PublishPackage(ctx, pkgLayout, dstRef, packager.PublishPackageOptions{
+	dstRef := oci.Reference{Registry: upstream, Repository: "zarf-packages"}
+	packageRef, err := packager.PublishPackageToOCI(ctx, pkgLayout, dstRef, packager.PublishPackageOptions{
 		RemoteOptions:  types.RemoteOptions{PlainHTTP: true},
 		OCIConcurrency: 3,
 	})

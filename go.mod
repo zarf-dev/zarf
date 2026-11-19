@@ -31,6 +31,7 @@ require (
 	github.com/mholt/archives v0.1.5
 	github.com/moby/moby/client v0.6.0
 	github.com/opencontainers/image-spec v1.1.1
+	github.com/oras-project/oras-go/v3 v3.0.0
 	github.com/phsym/console-slog v0.3.1
 	github.com/prometheus/client_golang v1.24.1
 	github.com/pterm/pterm v0.12.83
@@ -301,7 +302,7 @@ require (
 	github.com/Microsoft/go-winio v0.6.3-0.20251027160822-ad3df93bed29 // indirect
 	github.com/Microsoft/hcsshim v0.15.0-rc.1 // indirect
 	github.com/OneOfOne/xxhash v1.2.8 // indirect
-	github.com/ProtonMail/go-crypto v1.4.1 // indirect
+	github.com/ProtonMail/go-crypto v1.5.2 // indirect
 	github.com/ThalesIgnite/crypto11 v1.2.5 // indirect
 	github.com/a8m/envsubst v1.4.3 // indirect
 	github.com/acarl005/stripansi v0.0.0-20180116102854-5a71ef0e047d // indirect

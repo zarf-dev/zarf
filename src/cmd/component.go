@@ -9,14 +9,15 @@ import (
 	"path"
 	"strings"
 
+	"github.com/oras-project/oras-go/v3/registry/remote/properties"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/pkg/component"
 	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/oci"
 	"github.com/zarf-dev/zarf/src/pkg/signing"
-	"oras.land/oras-go/v2/registry"
 )
 
 func newComponentCommand() *cobra.Command {
@@ -77,7 +78,7 @@ func (o *componentPublishOptions) run(cmd *cobra.Command, args []string) error {
 	}
 
 	parts := strings.Split(strings.TrimPrefix(args[1], helpers.OCIURLPrefix), "/")
-	destination := registry.Reference{
+	destination := oci.Reference{
 		Registry:   parts[0],
 		Repository: path.Join(parts[1:]...),
 	}
@@ -96,7 +97,7 @@ func (o *componentPublishOptions) run(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	_, err = component.Publish(cmd.Context(), args[0], destination, component.PublishOptions{
+	_, err = component.PublishToOCI(cmd.Context(), args[0], destination, component.PublishOptions{
 		CachePath:           cachePath,
 		OCIConcurrency:      o.ociConcurrency,
 		Retries:             o.retries,
@@ -151,7 +152,7 @@ func (o *componentSignOptions) run(cmd *cobra.Command, args []string) error {
 	}
 
 	componentSource := strings.TrimPrefix(args[0], helpers.OCIURLPrefix)
-	componentRef, err := registry.ParseReference(componentSource)
+	componentRef, err := properties.NewReference(componentSource)
 	if err != nil {
 		return fmt.Errorf("component source must be a published OCI reference: %w", err)
 	}
@@ -203,7 +204,7 @@ func newComponentVerifyCommand(v *viper.Viper) *cobra.Command {
 
 func (o *componentVerifyOptions) run(cmd *cobra.Command, args []string) error {
 	componentSource := strings.TrimPrefix(args[0], helpers.OCIURLPrefix)
-	componentRef, err := registry.ParseReference(componentSource)
+	componentRef, err := properties.NewReference(componentSource)
 	if err != nil {
 		return fmt.Errorf("component source must be a published OCI reference: %w", err)
 	}

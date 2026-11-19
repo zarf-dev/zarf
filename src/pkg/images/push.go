@@ -8,15 +8,15 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/avast/retry-go/v4"
-	"oras.land/oras-go/v2"
-	"oras.land/oras-go/v2/content/oci"
-	"oras.land/oras-go/v2/registry"
-	orasRemote "oras.land/oras-go/v2/registry/remote"
-	"oras.land/oras-go/v2/registry/remote/auth"
+	"github.com/oras-project/oras-go/v3"
+	"github.com/oras-project/oras-go/v3/content/oci"
+	orasRemote "github.com/oras-project/oras-go/v3/registry/remote"
+	"github.com/oras-project/oras-go/v3/registry/remote/auth"
+	"github.com/oras-project/oras-go/v3/registry/remote/credentials"
+	"github.com/oras-project/oras-go/v3/registry/remote/properties"
 
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/helpers"
@@ -79,7 +79,7 @@ func Push(ctx context.Context, imageList []transform.Image, sourceDirectory stri
 	err = retry.Do(func() error {
 		// reset concurrency to user-provided value on each component retry
 		ociConcurrency := cfg.OCIConcurrency
-		var registryRef registry.Reference
+		var registryRef properties.Resource
 		// Include tunnel connection in retry loop in case the port forward breaks, for example, a registry pod could spin down / restart
 		var tunnel *cluster.Tunnel
 		if cfg.Cluster != nil {
@@ -89,7 +89,7 @@ func Push(ctx context.Context, imageList []transform.Image, sourceDirectory stri
 			if err != nil {
 				return err
 			}
-			registryRef, err = parseRegistryReference(registryURL)
+			registryRef, err = properties.ParseResource(registryURL)
 			if err != nil {
 				return fmt.Errorf("failed to get reference from registry from internal registry: %w", err)
 			}
@@ -97,7 +97,7 @@ func Push(ctx context.Context, imageList []transform.Image, sourceDirectory stri
 				defer tunnel.Close()
 			}
 		} else {
-			registryRef, err = parseRegistryReference(registryInfo.Address)
+			registryRef, err = properties.ParseResource(registryInfo.Address)
 			if err != nil {
 				return fmt.Errorf("failed to get reference from registry address: %w", err)
 			}
@@ -127,7 +127,7 @@ func Push(ctx context.Context, imageList []transform.Image, sourceDirectory stri
 				Transport: transport,
 			},
 			Cache: auth.NewCache(),
-			Credential: auth.StaticCredential(registryRef.Host(), auth.Credential{
+			CredentialFunc: credentials.StaticCredentialFunc(registryRef.Registry, credentials.Credential{
 				Username: registryInfo.PushUsername,
 				Password: registryInfo.PushPassword,
 			}),
@@ -144,14 +144,16 @@ func Push(ctx context.Context, imageList []transform.Image, sourceDirectory stri
 		}
 
 		pushImage := func(srcName, dstName string) error {
-			remoteRepo := &orasRemote.Repository{
-				PlainHTTP: plainHTTP,
-				Client:    client,
-			}
-			remoteRepo.Reference, err = registry.ParseReference(dstName)
+			ref, err := properties.NewReference(dstName)
 			if err != nil {
 				return fmt.Errorf("failed to parse ref %s: %w", dstName, err)
 			}
+			remoteRepo, err := orasRemote.NewRepository(ref.Registry + "/" + ref.Repository)
+			if err != nil {
+				return err
+			}
+			remoteRepo.Registry.PlainHTTP = plainHTTP
+			remoteRepo.Registry.Client = client
 			if tunnel != nil {
 				return tunnel.Wrap(func() error {
 					return copyImage(ctx, src, remoteRepo, srcName, dstName, ociConcurrency)
@@ -274,16 +276,4 @@ func copyImage(ctx context.Context, src *oci.Store, remote oras.Target, srcName 
 		return fmt.Errorf("failed to push image %s: %w", srcName, err)
 	}
 	return nil
-}
-
-// parse registry reference returns a registry.Reference with only the host if the registry URL only contains a host
-// otherwise calls registry.ParseReference()
-func parseRegistryReference(registryURL string) (registry.Reference, error) {
-	parts := strings.SplitN(registryURL, "/", 2)
-	if len(parts) == 1 {
-		return registry.Reference{
-			Registry: registryURL,
-		}, nil
-	}
-	return registry.ParseReference(registryURL)
 }

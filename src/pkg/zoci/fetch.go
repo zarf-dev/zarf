@@ -9,11 +9,11 @@ import (
 	"fmt"
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"github.com/oras-project/oras-go/v3/content"
 	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
 	"github.com/zarf-dev/zarf/src/pkg/oci"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
-	"oras.land/oras-go/v2/content"
 )
 
 // FetchZarfYAML fetches and parses the zarf.yaml layer of an already-fetched root manifest.

@@ -14,19 +14,19 @@ import (
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/stretchr/testify/require"
 
+	"github.com/oras-project/oras-go/v3"
+	"github.com/oras-project/oras-go/v3/content"
+	"github.com/oras-project/oras-go/v3/content/memory"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/packager/requirements"
 	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
+	"github.com/zarf-dev/zarf/src/pkg/oci"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 	"github.com/zarf-dev/zarf/src/types"
-	"oras.land/oras-go/v2"
-	"oras.land/oras-go/v2/content"
-	"oras.land/oras-go/v2/content/memory"
-	"oras.land/oras-go/v2/registry"
 )
 
 func TestVariantMatchesOCIPlatform(t *testing.T) {
@@ -55,10 +55,10 @@ func TestRemoteComponentConfigRejectsPlatformVariantMismatch(t *testing.T) {
 	t.Parallel()
 
 	ctx := testutil.TestContext(t)
-	ref := registry.Reference{
+	ref := oci.Reference{
 		Registry:   testutil.SetupInMemoryRegistryDynamic(ctx, t),
 		Repository: "components",
-		Reference:  "mismatch",
+		Tag:        "mismatch",
 	}
 	component := v1beta1.ComponentConfig{
 		APIVersion:  v1beta1.APIVersion,
@@ -81,7 +81,7 @@ func TestRemoteComponentConfigRejectsPlatformVariantMismatch(t *testing.T) {
 		RemoteOptions: types.RemoteOptions{PlainHTTP: true},
 	})
 	require.NoError(t, err)
-	_, err = oras.Copy(ctx, store, manifest.Digest.String(), remote.Repo(), ref.Reference, remote.GetDefaultCopyOpts())
+	_, err = oras.Copy(ctx, store, manifest.Digest.String(), remote.Repo(), ref.GetReference(), remote.GetDefaultCopyOpts())
 	require.NoError(t, err)
 
 	_, err = (remoteReferenceCache{}).load(ctx, "oci://"+ref.String(), "arm64", types.RemoteOptions{PlainHTTP: true}, "")
@@ -92,10 +92,10 @@ func TestRemoteComponentConfigRejectsOnCreateActions(t *testing.T) {
 	t.Parallel()
 
 	ctx := testutil.TestContext(t)
-	ref := registry.Reference{
+	ref := oci.Reference{
 		Registry:   testutil.SetupInMemoryRegistryDynamic(ctx, t),
 		Repository: "components",
-		Reference:  "on-create",
+		Tag:        "on-create",
 	}
 	component := v1beta1.ComponentConfig{
 		APIVersion: v1beta1.APIVersion,
@@ -115,7 +115,7 @@ func TestRemoteComponentConfigRejectsOnCreateActions(t *testing.T) {
 	require.NoError(t, store.Tag(ctx, manifest, manifest.Digest.String()))
 	remote, err := zoci.NewRemote(ctx, ref.String(), ocispec.Platform{}, zoci.RemoteClientOptions{RemoteOptions: types.RemoteOptions{PlainHTTP: true}})
 	require.NoError(t, err)
-	_, err = oras.Copy(ctx, store, manifest.Digest.String(), remote.Repo(), ref.Reference, remote.GetDefaultCopyOpts())
+	_, err = oras.Copy(ctx, store, manifest.Digest.String(), remote.Repo(), ref.GetReference(), remote.GetDefaultCopyOpts())
 	require.NoError(t, err)
 
 	_, err = (remoteReferenceCache{}).load(ctx, "oci://"+ref.String(), "amd64", types.RemoteOptions{PlainHTTP: true}, "")
@@ -139,24 +139,24 @@ func loadV1Beta1Package(t *testing.T, dir string) v1beta1.Package {
 	return pkg
 }
 
-func publishRemoteComponent(ctx context.Context, t *testing.T, reference string, resourcePaths ...string) registry.Reference {
+func publishRemoteComponent(ctx context.Context, t *testing.T, reference string, resourcePaths ...string) oci.Reference {
 	t.Helper()
 
-	ref := registry.Reference{
+	ref := oci.Reference{
 		Registry:   testutil.SetupInMemoryRegistryDynamic(ctx, t),
 		Repository: "components",
-		Reference:  reference,
+		Tag:        reference,
 	}
 	return publishRemoteComponentToReference(ctx, t, ref, resourcePaths...)
 }
 
-func publishRemoteComponentToReference(ctx context.Context, t *testing.T, ref registry.Reference, resourcePaths ...string) registry.Reference {
+func publishRemoteComponentToReference(ctx context.Context, t *testing.T, ref oci.Reference, resourcePaths ...string) oci.Reference {
 	t.Helper()
 
 	component := v1beta1.ComponentConfig{
 		APIVersion: v1beta1.APIVersion,
 		Kind:       v1beta1.ZarfComponentConfig,
-		Metadata:   v1beta1.ComponentMetadata{Name: ref.Reference},
+		Metadata:   v1beta1.ComponentMetadata{Name: ref.GetReference()},
 		Component: v1beta1.ComponentSpec{
 			Actions: v1beta1.ComponentActions{OnDeploy: v1beta1.ComponentActionSet{Before: []v1beta1.ComponentAction{{Cmd: "echo remote"}}}},
 		},
@@ -164,7 +164,7 @@ func publishRemoteComponentToReference(ctx context.Context, t *testing.T, ref re
 	return publishRemoteComponentConfig(ctx, t, ref, component, resourcePaths...)
 }
 
-func publishRemoteComponentConfig(ctx context.Context, t *testing.T, ref registry.Reference, component v1beta1.ComponentConfig, resourcePaths ...string) registry.Reference {
+func publishRemoteComponentConfig(ctx context.Context, t *testing.T, ref oci.Reference, component v1beta1.ComponentConfig, resourcePaths ...string) oci.Reference {
 	t.Helper()
 
 	store := memory.New()
@@ -194,7 +194,7 @@ func publishRemoteComponentConfig(ctx context.Context, t *testing.T, ref registr
 		RemoteOptions: types.RemoteOptions{PlainHTTP: true},
 	})
 	require.NoError(t, err)
-	_, err = oras.Copy(ctx, store, manifest.Digest.String(), remote.Repo(), ref.Reference, remote.GetDefaultCopyOpts())
+	_, err = oras.Copy(ctx, store, manifest.Digest.String(), remote.Repo(), ref.GetReference(), remote.GetDefaultCopyOpts())
 	require.NoError(t, err)
 	return ref
 }
@@ -205,10 +205,10 @@ func TestPackageDefinitionEnforcesRemoteComponentVersionRequirements(t *testing.
 	config.CLIVersion = "v0.88.0"
 
 	ctx := testutil.TestContext(t)
-	ref := registry.Reference{
+	ref := oci.Reference{
 		Registry:   testutil.SetupInMemoryRegistryDynamic(ctx, t),
 		Repository: "components",
-		Reference:  "requires-newer-cli",
+		Tag:        "requires-newer-cli",
 	}
 	publishRemoteComponentConfig(ctx, t, ref, v1beta1.ComponentConfig{
 		APIVersion: v1beta1.APIVersion,
@@ -304,10 +304,10 @@ func TestRemoteImportRejectsUnbundledLocalResources(t *testing.T) {
 				Metadata:   v1beta1.ComponentMetadata{Name: "untrusted"},
 			}
 			tt.set(&component, secret)
-			ref := registry.Reference{
+			ref := oci.Reference{
 				Registry:   testutil.SetupInMemoryRegistryDynamic(ctx, t),
 				Repository: "components",
-				Reference:  "untrusted",
+				Tag:        "untrusted",
 			}
 			publishRemoteComponentConfig(ctx, t, ref, component)
 			manifest := []byte(`apiVersion: zarf.dev/v1beta1
@@ -334,10 +334,10 @@ components:
 func TestRemoteImportRejectsAllowAnyDirectory(t *testing.T) {
 	t.Parallel()
 	ctx := testutil.TestContext(t)
-	ref := registry.Reference{
+	ref := oci.Reference{
 		Registry:   testutil.SetupInMemoryRegistryDynamic(ctx, t),
 		Repository: "components",
-		Reference:  "unrestricted-kustomize",
+		Tag:        "unrestricted-kustomize",
 	}
 	component := v1beta1.ComponentConfig{
 		APIVersion: v1beta1.APIVersion,
@@ -406,10 +406,10 @@ func TestRemoteImportResolutionPinsReferencesForOneInvocation(t *testing.T) {
 	t.Parallel()
 
 	ctx := testutil.TestContext(t)
-	ref := registry.Reference{
+	ref := oci.Reference{
 		Registry:   testutil.SetupInMemoryRegistryDynamic(ctx, t),
 		Repository: "components",
-		Reference:  "mutable",
+		Tag:        "mutable",
 	}
 	publishRemoteComponentToReference(ctx, t, ref, "resources/0/first.txt")
 	imports := v1beta1.ComponentImport{Remote: []v1beta1.ComponentImportRemote{{URL: "oci://" + ref.String()}}}
@@ -430,7 +430,7 @@ func TestRemoteImportResolutionPinsReferencesForOneInvocation(t *testing.T) {
 	}
 }
 
-func resolveRemoteImport(ctx context.Context, t *testing.T, ref registry.Reference) v1beta1ImportResolution {
+func resolveRemoteImport(ctx context.Context, t *testing.T, ref oci.Reference) v1beta1ImportResolution {
 	t.Helper()
 
 	dir := t.TempDir()

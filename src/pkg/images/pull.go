@@ -22,15 +22,17 @@ import (
 	"github.com/mholt/archives"
 	"github.com/moby/moby/client"
 	"github.com/moby/moby/client/pkg/versions"
+	"github.com/oras-project/oras-go/v3"
+	"github.com/oras-project/oras-go/v3/content/oci"
+	"github.com/oras-project/oras-go/v3/registry/remote/properties"
 	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"golang.org/x/sync/errgroup"
-	"oras.land/oras-go/v2"
-	"oras.land/oras-go/v2/content/oci"
-	"oras.land/oras-go/v2/registry"
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	orasRemote "github.com/oras-project/oras-go/v3/registry/remote"
+	"github.com/oras-project/oras-go/v3/registry/remote/auth"
 	"github.com/zarf-dev/zarf/src/internal/dns"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/helpers"
@@ -38,8 +40,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/ocischeme"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
-	orasRemote "oras.land/oras-go/v2/registry/remote"
-	"oras.land/oras-go/v2/registry/remote/auth"
 )
 
 // PullOptions is the configuration for pulling images.
@@ -145,7 +145,7 @@ func Pull(ctx context.Context, imageList []ImageRequest, destinationDirectory st
 	uniqueHosts := map[string]struct{}{}
 	for _, v := range imagesWithOverride {
 		if v.request.Source != api.ImageSourceDaemon {
-			ref, err := registry.ParseReference(v.overridden.Reference)
+			ref, err := properties.NewReference(v.overridden.Reference)
 			if err != nil {
 				return nil, fmt.Errorf("invalid image reference %q: %w", v.overridden.Reference, err)
 			}
@@ -180,21 +180,22 @@ func Pull(ctx context.Context, imageList []ImageRequest, destinationDirectory st
 			continue
 		}
 		eg.Go(func() error {
-			repo := &orasRemote.Repository{}
-
-			ref, err := registry.ParseReference(image.overridden.Reference)
+			ref, err := properties.NewReference(image.overridden.Reference)
 			if err != nil {
 				return err
 			}
-			repo.Reference = ref
-			repo.Client = client
+			repo, err := orasRemote.NewRepository(ref.Registry + "/" + ref.Repository)
+			if err != nil {
+				return err
+			}
+			repo.Registry.Client = client
 
 			// Only verify per-host when the flag is set, or when the host is
 			// localhost: a local dev/test registry is commonly plain HTTP even
 			// when --plain-http wasn't passed for that specific purpose.
 			var plainHTTP bool
-			if opts.PlainHTTP || dns.IsLocalOrPrivate(repo.Reference.Host()) {
-				plainHTTP, err = ocischeme.From(ctx).UsePlainHTTP(ctx, repo.Reference.Host(), ocischeme.ProbeOptions{InsecureSkipTLSVerify: opts.InsecureSkipTLSVerify})
+			if opts.PlainHTTP || dns.IsLocalOrPrivate(ref.Host()) {
+				plainHTTP, err = ocischeme.From(ctx).UsePlainHTTP(ctx, ref.Host(), ocischeme.ProbeOptions{InsecureSkipTLSVerify: opts.InsecureSkipTLSVerify})
 				if err != nil {
 					if image.request.Source == api.ImageSourceRegistry {
 						return fmt.Errorf("unable to reach registry for image %q: %w", image.overridden.Reference, err)
@@ -207,7 +208,7 @@ func Pull(ctx context.Context, imageList []ImageRequest, destinationDirectory st
 					return nil
 				}
 			}
-			repo.PlainHTTP = plainHTTP
+			repo.Registry.PlainHTTP = plainHTTP
 
 			fetchOpts := oras.DefaultFetchBytesOptions
 			desc, b, err := oras.FetchBytes(ectx, repo, image.overridden.Reference, fetchOpts)
@@ -429,16 +430,18 @@ func saveImageFromDockerDaemon(ctx context.Context, cli *client.Client, dst *oci
 func orasSave(ctx context.Context, imageInfo imagePullInfo, index, count int, opts PullOptions, dst *oci.Store, client *auth.Client) error {
 	l := logger.From(ctx)
 	var pullSrc oras.ReadOnlyTarget
-	var err error
-	repo := &orasRemote.Repository{}
-	repo.Reference, err = registry.ParseReference(imageInfo.registryOverrideRef)
+	ref, err := properties.NewReference(imageInfo.registryOverrideRef)
 	if err != nil {
 		return fmt.Errorf("failed to parse image reference %s: %w", imageInfo.registryOverrideRef, err)
 	}
+	repo, err := orasRemote.NewRepository(ref.Registry + "/" + ref.Repository)
+	if err != nil {
+		return err
+	}
 	// The transport scheme was already negotiated for this host during the metadata-fetch
 	// pass (the host is known-reachable at this point); reuse it rather than re-probing.
-	repo.PlainHTTP = imageInfo.plainHTTP
-	repo.Client = client
+	repo.Registry.PlainHTTP = imageInfo.plainHTTP
+	repo.Registry.Client = client
 
 	copyOpts := oras.DefaultCopyOptions
 	copyOpts.Concurrency = opts.OCIConcurrency

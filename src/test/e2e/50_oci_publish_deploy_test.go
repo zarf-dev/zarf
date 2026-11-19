@@ -12,21 +12,21 @@ import (
 	_ "github.com/distribution/distribution/v3/registry/storage/driver/inmemory" // used for docker test registry
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	"github.com/zarf-dev/zarf/src/pkg/oci"
 	"github.com/zarf-dev/zarf/src/test/testutil"
-	"oras.land/oras-go/v2/registry"
 )
 
 type PublishDeploySuiteTestSuite struct {
 	suite.Suite
 	*require.Assertions
-	Reference   registry.Reference
+	Reference   oci.Reference
 	PackagesDir string
 }
 
-var badDeployRef = registry.Reference{
+var badDeployRef = oci.Reference{
 	Registry:   "localhost:5000",
 	Repository: "zarf-test",
-	Reference:  "bad-tag",
+	Tag:        "bad-tag",
 }
 
 func (suite *PublishDeploySuiteTestSuite) SetupSuite() {
@@ -95,7 +95,7 @@ func (suite *PublishDeploySuiteTestSuite) Test_1_Deploy() {
 
 	// Build the fully qualified reference.
 	suite.Reference.Repository = "helm-charts"
-	suite.Reference.Reference = "0.0.1"
+	suite.Reference.Tag = "0.0.1"
 	ref := suite.Reference.String()
 
 	// Deploy the package via OCI.

@@ -65,7 +65,7 @@ func TestNewRemoteTransportNegotiation(t *testing.T) {
 			}
 
 			require.NoError(t, err)
-			require.Equal(t, tt.expectHTTP, remote.Repo().PlainHTTP)
+			require.Equal(t, tt.expectHTTP, remote.Repo().Registry.PlainHTTP)
 		})
 	}
 }
@@ -92,7 +92,7 @@ func TestNewRemoteUsesCustomTransportForNegotiation(t *testing.T) {
 			},
 		})
 		require.NoError(t, err)
-		require.False(t, remote.Repo().PlainHTTP)
+		require.False(t, remote.Repo().Registry.PlainHTTP)
 	})
 
 	t.Run("insecure TLS option", func(t *testing.T) {
@@ -109,6 +109,6 @@ func TestNewRemoteUsesCustomTransportForNegotiation(t *testing.T) {
 			},
 		})
 		require.NoError(t, err)
-		require.False(t, remote.Repo().PlainHTTP)
+		require.False(t, remote.Repo().Registry.PlainHTTP)
 	})
 }

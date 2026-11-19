@@ -12,20 +12,20 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	"github.com/zarf-dev/zarf/src/pkg/oci"
 	"github.com/zarf-dev/zarf/src/test/testutil"
-	"oras.land/oras-go/v2/registry"
 )
 
 type PullInspectTestSuite struct {
 	suite.Suite
 	*require.Assertions
-	Reference registry.Reference
+	Reference oci.Reference
 }
 
-var badPullInspectRef = registry.Reference{
+var badPullInspectRef = oci.Reference{
 	Registry:   "localhost:5000",
 	Repository: "zarf-test",
-	Reference:  "bad-tag",
+	Tag:        "bad-tag",
 }
 
 func (suite *PullInspectTestSuite) SetupSuite() {
@@ -95,6 +95,16 @@ func (suite *PullInspectTestSuite) Test_0_Pull() {
 	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "inspect", "digest", unprefixedPackageRef, "--plain-http")
 	suite.NoError(err, stdOut, stdErr)
 	suite.Equal(ociDigest, strings.TrimSpace(stdOut))
+
+	// Copy pinned content while retaining the source tag at the destination.
+	pinnedCopyDestination := "oci://" + ref + "/pinned-copy"
+	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "publish", simplePackageRef+"@"+ociDigest, pinnedCopyDestination, "--plain-http")
+	suite.NoError(err, stdOut, stdErr)
+	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "inspect", "digest", pinnedCopyDestination+"/simple-package:0.0.1", "--plain-http")
+	suite.NoError(err, stdOut, stdErr)
+	suite.Equal(ociDigest, strings.TrimSpace(stdOut))
+	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "inspect", "definition", pinnedCopyDestination+"/simple-package:0.0.1", "--plain-http", publicKeyFlag)
+	suite.NoError(err, stdOut, stdErr)
 }
 
 func (suite *PullInspectTestSuite) Test_1_Init_Loads_OCI_Over_Plain_HTTP() {

@@ -399,7 +399,7 @@ github.com/Microsoft/hcsshim/pkg/ociwclayer
 # github.com/OneOfOne/xxhash v1.2.8
 ## explicit; go 1.11
 github.com/OneOfOne/xxhash
-# github.com/ProtonMail/go-crypto v1.4.1
+# github.com/ProtonMail/go-crypto v1.5.2
 ## explicit; go 1.23.0
 github.com/ProtonMail/go-crypto/bitcurves
 github.com/ProtonMail/go-crypto/brainpool
@@ -420,8 +420,11 @@ github.com/ProtonMail/go-crypto/openpgp/errors
 github.com/ProtonMail/go-crypto/openpgp/internal/algorithm
 github.com/ProtonMail/go-crypto/openpgp/internal/ecc
 github.com/ProtonMail/go-crypto/openpgp/internal/encoding
+github.com/ProtonMail/go-crypto/openpgp/mldsa_eddsa
+github.com/ProtonMail/go-crypto/openpgp/mlkem_ecdh
 github.com/ProtonMail/go-crypto/openpgp/packet
 github.com/ProtonMail/go-crypto/openpgp/s2k
+github.com/ProtonMail/go-crypto/openpgp/slhdsa
 github.com/ProtonMail/go-crypto/openpgp/x25519
 github.com/ProtonMail/go-crypto/openpgp/x448
 # github.com/STARRY-S/zip v0.2.3
@@ -1085,13 +1088,32 @@ github.com/cloudflare/circl/dh/x448
 github.com/cloudflare/circl/ecc/goldilocks
 github.com/cloudflare/circl/internal/conv
 github.com/cloudflare/circl/internal/sha3
+github.com/cloudflare/circl/kem
+github.com/cloudflare/circl/kem/mlkem/mlkem1024
+github.com/cloudflare/circl/kem/mlkem/mlkem768
 github.com/cloudflare/circl/math
 github.com/cloudflare/circl/math/fp25519
 github.com/cloudflare/circl/math/fp448
 github.com/cloudflare/circl/math/mlsbset
+github.com/cloudflare/circl/pke/kyber/internal/common
+github.com/cloudflare/circl/pke/kyber/internal/common/params
+github.com/cloudflare/circl/pke/kyber/kyber1024
+github.com/cloudflare/circl/pke/kyber/kyber1024/internal
+github.com/cloudflare/circl/pke/kyber/kyber768
+github.com/cloudflare/circl/pke/kyber/kyber768/internal
 github.com/cloudflare/circl/sign
 github.com/cloudflare/circl/sign/ed25519
 github.com/cloudflare/circl/sign/ed448
+github.com/cloudflare/circl/sign/internal/dilithium
+github.com/cloudflare/circl/sign/internal/dilithium/params
+github.com/cloudflare/circl/sign/mldsa/mldsa65
+github.com/cloudflare/circl/sign/mldsa/mldsa65/internal
+github.com/cloudflare/circl/sign/mldsa/mldsa87
+github.com/cloudflare/circl/sign/mldsa/mldsa87/internal
+github.com/cloudflare/circl/sign/slhdsa
+github.com/cloudflare/circl/simd/keccakf1600
+github.com/cloudflare/circl/xof
+github.com/cloudflare/circl/xof/k12
 # github.com/cncf/xds/go v0.0.0-20260202195803-dba9d589def2
 ## explicit; go 1.24.6
 github.com/cncf/xds/go/udpa/annotations
@@ -2578,6 +2600,45 @@ github.com/opencontainers/runtime-spec/specs-go/features
 ## explicit; go 1.22
 github.com/openvex/go-vex/pkg/csaf
 github.com/openvex/go-vex/pkg/vex
+# github.com/oras-project/oras-go/v3 v3.0.0
+## explicit; go 1.26.0
+github.com/oras-project/oras-go/v3
+github.com/oras-project/oras-go/v3/content
+github.com/oras-project/oras-go/v3/content/cache
+github.com/oras-project/oras-go/v3/content/file
+github.com/oras-project/oras-go/v3/content/memory
+github.com/oras-project/oras-go/v3/content/oci
+github.com/oras-project/oras-go/v3/errdef
+github.com/oras-project/oras-go/v3/internal/authtype
+github.com/oras-project/oras-go/v3/internal/cas
+github.com/oras-project/oras-go/v3/internal/container/set
+github.com/oras-project/oras-go/v3/internal/descriptor
+github.com/oras-project/oras-go/v3/internal/docker
+github.com/oras-project/oras-go/v3/internal/fs/tarfs
+github.com/oras-project/oras-go/v3/internal/graph
+github.com/oras-project/oras-go/v3/internal/httputil
+github.com/oras-project/oras-go/v3/internal/ioutil
+github.com/oras-project/oras-go/v3/internal/manifestutil
+github.com/oras-project/oras-go/v3/internal/platform
+github.com/oras-project/oras-go/v3/internal/registryutil
+github.com/oras-project/oras-go/v3/internal/resolver
+github.com/oras-project/oras-go/v3/internal/spec
+github.com/oras-project/oras-go/v3/internal/status
+github.com/oras-project/oras-go/v3/internal/syncutil
+github.com/oras-project/oras-go/v3/registry
+github.com/oras-project/oras-go/v3/registry/remote
+github.com/oras-project/oras-go/v3/registry/remote/auth
+github.com/oras-project/oras-go/v3/registry/remote/credentials
+github.com/oras-project/oras-go/v3/registry/remote/credentials/internal/executer
+github.com/oras-project/oras-go/v3/registry/remote/credentials/trace
+github.com/oras-project/oras-go/v3/registry/remote/errcode
+github.com/oras-project/oras-go/v3/registry/remote/internal/configfile
+github.com/oras-project/oras-go/v3/registry/remote/internal/errutil
+github.com/oras-project/oras-go/v3/registry/remote/internal/ioutil
+github.com/oras-project/oras-go/v3/registry/remote/internal/urlutil
+github.com/oras-project/oras-go/v3/registry/remote/policy
+github.com/oras-project/oras-go/v3/registry/remote/properties
+github.com/oras-project/oras-go/v3/registry/remote/retry
 # github.com/otiai10/copy v1.14.1
 ## explicit; go 1.18
 github.com/otiai10/copy
@@ -3508,6 +3569,7 @@ golang.org/x/crypto/acme/autocert
 golang.org/x/crypto/argon2
 golang.org/x/crypto/bcrypt
 golang.org/x/crypto/blake2b
+golang.org/x/crypto/blake2s
 golang.org/x/crypto/blowfish
 golang.org/x/crypto/cast5
 golang.org/x/crypto/chacha20
@@ -4813,16 +4875,13 @@ modernc.org/token
 ## explicit; go 1.25.0
 oras.land/oras-go/v2
 oras.land/oras-go/v2/content
-oras.land/oras-go/v2/content/file
 oras.land/oras-go/v2/content/memory
-oras.land/oras-go/v2/content/oci
 oras.land/oras-go/v2/errdef
 oras.land/oras-go/v2/internal/cas
 oras.land/oras-go/v2/internal/container/set
 oras.land/oras-go/v2/internal/copyutil
 oras.land/oras-go/v2/internal/descriptor
 oras.land/oras-go/v2/internal/docker
-oras.land/oras-go/v2/internal/fs/tarfs
 oras.land/oras-go/v2/internal/graph
 oras.land/oras-go/v2/internal/httputil
 oras.land/oras-go/v2/internal/interfaces

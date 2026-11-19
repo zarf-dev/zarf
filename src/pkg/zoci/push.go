@@ -10,11 +10,11 @@ import (
 	"time"
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"github.com/oras-project/oras-go/v3"
 	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
-	"oras.land/oras-go/v2"
 )
 
 // PushPackage publishes the zarf package to the remote repository.
@@ -39,7 +39,7 @@ func (r *Remote) PushPackage(ctx context.Context, pkgLayout *layout.PackageLayou
 	}
 
 	totalSize := pkgLayout.TotalSize()
-	l.Info("pushing package to registry", "destination", r.Repo().Reference.String(),
+	l.Info("pushing package to registry", "destination", r.Reference().String(),
 		"architecture", pkgLayout.Definition().Build.Architecture,
 		"size", utils.ByteFormat(float64(totalSize), 2),
 		"manifestSize", utils.ByteFormat(float64(manifestDesc.Size), 2))
@@ -49,7 +49,7 @@ func (r *Remote) PushPackage(ctx context.Context, pkgLayout *layout.PackageLayou
 		trackedRemote := images.NewTrackedTarget(
 			r.Repo(),
 			totalSize,
-			images.DefaultReport(r.Log(), "package publish in progress", r.Repo().Reference.String()),
+			images.DefaultReport(r.Log(), "package publish in progress", r.Reference().String()),
 		)
 		trackedRemote.StartReporting(ctx)
 		defer trackedRemote.StopReporting()
@@ -60,14 +60,14 @@ func (r *Remote) PushPackage(ctx context.Context, pkgLayout *layout.PackageLayou
 			return copyErr
 		}
 
-		return r.OrasRemote.UpdateIndex(ctx, r.Repo().Reference.Reference, publishedDesc)
+		return r.OrasRemote.UpdateIndex(ctx, r.Reference().GetReference(), publishedDesc)
 	},
 	)
 	if err != nil {
 		return ocispec.Descriptor{}, fmt.Errorf("publish failed: %w", err)
 	}
 
-	l.Info("completed package publish", "destination", r.Repo().Reference.String(),
+	l.Info("completed package publish", "destination", r.Reference().String(),
 		"duration", time.Since(start).Round(100*time.Millisecond))
 
 	return publishedDesc, nil

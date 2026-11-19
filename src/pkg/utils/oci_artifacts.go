@@ -10,15 +10,15 @@ import (
 	"fmt"
 
 	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/oras-project/oras-go/v3"
+	"github.com/oras-project/oras-go/v3/errdef"
+	orasRemote "github.com/oras-project/oras-go/v3/registry/remote"
+	"github.com/oras-project/oras-go/v3/registry/remote/auth"
+	"github.com/oras-project/oras-go/v3/registry/remote/properties"
 	ociremote "github.com/sigstore/cosign/v3/pkg/oci/remote"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/ocischeme"
 	"github.com/zarf-dev/zarf/src/types"
-	"oras.land/oras-go/v2"
-	"oras.land/oras-go/v2/errdef"
-	"oras.land/oras-go/v2/registry"
-	orasRemote "oras.land/oras-go/v2/registry/remote"
-	"oras.land/oras-go/v2/registry/remote/auth"
 )
 
 // GetCosignArtifacts returns signatures and attestations for the given image.
@@ -92,13 +92,16 @@ func imageDigestRef(ctx context.Context, reference string, parsedRef name.Refere
 		return digestRef, nil
 	}
 
-	repo := &orasRemote.Repository{PlainHTTP: plainHTTP}
-	orasRef, err := registry.ParseReference(reference)
+	orasRef, err := properties.NewReference(reference)
 	if err != nil {
 		return name.Digest{}, err
 	}
-	repo.Reference = orasRef
-	repo.Client = client
+	repo, err := orasRemote.NewRepository(orasRef.Registry + "/" + orasRef.Repository)
+	if err != nil {
+		return name.Digest{}, err
+	}
+	repo.Registry.PlainHTTP = plainHTTP
+	repo.Registry.Client = client
 
 	desc, err := oras.Resolve(ctx, repo, reference, oras.DefaultResolveOptions)
 	if err != nil {
@@ -114,14 +117,16 @@ func imageDigestRef(ctx context.Context, reference string, parsedRef name.Refere
 }
 
 func existsInRemote(ctx context.Context, reference string, client *auth.Client, plainHTTP bool) (bool, error) {
-	repo := &orasRemote.Repository{PlainHTTP: plainHTTP}
-
-	ref, err := registry.ParseReference(reference)
+	ref, err := properties.NewReference(reference)
 	if err != nil {
 		return false, err
 	}
-	repo.Reference = ref
-	repo.Client = client
+	repo, err := orasRemote.NewRepository(ref.Registry + "/" + ref.Repository)
+	if err != nil {
+		return false, err
+	}
+	repo.Registry.PlainHTTP = plainHTTP
+	repo.Registry.Client = client
 
 	_, err = oras.Resolve(ctx, repo, reference, oras.DefaultResolveOptions)
 	if err != nil {

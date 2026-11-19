@@ -22,9 +22,9 @@ import (
 	"github.com/zarf-dev/zarf/src/types"
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	ocistore "github.com/oras-project/oras-go/v3/content/oci"
 	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/oci"
-	ocistore "oras.land/oras-go/v2/content/oci"
 
 	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"

@@ -7,7 +7,27 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/api"
+	legacyerrdef "oras.land/oras-go/v2/errdef"
 )
+
+func TestReferenceFromMetadataLegacy(t *testing.T) {
+	t.Parallel()
+
+	pkg := api.Package{Metadata: api.PackageMetadata{Name: "test", Version: "1.0.0"}}
+	ref, err := ReferenceFromMetadata("registry.example.com/team", pkg)
+	require.NoError(t, err)
+	require.Equal(t, "1.0.0", ref.Reference)
+	require.Equal(t, "registry.example.com/team/test:1.0.0", ref.String())
+
+	ref, err = ReferenceFromMetadataWithOptions("registry.example.com/team", pkg, ReferenceFromMetadataOptions{Tag: "release"})
+	require.NoError(t, err)
+	require.Equal(t, "release", ref.Reference)
+	require.Equal(t, "registry.example.com/team/test:release", ref.String())
+
+	_, err = ReferenceFromMetadataWithOptions("registry.example.com/team", pkg, ReferenceFromMetadataOptions{Tag: "invalid tag"})
+	require.ErrorIs(t, err, legacyerrdef.ErrInvalidReference)
+}
 
 func TestNormalizeOCISource(t *testing.T) {
 	t.Parallel()

@@ -12,59 +12,58 @@ import (
 	"testing"
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"github.com/oras-project/oras-go/v3"
+	"github.com/oras-project/oras-go/v3/content"
+	"github.com/oras-project/oras-go/v3/content/memory"
+	remote "github.com/oras-project/oras-go/v3/registry/remote"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/test/testutil"
-	"oras.land/oras-go/v2"
-	"oras.land/oras-go/v2/content"
-	"oras.land/oras-go/v2/content/memory"
-	"oras.land/oras-go/v2/registry"
-	remote "oras.land/oras-go/v2/registry/remote"
 )
 
 func TestUpdateIndexWithDescriptor(t *testing.T) {
 	t.Parallel()
 
 	ctx := testutil.TestContext(t)
-	ref := registry.Reference{
+	ref := Reference{
 		Registry:   testutil.SetupInMemoryRegistryDynamic(ctx, t),
 		Repository: "components",
-		Reference:  "example",
+		Tag:        "example",
 	}
 	remote, err := NewOrasRemote(ref.String(), ocispec.Platform{}, WithPlainHTTP(true))
 	require.NoError(t, err)
 
 	amd64First := pushManifest(ctx, t, remote, "amd64-first")
-	indexDescriptor, err := UpdateIndexWithDescriptor(ctx, remote.Repo(), ref.Reference, ocispec.Platform{Architecture: "amd64"}, amd64First)
+	indexDescriptor, err := UpdateIndexWithDescriptor(ctx, remote.Repo(), ref.GetReference(), ocispec.Platform{Architecture: "amd64"}, amd64First)
 	require.NoError(t, err)
 	require.Equal(t, ocispec.MediaTypeImageIndex, indexDescriptor.MediaType)
-	_, err = remote.Repo().Resolve(ctx, ref.Reference)
+	_, err = remote.Repo().Resolve(ctx, ref.GetReference())
 	require.ErrorContains(t, err, "not found")
-	tagDescriptor(ctx, t, remote, indexDescriptor, ref.Reference)
-	require.Equal(t, indexDescriptor, resolveDescriptor(ctx, t, remote, ref.Reference))
-	requireIndexManifests(t, readIndex(ctx, t, remote, ref.Reference), map[string]ocispec.Descriptor{
+	tagDescriptor(ctx, t, remote, indexDescriptor, ref.GetReference())
+	require.Equal(t, indexDescriptor, resolveDescriptor(ctx, t, remote, ref.GetReference()))
+	requireIndexManifests(t, readIndex(ctx, t, remote, ref.GetReference()), map[string]ocispec.Descriptor{
 		"amd64": amd64First,
 	})
 
 	arm64 := pushManifest(ctx, t, remote, "arm64")
 	previousIndex := indexDescriptor
-	indexDescriptor, err = UpdateIndexWithDescriptor(ctx, remote.Repo(), ref.Reference, ocispec.Platform{Architecture: "arm64"}, arm64)
+	indexDescriptor, err = UpdateIndexWithDescriptor(ctx, remote.Repo(), ref.GetReference(), ocispec.Platform{Architecture: "arm64"}, arm64)
 	require.NoError(t, err)
-	require.Equal(t, previousIndex, resolveDescriptor(ctx, t, remote, ref.Reference))
-	tagDescriptor(ctx, t, remote, indexDescriptor, ref.Reference)
-	require.Equal(t, indexDescriptor, resolveDescriptor(ctx, t, remote, ref.Reference))
-	requireIndexManifests(t, readIndex(ctx, t, remote, ref.Reference), map[string]ocispec.Descriptor{
+	require.Equal(t, previousIndex, resolveDescriptor(ctx, t, remote, ref.GetReference()))
+	tagDescriptor(ctx, t, remote, indexDescriptor, ref.GetReference())
+	require.Equal(t, indexDescriptor, resolveDescriptor(ctx, t, remote, ref.GetReference()))
+	requireIndexManifests(t, readIndex(ctx, t, remote, ref.GetReference()), map[string]ocispec.Descriptor{
 		"amd64": amd64First,
 		"arm64": arm64,
 	})
 
 	amd64Replacement := pushManifest(ctx, t, remote, "amd64-replacement")
 	previousIndex = indexDescriptor
-	indexDescriptor, err = UpdateIndexWithDescriptor(ctx, remote.Repo(), ref.Reference, ocispec.Platform{Architecture: "amd64"}, amd64Replacement)
+	indexDescriptor, err = UpdateIndexWithDescriptor(ctx, remote.Repo(), ref.GetReference(), ocispec.Platform{Architecture: "amd64"}, amd64Replacement)
 	require.NoError(t, err)
-	require.Equal(t, previousIndex, resolveDescriptor(ctx, t, remote, ref.Reference))
-	tagDescriptor(ctx, t, remote, indexDescriptor, ref.Reference)
-	require.Equal(t, indexDescriptor, resolveDescriptor(ctx, t, remote, ref.Reference))
-	requireIndexManifests(t, readIndex(ctx, t, remote, ref.Reference), map[string]ocispec.Descriptor{
+	require.Equal(t, previousIndex, resolveDescriptor(ctx, t, remote, ref.GetReference()))
+	tagDescriptor(ctx, t, remote, indexDescriptor, ref.GetReference())
+	require.Equal(t, indexDescriptor, resolveDescriptor(ctx, t, remote, ref.GetReference()))
+	requireIndexManifests(t, readIndex(ctx, t, remote, ref.GetReference()), map[string]ocispec.Descriptor{
 		"amd64": amd64Replacement,
 		"arm64": arm64,
 	})
@@ -76,19 +75,12 @@ func TestFetchIndexRejectsMismatchedDescriptor(t *testing.T) {
 	expected := []byte(`{"schemaVersion":2,"manifests":[]}`)
 	received := []byte(`{"schemaVersion":3,"manifests":[]}`)
 	descriptor := content.NewDescriptorFromBytes(ocispec.MediaTypeImageIndex, expected)
-	repo := &remote.Repository{
-		Client: staticResponseClient{
-			body:   received,
-			digest: descriptor.Digest.String(),
-		},
-		Reference: registry.Reference{
-			Registry:   "example.com",
-			Repository: "components",
-		},
-		PlainHTTP: true,
-	}
+	repo, err := remote.NewRepository("example.com/components")
+	require.NoError(t, err)
+	repo.Registry.Client = staticResponseClient{body: received, digest: descriptor.Digest.String()}
+	repo.Registry.PlainHTTP = true
 
-	_, err := fetchIndex(context.Background(), repo, "example")
+	_, err = fetchIndex(context.Background(), repo, "example")
 	require.ErrorIs(t, err, content.ErrMismatchedDigest)
 }
 

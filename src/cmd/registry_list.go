@@ -12,6 +12,11 @@ import (
 	"time"
 
 	"github.com/distribution/reference"
+	orasRegistry "github.com/oras-project/oras-go/v3/registry"
+	orasRemote "github.com/oras-project/oras-go/v3/registry/remote"
+	"github.com/oras-project/oras-go/v3/registry/remote/auth"
+	"github.com/oras-project/oras-go/v3/registry/remote/credentials"
+	"github.com/oras-project/oras-go/v3/registry/remote/properties"
 	"github.com/spf13/cobra"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/dns"
@@ -19,9 +24,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/ocischeme"
-	orasRegistry "oras.land/oras-go/v2/registry"
-	orasRemote "oras.land/oras-go/v2/registry/remote"
-	"oras.land/oras-go/v2/registry/remote/auth"
 )
 
 // registryListResponseHeaderTimeout matches the default used by images.PushOptions/PullOptions.
@@ -93,7 +95,7 @@ type registryConnection struct {
 
 // registryHost returns the registry host:port for repoRef.
 func registryHost(repoRef string) (string, error) {
-	ref, err := orasRegistry.ParseReference(repoRef)
+	ref, err := properties.NewReference(repoRef)
 	if err != nil {
 		return "", fmt.Errorf("parsing repo %q: %w", repoRef, err)
 	}
@@ -147,7 +149,7 @@ func setupRegistryAuth(ctx context.Context, repoRef string, plainHTTP, insecureS
 		return registryConnection{}, err
 	}
 
-	client.Credential = auth.StaticCredential(credentialHost, auth.Credential{
+	client.CredentialFunc = credentials.StaticCredentialFunc(credentialHost, credentials.Credential{
 		Username: s.RegistryInfo.PushUsername,
 		Password: s.RegistryInfo.PushPassword,
 	})
@@ -171,28 +173,29 @@ func setupRegistryAuth(ctx context.Context, repoRef string, plainHTTP, insecureS
 }
 
 func listRegistryTags(ctx context.Context, out io.Writer, conn registryConnection, plainHTTP, insecureSkipTLSVerify, fullRef, omitDigestTags bool) error {
-	ref, err := orasRegistry.ParseReference(conn.ref)
+	ref, err := properties.NewReference(conn.ref)
 	if err != nil {
 		return fmt.Errorf("parsing repo %q: %w", conn.ref, err)
 	}
 
-	repo := &orasRemote.Repository{
-		Reference:       ref,
-		Client:          conn.client,
-		TagListPageSize: 1000,
+	repo, err := orasRemote.NewRepository(conn.ref)
+	if err != nil {
+		return err
 	}
+	repo.Registry.Client = conn.client
+	repo.TagListPageSize = 1000
 
 	switch {
 	case conn.plainHTTPKnown:
-		repo.PlainHTTP = conn.plainHTTP
+		repo.Registry.PlainHTTP = conn.plainHTTP
 	case plainHTTP:
-		repo.PlainHTTP = true
+		repo.Registry.PlainHTTP = true
 	case dns.IsLocalOrPrivate(ref.Host()):
 		resolved, err := ocischeme.From(ctx).UsePlainHTTP(ctx, ref.Host(), ocischeme.ProbeOptions{InsecureSkipTLSVerify: insecureSkipTLSVerify})
 		if err != nil {
 			return fmt.Errorf("probing scheme for %s: %w", ref.Host(), err)
 		}
-		repo.PlainHTTP = resolved
+		repo.Registry.PlainHTTP = resolved
 	}
 
 	tags, err := orasRegistry.Tags(ctx, repo)

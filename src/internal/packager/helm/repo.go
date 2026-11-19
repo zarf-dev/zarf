@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/oras-project/oras-go/v3/registry/remote/properties"
 	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
@@ -31,7 +32,6 @@ import (
 	repov1 "helm.sh/helm/v4/pkg/repo/v1"
 
 	retry "github.com/avast/retry-go/v4"
-	orasRegistry "oras.land/oras-go/v2/registry"
 
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
@@ -49,7 +49,7 @@ func negotiateChartPlainHTTP(ctx context.Context, ociURL string, remoteOptions t
 	if !remoteOptions.PlainHTTP {
 		return false, nil
 	}
-	ref, err := orasRegistry.ParseReference(strings.TrimPrefix(ociURL, helpers.OCIURLPrefix))
+	ref, err := properties.NewReference(strings.TrimPrefix(ociURL, helpers.OCIURLPrefix))
 	if err != nil {
 		return false, fmt.Errorf("unable to parse chart url %q: %w", ociURL, err)
 	}

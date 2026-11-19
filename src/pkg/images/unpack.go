@@ -13,14 +13,14 @@ import (
 	"strings"
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"github.com/oras-project/oras-go/v3"
+	"github.com/oras-project/oras-go/v3/content/oci"
 	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
-	"oras.land/oras-go/v2"
-	"oras.land/oras-go/v2/content/oci"
 )
 
 // PulledImage describes an image that landed in the destination OCI layout.

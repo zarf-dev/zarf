@@ -17,6 +17,8 @@ import (
 	"time"
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"github.com/oras-project/oras-go/v3/content"
+	"github.com/oras-project/oras-go/v3/content/file"
 	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/internal/checksum"
 	"github.com/zarf-dev/zarf/src/pkg/helpers"
@@ -26,8 +28,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
-	"oras.land/oras-go/v2/content"
-	"oras.land/oras-go/v2/content/file"
 )
 
 var (
@@ -48,7 +48,7 @@ func (r *Remote) PullPackage(ctx context.Context, destinationDir string, concurr
 	}
 
 	layerSize := oci.SumDescsSize(layersToPull)
-	logger.From(ctx).Info("pulling package", "name", r.Repo().Reference, "size", utils.ByteFormat(float64(layerSize), 2))
+	logger.From(ctx).Info("pulling package", "name", r.Reference(), "size", utils.ByteFormat(float64(layerSize), 2))
 
 	dst, err := file.New(destinationDir)
 	if err != nil {
@@ -64,7 +64,7 @@ func (r *Remote) PullPackage(ctx context.Context, destinationDir string, concurr
 	copyOpts := r.GetDefaultCopyOpts()
 	copyOpts.Concurrency = concurrency
 
-	trackedDst := images.NewTrackedTarget(dst, layerSize, images.DefaultReport(r.Log(), "package pull in progress", r.Repo().Reference.String()))
+	trackedDst := images.NewTrackedTarget(dst, layerSize, images.DefaultReport(r.Log(), "package pull in progress", r.Reference().String()))
 	trackedDst.StartReporting(ctx)
 	defer trackedDst.StopReporting()
 

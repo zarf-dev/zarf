@@ -14,6 +14,8 @@ import (
 	"testing"
 
 	goyaml "github.com/goccy/go-yaml"
+	"github.com/oras-project/oras-go/v3"
+	"github.com/oras-project/oras-go/v3/errdef"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/convert"
@@ -25,11 +27,46 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 	"github.com/zarf-dev/zarf/src/types"
-	"oras.land/oras-go/v2"
-	"oras.land/oras-go/v2/errdef"
+	legacyerrdef "oras.land/oras-go/v2/errdef"
 	"oras.land/oras-go/v2/registry"
-	"oras.land/oras-go/v2/registry/remote"
 )
+
+func TestPublishLegacyReferences(t *testing.T) {
+	ctx := testutil.TestContext(t)
+	source := registry.Reference{Registry: testutil.SetupInMemoryRegistryDynamic(ctx, t), Repository: "packages"}
+	pkgLayout, err := layout.LoadFromTar(ctx, testTarball, layout.PackageLayoutOptions{})
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, pkgLayout.Cleanup()) })
+
+	published, err := PublishPackage(ctx, pkgLayout, source, PublishPackageOptions{Tag: "release", RemoteOptions: defaultTestRemoteOptions()})
+	require.NoError(t, err)
+	require.Equal(t, "release", published.Reference)
+
+	sourceRepo := testutil.NewRepo(t, published.String())
+	desc, err := sourceRepo.Resolve(ctx, published.Reference)
+	require.NoError(t, err)
+	pinned := published
+	pinned.Reference = desc.Digest.String()
+	destination := registry.Reference{Registry: testutil.SetupInMemoryRegistryDynamic(ctx, t), Repository: published.Repository, Reference: "copied"}
+	require.NoError(t, PublishFromOCI(ctx, pinned, destination, PublishFromOCIOptions{
+		Architecture: pkgLayout.Definition().Build.Architecture, RemoteOptions: defaultTestRemoteOptions(),
+	}))
+	copied := pullFromRemote(ctx, t, destination.String(), pkgLayout.Definition().Build.Architecture, "", t.TempDir(), defaultTestRemoteOptions())
+	t.Cleanup(func() { require.NoError(t, copied.Cleanup()) })
+	require.Equal(t, pkgLayout.Definition(), copied.Definition())
+
+	skeleton, err := PublishSkeleton(ctx, "testdata/skeleton", source, PublishSkeletonOptions{Tag: "skeleton", RemoteOptions: defaultTestRemoteOptions()})
+	require.NoError(t, err)
+	require.Equal(t, "skeleton", skeleton.Reference)
+	remote, err := zoci.NewRemote(ctx, skeleton.String(), zoci.PlatformForSkeleton(), zoci.RemoteClientOptions{RemoteOptions: defaultTestRemoteOptions()})
+	require.NoError(t, err)
+	definition, err := remote.FetchZarfYAML(ctx)
+	require.NoError(t, err)
+	require.NotEmpty(t, definition.Components)
+
+	_, err = PublishPackage(ctx, pkgLayout, registry.Reference{}, PublishPackageOptions{})
+	require.ErrorIs(t, err, legacyerrdef.ErrInvalidReference)
+}
 
 func defaultTestRemoteOptions() types.RemoteOptions {
 	return types.RemoteOptions{
@@ -58,8 +95,8 @@ func pullFromRemote(ctx context.Context, t *testing.T, packageRef string, archit
 	return pkgLayout
 }
 
-func createRegistry(ctx context.Context, t *testing.T) registry.Reference {
-	return registry.Reference{
+func createRegistry(ctx context.Context, t *testing.T) oci.Reference {
+	return oci.Reference{
 		Registry:   testutil.SetupInMemoryRegistryDynamic(ctx, t),
 		Repository: "my-namespace",
 	}
@@ -69,7 +106,7 @@ func TestPublishError(t *testing.T) {
 	ctx := context.Background()
 
 	registryURL := testutil.SetupInMemoryRegistryDynamic(ctx, t)
-	defaultRef := registry.Reference{
+	defaultRef := oci.Reference{
 		Registry:   registryURL,
 		Repository: "my-namespace",
 	}
@@ -77,7 +114,7 @@ func TestPublishError(t *testing.T) {
 	tt := []struct {
 		name          string
 		packageLayout *layout.PackageLayout
-		ref           registry.Reference
+		ref           oci.Reference
 		opts          PublishPackageOptions
 		expectErr     error
 	}{
@@ -97,7 +134,7 @@ func TestPublishError(t *testing.T) {
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			_, err := PublishPackage(context.Background(), tc.packageLayout, tc.ref, tc.opts)
+			_, err := PublishPackageToOCI(context.Background(), tc.packageLayout, tc.ref, tc.opts)
 			require.ErrorContains(t, err, tc.expectErr.Error())
 		})
 	}
@@ -108,49 +145,49 @@ func TestPublishFromOCIValidation(t *testing.T) {
 
 	tt := []struct {
 		name      string
-		src       registry.Reference
-		dst       registry.Reference
-		opts      PublishFromOCIOptions
+		src       oci.Reference
+		dst       oci.Reference
+		opts      CopyPackageOptions
 		expectErr error
 	}{
 		{
 			name: "errors if src is not a valid ref",
-			src: registry.Reference{
+			src: oci.Reference{
 				Registry:   "example.com",
 				Repository: "my-namespace",
 			},
-			dst:       registry.Reference{},
-			opts:      PublishFromOCIOptions{},
+			dst:       oci.Reference{},
+			opts:      CopyPackageOptions{},
 			expectErr: errdef.ErrInvalidReference,
 		},
 		{
 			name: "errors if dst is not a valid ref",
-			src: registry.Reference{
+			src: oci.Reference{
 				Registry:   "example.com",
 				Repository: "my-namespace",
 			},
-			dst:       registry.Reference{},
-			opts:      PublishFromOCIOptions{},
+			dst:       oci.Reference{},
+			opts:      CopyPackageOptions{},
 			expectErr: errdef.ErrInvalidReference,
 		},
 		{
 			name: "errors if src's repo name is not the same as dst's",
-			src: registry.Reference{
+			src: oci.Reference{
 				Registry:   "example.com",
 				Repository: "my-namespace",
 			},
-			dst: registry.Reference{
+			dst: oci.Reference{
 				Registry:   "example.com",
 				Repository: "my-other-namespace",
 			},
-			opts:      PublishFromOCIOptions{},
+			opts:      CopyPackageOptions{},
 			expectErr: errors.New("source and destination repositories must have the same name"),
 		},
 	}
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			err := PublishFromOCI(ctx, tc.src, tc.dst, tc.opts)
+			err := CopyPackage(ctx, tc.src, tc.dst, tc.opts)
 			if tc.expectErr != nil {
 				require.ErrorContains(t, err, tc.expectErr.Error())
 				return
@@ -192,9 +229,9 @@ func TestPublishSkeleton(t *testing.T) {
 			registryRef := createRegistry(ctx, t)
 
 			// Publish test package
-			ref, err := PublishSkeleton(ctx, tc.path, registryRef, tc.opts)
+			ref, err := PublishSkeletonToOCI(ctx, tc.path, registryRef, tc.opts)
 			require.NoError(t, err)
-			require.Equal(t, tc.expectedTag, ref.Reference)
+			require.Equal(t, tc.expectedTag, ref.GetReference())
 
 			// Read and unmarshall expected
 			data, err := os.ReadFile(filepath.Join(tc.path, layout.ZarfYAML))
@@ -265,9 +302,9 @@ func TestPublishPackage(t *testing.T) {
 			require.NoError(t, err)
 
 			// Publish test package
-			packageRef, err := PublishPackage(ctx, layoutExpected, registryRef, tc.opts)
+			packageRef, err := PublishPackageToOCI(ctx, layoutExpected, registryRef, tc.opts)
 			require.NoError(t, err)
-			require.Equal(t, tc.expectedTag, packageRef.Reference)
+			require.Equal(t, tc.expectedTag, packageRef.GetReference())
 
 			expectedPkg := layoutExpected.Definition()
 			expectedPkg.Build = api.BuildData{}
@@ -326,7 +363,7 @@ func TestPublishPackageDirectoryNameCollision(t *testing.T) {
 			})
 
 			// Publish test package
-			packageRef, err := PublishPackage(ctx, layoutExpected, registryRef, tc.opts)
+			packageRef, err := PublishPackageToOCI(ctx, layoutExpected, registryRef, tc.opts)
 			require.NoError(t, err)
 
 			expectedPkg := layoutExpected.Definition()
@@ -365,7 +402,7 @@ func TestPublishPackageDeterministic(t *testing.T) {
 			require.NoError(t, err)
 
 			// Publish test package
-			packageRef, err := PublishPackage(ctx, layoutExpected, registryRef, tc.opts)
+			packageRef, err := PublishPackageToOCI(ctx, layoutExpected, registryRef, tc.opts)
 			require.NoError(t, err)
 
 			// Attempt to get the digest
@@ -379,7 +416,7 @@ func TestPublishPackageDeterministic(t *testing.T) {
 			expectedDigest := desc.Digest.String()
 
 			// Re-publish the package to ensure the digest does not change
-			_, err = PublishPackage(ctx, layoutExpected, registryRef, tc.opts)
+			_, err = PublishPackageToOCI(ctx, layoutExpected, registryRef, tc.opts)
 			require.NoError(t, err)
 			// Publish creates a local oci manifest file using the package name, which gets deleted
 			require.NoFileExists(t, layoutExpected.Definition().Metadata.Name)
@@ -418,33 +455,32 @@ func TestPublishCopySHA(t *testing.T) {
 			require.NoError(t, err)
 
 			// Publish test package
-			srcRef, err := PublishPackage(ctx, layoutExpected, registryRef, tc.opts)
+			srcRef, err := PublishPackageToOCI(ctx, layoutExpected, registryRef, tc.opts)
 			require.NoError(t, err)
 
 			// Setup destination registry
 			dstRegistryRef := createRegistry(ctx, t)
 
 			// This gets the test package digest from the first package publish
-			localRepo := &remote.Repository{PlainHTTP: true}
-			localRepo.Reference = srcRef
+			localRepo := testutil.NewRepo(t, srcRef.String())
 			indexDesc, err := oras.Resolve(ctx, localRepo, srcRef.String(), oras.ResolveOptions{})
 			require.NoError(t, err)
 			src := fmt.Sprintf("%s@%s", srcRef, indexDesc.Digest)
-			srcRefWithDigest, err := registry.ParseReference(src)
+			srcRefWithDigest, err := oci.ParseReference(src)
 			require.NoError(t, err)
 
 			dst := fmt.Sprintf("%s/%s", dstRegistryRef.String(), "test:0.0.1")
-			dstRef, err := registry.ParseReference(dst)
+			dstRef, err := oci.ParseReference(dst)
 			require.NoError(t, err)
 
-			opts := PublishFromOCIOptions{
+			opts := CopyPackageOptions{
 				RemoteOptions:  tc.opts.RemoteOptions,
 				Architecture:   layoutExpected.Definition().Build.Architecture,
 				OCIConcurrency: tc.opts.OCIConcurrency,
 			}
 
 			// Publish test package to the destination registry
-			err = PublishFromOCI(ctx, srcRefWithDigest, dstRef, opts)
+			err = CopyPackage(ctx, srcRefWithDigest, dstRef, opts)
 			require.NoError(t, err)
 
 			// This verifies that publish deletes the manifest that is auto created by oras
@@ -454,6 +490,54 @@ func TestPublishCopySHA(t *testing.T) {
 
 			layoutActual := pullFromRemote(ctx, t, pkgRefSha, layoutExpected.Definition().Build.Architecture, "", t.TempDir(), defaultTestRemoteOptions())
 			require.Equal(t, layoutExpected.Definition(), layoutActual.Definition(), "Uploaded package is not identical to downloaded package")
+		})
+	}
+}
+
+func TestPublishCopyPinnedReferencePreservesTag(t *testing.T) {
+	t.Parallel()
+
+	ctx := testutil.TestContext(t)
+	expected, err := layout.LoadFromTar(ctx, filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst"), layout.PackageLayoutOptions{})
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, expected.Cleanup()) })
+	sourceRef, err := PublishPackageToOCI(ctx, expected, createRegistry(ctx, t), PublishPackageOptions{RemoteOptions: defaultTestRemoteOptions()})
+	require.NoError(t, err)
+	sourceRepo := testutil.NewRepo(t, sourceRef.String())
+	root, err := sourceRepo.Resolve(ctx, sourceRef.Tag)
+	require.NoError(t, err)
+	sourceRef.Digest = root.Digest.String()
+
+	// Moving the tag must not change the content selected by the pinned digest.
+	other := testutil.PushSinglePlatformImage(ctx, t, sourceRepo, "amd64")
+	require.NoError(t, sourceRepo.Tag(ctx, other, sourceRef.Tag))
+	for _, tc := range []struct {
+		name       string
+		tag        string
+		digest     string
+		publishTag string
+	}{
+		{name: "same tag", tag: sourceRef.Tag, digest: sourceRef.Digest, publishTag: sourceRef.Tag},
+		{name: "different tag", tag: "copy", digest: sourceRef.Digest, publishTag: "copy"},
+		{name: "repository only", publishTag: sourceRef.Tag},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			destinationRef := oci.Reference{
+				Registry:   testutil.SetupInMemoryRegistryDynamic(ctx, t),
+				Repository: sourceRef.Repository,
+				Tag:        tc.tag,
+				Digest:     tc.digest,
+			}
+			require.NoError(t, CopyPackage(ctx, sourceRef, destinationRef, CopyPackageOptions{
+				Architecture:  expected.Definition().Build.Architecture,
+				RemoteOptions: defaultTestRemoteOptions(),
+			}))
+
+			destinationRef.Tag = tc.publishTag
+			destinationRef.Digest = ""
+			actual := pullFromRemote(ctx, t, destinationRef.String(), expected.Definition().Build.Architecture, "", t.TempDir(), defaultTestRemoteOptions())
+			t.Cleanup(func() { require.NoError(t, actual.Cleanup()) })
+			require.Equal(t, expected.Definition(), actual.Definition())
 		})
 	}
 }
@@ -472,7 +556,7 @@ func TestPublishFromOCITransportNegotiation(t *testing.T) {
 	layoutExpected, err := layout.LoadFromTar(ctx, filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst"), layout.PackageLayoutOptions{})
 	require.NoError(t, err)
 
-	sourceRef, err := PublishPackage(ctx, layoutExpected, registry.Reference{
+	sourceRef, err := PublishPackageToOCI(ctx, layoutExpected, oci.Reference{
 		Registry:   sourceAddress,
 		Repository: "my-namespace",
 	}, PublishPackageOptions{
@@ -480,16 +564,16 @@ func TestPublishFromOCITransportNegotiation(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	destinationRef := registry.Reference{
+	destinationRef := oci.Reference{
 		Registry:   destinationAddress,
 		Repository: sourceRef.Repository,
-		Reference:  sourceRef.Reference,
+		Tag:        sourceRef.GetReference(),
 	}
 	remoteOptions := types.RemoteOptions{
 		PlainHTTP:             true,
 		InsecureSkipTLSVerify: true,
 	}
-	require.NoError(t, PublishFromOCI(ctx, sourceRef, destinationRef, PublishFromOCIOptions{
+	require.NoError(t, CopyPackage(ctx, sourceRef, destinationRef, CopyPackageOptions{
 		Architecture:  layoutExpected.Definition().Build.Architecture,
 		RemoteOptions: remoteOptions,
 	}))
@@ -512,7 +596,7 @@ func TestSignOCITransportNegotiation(t *testing.T) {
 	layoutExpected, err := layout.LoadFromTar(ctx, filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst"), layout.PackageLayoutOptions{})
 	require.NoError(t, err)
 
-	sourceRef, err := PublishPackage(ctx, layoutExpected, registry.Reference{
+	sourceRef, err := PublishPackageToOCI(ctx, layoutExpected, oci.Reference{
 		Registry:   sourceAddress,
 		Repository: "my-namespace",
 	}, PublishPackageOptions{
@@ -546,7 +630,7 @@ func TestSignOCITransportNegotiation(t *testing.T) {
 	signOpts.Password = "password"
 	require.NoError(t, sourceLayout.SignPackage(ctx, &signOpts))
 
-	destinationRef, err := PublishPackage(ctx, sourceLayout, registry.Reference{
+	destinationRef, err := PublishPackageToOCI(ctx, sourceLayout, oci.Reference{
 		Registry:   destinationAddress,
 		Repository: sourceRef.Repository,
 	}, PublishPackageOptions{
@@ -588,7 +672,7 @@ func TestPullOCIConnectedExcludesImages(t *testing.T) {
 	layoutExpected, err := layout.LoadFromTar(ctx, tarPath, layout.PackageLayoutOptions{Filter: filters.Empty()})
 	require.NoError(t, err)
 
-	packageRef, err := PublishPackage(ctx, layoutExpected, registryRef, PublishPackageOptions{
+	packageRef, err := PublishPackageToOCI(ctx, layoutExpected, registryRef, PublishPackageOptions{
 		RemoteOptions: defaultTestRemoteOptions(),
 	})
 	require.NoError(t, err)
@@ -665,29 +749,29 @@ func TestPublishCopyTag(t *testing.T) {
 			require.NoError(t, err)
 
 			// Publish test package
-			srcRef, err := PublishPackage(ctx, layoutExpected, registryRef, tc.opts)
+			srcRef, err := PublishPackageToOCI(ctx, layoutExpected, registryRef, tc.opts)
 			require.NoError(t, err)
 
 			dstRegistryRef := createRegistry(ctx, t)
 
 			dst := fmt.Sprintf("%s/%s:%s", dstRegistryRef.String(), "test", tc.dstTag)
-			dstRegistry, err := registry.ParseReference(dst)
+			dstRegistry, err := oci.ParseReference(dst)
 			require.NoError(t, err)
 
-			opts := PublishFromOCIOptions{
+			opts := CopyPackageOptions{
 				RemoteOptions:  tc.opts.RemoteOptions,
 				Architecture:   layoutExpected.Definition().Build.Architecture,
 				OCIConcurrency: tc.opts.OCIConcurrency,
 			}
 
 			// Publish test package
-			err = PublishFromOCI(ctx, srcRef, dstRegistry, opts)
+			err = CopyPackage(ctx, srcRef, dstRegistry, opts)
 			require.NoError(t, err)
 
 			// This verifies that publish deletes the manifest that is auto created by oras
 			require.NoFileExists(t, layoutExpected.Definition().Metadata.Name)
 
-			require.Equal(t, tc.dstTag, dstRegistry.Reference)
+			require.Equal(t, tc.dstTag, dstRegistry.GetReference())
 
 			layoutActual := pullFromRemote(ctx, t, dstRegistry.String(), layoutExpected.Definition().Build.Architecture, "", t.TempDir(), defaultTestRemoteOptions())
 

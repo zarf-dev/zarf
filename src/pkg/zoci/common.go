@@ -13,6 +13,8 @@ import (
 	"time"
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	ociDirectory "github.com/oras-project/oras-go/v3/content/oci"
+	"github.com/oras-project/oras-go/v3/registry/remote/credentials"
 	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
@@ -20,8 +22,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/oci"
 	"github.com/zarf-dev/zarf/src/pkg/ocischeme"
 	"github.com/zarf-dev/zarf/src/types"
-	ociDirectory "oras.land/oras-go/v2/content/oci"
-	"oras.land/oras-go/v2/registry/remote/auth"
 )
 
 // LayerSelection controls optional OCI package layers to retrieve.
@@ -93,7 +93,7 @@ type RemoteClientOptions struct {
 	CachePath string
 	// CredentialFunc supplies registry credentials.
 	// If nil, the Docker credential store is used instead.
-	CredentialFunc auth.CredentialFunc
+	CredentialFunc credentials.CredentialFunc
 	// Transport configures HTTP transport behavior such as proxies and mTLS.
 	// It is cloned before use and is never modified.
 	Transport *http.Transport
@@ -141,11 +141,11 @@ func NewRemote(ctx context.Context, url string, platform ocispec.Platform, optio
 		if options.Transport != nil {
 			probeOptions.Transport = transportForProbe(options.Transport, options.InsecureSkipTLSVerify)
 		}
-		plainHTTP, err := ocischeme.From(ctx).UsePlainHTTP(ctx, remote.Repo().Reference.Registry, probeOptions)
+		plainHTTP, err := ocischeme.From(ctx).UsePlainHTTP(ctx, remote.Reference().Host(), probeOptions)
 		if err != nil {
 			return nil, fmt.Errorf("could not resolve registry transport: %w", err)
 		}
-		remote.Repo().PlainHTTP = plainHTTP
+		remote.Repo().Registry.PlainHTTP = plainHTTP
 	}
 
 	return remote, nil

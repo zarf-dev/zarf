@@ -6,17 +6,20 @@ package images
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
+	"net/http"
 	"os"
+	"strings"
 	"testing"
 
+	"github.com/oras-project/oras-go/v3"
+	"github.com/oras-project/oras-go/v3/registry/remote/auth"
+	"github.com/oras-project/oras-go/v3/registry/remote/credentials"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/test/testutil"
-	"oras.land/oras-go/v2"
-	"oras.land/oras-go/v2/registry"
-	orasRemote "oras.land/oras-go/v2/registry/remote"
 )
 
 func TestPush(t *testing.T) {
@@ -103,12 +106,41 @@ func TestPushRequiresClusterForZarfManagedMTLS(t *testing.T) {
 	require.EqualError(t, err, "registry uses Zarf-managed mTLS, but no cluster is available to obtain its client certificate")
 }
 
-func verifyImageExists(ctx context.Context, t *testing.T, ref string) {
-	repo := &orasRemote.Repository{}
-	var err error
-	repo.Reference, err = registry.ParseReference(ref)
+func TestPushAuthenticatesWithUppercaseRegistryHost(t *testing.T) {
+	t.Parallel()
+
+	ctx := testutil.TestContext(t)
+	credential := credentials.Credential{Username: "push-user", Password: "push-password"}
+	address := testutil.SetupInMemoryRegistryTLSAuth(ctx, t, credential.Username, credential.Password)
+	sourceDirectory := t.TempDir()
+	require.NoError(t, os.CopyFS(sourceDirectory, os.DirFS("testdata/oras-oci-layout/images")))
+	image, err := transform.ParseImageRef("local-test:1.0.0")
 	require.NoError(t, err)
-	repo.PlainHTTP = true
-	_, err = oras.Resolve(ctx, repo, ref, oras.DefaultResolveOptions)
+
+	err = Push(ctx, []transform.Image{image}, sourceDirectory, state.RegistryInfo{
+		Address:      strings.ToUpper(address),
+		PushUsername: credential.Username,
+		PushPassword: credential.Password,
+	}, PushOptions{InsecureSkipTLSVerify: true, Retries: 1})
+	require.NoError(t, err)
+
+	transport := &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}
+	t.Cleanup(transport.CloseIdleConnections)
+	client := &auth.Client{
+		Client:         &http.Client{Transport: transport},
+		CredentialFunc: credentials.StaticCredentialFunc(address, credential),
+	}
+	ref, err := transform.ImageTransformHostWithoutChecksum(address, image.Reference)
+	require.NoError(t, err)
+	repo := testutil.NewRepo(t, ref)
+	repo.Registry.PlainHTTP = false
+	repo.Registry.Client = client
+	_, err = repo.Resolve(ctx, "1.0.0")
+	require.NoError(t, err)
+}
+
+func verifyImageExists(ctx context.Context, t *testing.T, ref string) {
+	repo := testutil.NewRepo(t, ref)
+	_, err := oras.Resolve(ctx, repo, ref, oras.DefaultResolveOptions)
 	require.NoError(t, err)
 }

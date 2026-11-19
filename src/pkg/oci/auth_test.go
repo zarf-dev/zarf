@@ -19,19 +19,21 @@ import (
 	"testing"
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"github.com/oras-project/oras-go/v3/content"
+	"github.com/oras-project/oras-go/v3/registry/remote/auth"
+	"github.com/oras-project/oras-go/v3/registry/remote/credentials"
+	"github.com/oras-project/oras-go/v3/registry/remote/properties"
 	"github.com/stretchr/testify/require"
-	"oras.land/oras-go/v2/content"
-	"oras.land/oras-go/v2/registry/remote/auth"
 )
 
 func TestNewOrasRemoteCredentialFunc(t *testing.T) {
-	credential := auth.Credential{Username: "registry-user", Password: "registry-password"}
+	credential := credentials.Credential{Username: "registry-user", Password: "registry-password"}
 	providerErr := errors.New("credential provider unavailable")
-	basicCredential := func(_ context.Context, _ string) (auth.Credential, error) {
+	basicCredential := func(_ context.Context, _ properties.Resource) (credentials.Credential, error) {
 		return credential, nil
 	}
-	emptyCredential := func(_ context.Context, _ string) (auth.Credential, error) {
-		return auth.EmptyCredential, nil
+	emptyCredential := func(_ context.Context, _ properties.Resource) (credentials.Credential, error) {
+		return credentials.EmptyCredential, nil
 	}
 	withoutHome := func(t *testing.T, _ string) {
 		t.Helper()
@@ -103,8 +105,8 @@ func TestNewOrasRemoteCredentialFunc(t *testing.T) {
 		{
 			name:  "does not fall back to Docker when the provider fails",
 			setup: withDockerCredentials,
-			modifiers: []Modifier{WithCredentialFunc(func(_ context.Context, _ string) (auth.Credential, error) {
-				return auth.EmptyCredential, providerErr
+			modifiers: []Modifier{WithCredentialFunc(func(_ context.Context, _ properties.Resource) (credentials.Credential, error) {
+				return credentials.EmptyCredential, providerErr
 			})},
 			wantErr: providerErr,
 		},
@@ -129,10 +131,10 @@ func TestNewOrasRemoteCredentialFunc(t *testing.T) {
 	}
 }
 
-func TestNewOrasRemoteCredentialFuncUsesNormalizedRegistry(t *testing.T) {
+func TestNewOrasRemoteCredentialFuncUsesCanonicalResource(t *testing.T) {
 	t.Parallel()
 
-	credential := auth.Credential{Username: "registry-user", Password: "registry-password"}
+	credential := credentials.Credential{Username: "registry-user", Password: "registry-password"}
 	server, descriptor := newCredentialTestRegistry(t, credential, false)
 	defaultTransport, ok := http.DefaultTransport.(*http.Transport)
 	require.True(t, ok)
@@ -143,11 +145,11 @@ func TestNewOrasRemoteCredentialFuncUsesNormalizedRegistry(t *testing.T) {
 		return dialer.DialContext(ctx, network, server.Listener.Addr().String())
 	}
 	t.Cleanup(transport.CloseIdleConnections)
-	var credentialHost string
+	var credentialResource properties.Resource
 	remote, err := NewOrasRemote("docker.io/credential-tests:latest", ocispec.Platform{},
 		WithPlainHTTP(true), WithTransport(transport),
-		WithCredentialFunc(func(_ context.Context, hostport string) (auth.Credential, error) {
-			credentialHost = hostport
+		WithCredentialFunc(func(_ context.Context, resource properties.Resource) (credentials.Credential, error) {
+			credentialResource = resource
 			return credential, nil
 		}))
 	require.NoError(t, err)
@@ -155,11 +157,11 @@ func TestNewOrasRemoteCredentialFuncUsesNormalizedRegistry(t *testing.T) {
 	resolved, err := remote.Repo().Resolve(context.Background(), "latest")
 	require.NoError(t, err)
 	require.Equal(t, descriptor, resolved)
-	require.Equal(t, "registry-1.docker.io", credentialHost)
-	require.Equal(t, "credential-tests", remote.Repo().Reference.Repository)
+	require.Equal(t, properties.Resource{Registry: "docker.io", Path: "credential-tests"}, credentialResource)
+	require.Equal(t, "credential-tests", remote.Reference().Repository)
 }
 
-func newCredentialTestRegistry(t *testing.T, credential auth.Credential, anonymous bool) (*httptest.Server, ocispec.Descriptor) {
+func newCredentialTestRegistry(t *testing.T, credential credentials.Credential, anonymous bool) (*httptest.Server, ocispec.Descriptor) {
 	t.Helper()
 	manifest := []byte(`{"schemaVersion":2,"manifests":[]}`)
 	descriptor := content.NewDescriptorFromBytes(ocispec.MediaTypeImageIndex, manifest)

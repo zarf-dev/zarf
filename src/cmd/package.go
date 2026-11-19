@@ -25,7 +25,7 @@ import (
 	"github.com/spf13/viper"
 	internalv1alpha1 "github.com/zarf-dev/zarf/src/internal/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/helpers"
-	"oras.land/oras-go/v2/registry"
+	"github.com/zarf-dev/zarf/src/pkg/oci"
 
 	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/convert"
@@ -1766,7 +1766,7 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 
 	// Destination Repository
 	parts := strings.Split(strings.TrimPrefix(packageDestination, helpers.OCIURLPrefix), "/")
-	dstRef := registry.Reference{
+	dstRef := oci.Reference{
 		Registry:   parts[0],
 		Repository: strings.Join(parts[1:], "/"),
 	}
@@ -1780,7 +1780,7 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// Skeleton package - call PublishSkeleton
+	// Skeleton package - call PublishSkeletonToOCI
 	if isSkeletonPackage {
 		skeletonOpts := packager.PublishSkeletonOptions{
 			Architecture:         o.selectedArchitecture(),
@@ -1793,7 +1793,7 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 			WithBuildMachineInfo: o.withBuildMachineInfo,
 			Tag:                  o.tag,
 		}
-		pkgRef, err := packager.PublishSkeleton(ctx, packageSource, dstRef, skeletonOpts)
+		pkgRef, err := packager.PublishSkeletonToOCI(ctx, packageSource, dstRef, skeletonOpts)
 		if err != nil {
 			return err
 		}
@@ -1805,7 +1805,7 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 	}
 
 	if helpers.IsOCIURL(packageSource) {
-		ociOpts := packager.PublishFromOCIOptions{
+		ociOpts := packager.CopyPackageOptions{
 			OCIConcurrency: o.ociConcurrency,
 			Architecture:   o.selectedArchitecture(),
 			RemoteOptions:  defaultRemoteOptions(),
@@ -1814,7 +1814,7 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 
 		// source registry reference
 		trimmed := strings.TrimPrefix(packageSource, helpers.OCIURLPrefix)
-		srcRef, err := registry.ParseReference(trimmed)
+		srcRef, err := oci.ParseReference(trimmed)
 		if err != nil {
 			return err
 		}
@@ -1824,12 +1824,14 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 		srcPackageName := srcRepoParts[len(srcRepoParts)-1]
 
 		dstRef.Repository = path.Join(dstRef.Repository, srcPackageName)
-		dstRef.Reference = srcRef.Reference
+		dstRef.Tag = srcRef.Tag
+		dstRef.Digest = srcRef.Digest
 		if o.tag != "" {
-			dstRef.Reference = o.tag
+			dstRef.Tag = o.tag
+			dstRef.Digest = ""
 		}
 
-		return packager.PublishFromOCI(ctx, srcRef, dstRef, ociOpts)
+		return packager.CopyPackage(ctx, srcRef, dstRef, ociOpts)
 	}
 
 	// Establish default stance
@@ -1859,13 +1861,13 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 		Tag:            o.tag,
 	}
 
-	_, err = packager.PublishPackage(ctx, pkgLayout, dstRef, publishPackageOpts)
+	_, err = packager.PublishPackageToOCI(ctx, pkgLayout, dstRef, publishPackageOpts)
 	return err
 }
 
 // printSkeletonImportExample prints components that import each component from the published skeleton.
 // It reads the definition back from the registry so it matches what was published without resolving imports again.
-func printSkeletonImportExample(ctx context.Context, pkgRef registry.Reference, remoteOpts types.RemoteOptions) error {
+func printSkeletonImportExample(ctx context.Context, pkgRef oci.Reference, remoteOpts types.RemoteOptions) error {
 	l := logger.From(ctx)
 	remote, err := zoci.NewRemote(ctx, pkgRef.String(), zoci.PlatformForSkeleton(), zoci.RemoteClientOptions{
 		RemoteOptions: remoteOpts,
@@ -1888,7 +1890,7 @@ func printSkeletonImportExample(ctx context.Context, pkgRef registry.Reference, 
 // skeletonImportExample returns components that import each component of pkg from the skeleton published at ref,
 // converted to v1alpha1 for user-facing serialization. Skeletons are v1alpha1-only, so this does not branch on
 // apiVersion like packageForDisplay.
-func skeletonImportExample(pkg api.Package, ref registry.Reference) []v1alpha1.ZarfComponent {
+func skeletonImportExample(pkg api.Package, ref oci.Reference) []v1alpha1.ZarfComponent {
 	ex := api.Package{Components: make([]api.Component, 0, len(pkg.Components))}
 	for _, c := range pkg.Components {
 		ex.Components = append(ex.Components, api.Component{
@@ -2037,12 +2039,12 @@ func (o *packageSignOptions) run(cmd *cobra.Command, args []string) error {
 			// For OCI sources, default to publishing back to the same OCI location
 			// Extract the repository portion (without package name and tag) from source
 			trimmed := strings.TrimPrefix(packageSource, helpers.OCIURLPrefix)
-			srcRef, err := registry.ParseReference(trimmed)
+			srcRef, err := oci.ParseReference(trimmed)
 			if err != nil {
 				return fmt.Errorf("failed to parse source OCI reference: %w", err)
 			}
-			if srcRef.ValidateReferenceAsTag() == nil {
-				publishTag = srcRef.Reference
+			if srcRef.Digest == "" && srcRef.Tag != "" {
+				publishTag = srcRef.GetReference()
 			}
 
 			// Extract repository path without the package name
@@ -2115,13 +2117,13 @@ func (o *packageSignOptions) run(cmd *cobra.Command, args []string) error {
 	}
 
 	if helpers.IsOCIURL(outputDest) {
-		var dstRef registry.Reference
+		var dstRef oci.Reference
 		dstRef.Registry, dstRef.Repository, _ = strings.Cut(strings.TrimPrefix(outputDest, helpers.OCIURLPrefix), "/")
 		if err := dstRef.ValidateRegistry(); err != nil {
 			return fmt.Errorf("invalid destination OCI reference: %w", err)
 		}
 		l.Info("signing and publishing package to OCI registry", "destination", outputDest)
-		_, err = packager.PublishPackage(ctx, pkgLayout, dstRef, packager.PublishPackageOptions{
+		_, err = packager.PublishPackageToOCI(ctx, pkgLayout, dstRef, packager.PublishPackageOptions{
 			OCIConcurrency: o.ociConcurrency,
 			Retries:        o.retries,
 			RemoteOptions:  defaultRemoteOptions(),

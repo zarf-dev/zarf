@@ -14,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/oras-project/oras-go/v3/registry/remote"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
@@ -28,14 +29,12 @@ import (
 	"github.com/zarf-dev/zarf/src/test/testutil"
 	"github.com/zarf-dev/zarf/src/types"
 	corev1 "k8s.io/api/core/v1"
-	"oras.land/oras-go/v2/registry"
-	"oras.land/oras-go/v2/registry/remote"
 )
 
 type PublishCopySkeletonSuite struct {
 	suite.Suite
 	*require.Assertions
-	Reference   registry.Reference
+	Reference   oci.Reference
 	PackagesDir string
 }
 
@@ -198,7 +197,7 @@ func (suite *PublishCopySkeletonSuite) Test_3_Copy() {
 	suite.NoError(err, stdOut, stdErr)
 
 	suite.Reference.Repository = "helm-charts"
-	suite.Reference.Reference = "0.0.1"
+	suite.Reference.Tag = "0.0.1"
 	ref := suite.Reference.String()
 
 	dstRegistry := testutil.SetupInMemoryRegistry(testutil.TestContext(t), t, 31890)

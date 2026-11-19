@@ -11,6 +11,12 @@ import (
 	"net/http"
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"github.com/oras-project/oras-go/v3"
+	orasRemote "github.com/oras-project/oras-go/v3/registry/remote"
+	"github.com/oras-project/oras-go/v3/registry/remote/auth"
+	"github.com/oras-project/oras-go/v3/registry/remote/credentials"
+	"github.com/oras-project/oras-go/v3/registry/remote/properties"
+	orasRetry "github.com/oras-project/oras-go/v3/registry/remote/retry"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/agent/operations"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
@@ -19,11 +25,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	admission "k8s.io/api/admission/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"oras.land/oras-go/v2"
-	"oras.land/oras-go/v2/registry"
-	orasRemote "oras.land/oras-go/v2/registry/remote"
-	"oras.land/oras-go/v2/registry/remote/auth"
-	orasRetry "oras.land/oras-go/v2/registry/remote/retry"
 )
 
 const (
@@ -100,7 +101,7 @@ func anyZarfServiceUsable(requiresGit, requiresRegistry bool, s *state.State) bo
 }
 
 func getManifestConfigMediaType(ctx context.Context, zarfState *state.State, transport http.RoundTripper, imageAddress string) (string, error) {
-	ref, err := registry.ParseReference(imageAddress)
+	ref, err := properties.NewReference(imageAddress)
 	if err != nil {
 		return "", err
 	}
@@ -110,7 +111,7 @@ func getManifestConfigMediaType(ctx context.Context, zarfState *state.State, tra
 			Transport: transport,
 		},
 		Cache: auth.NewCache(),
-		Credential: auth.StaticCredential(ref.Registry, auth.Credential{
+		CredentialFunc: credentials.StaticCredentialFunc(ref.Registry, credentials.Credential{
 			Username: zarfState.RegistryInfo.PullUsername,
 			Password: zarfState.RegistryInfo.PullPassword,
 		}),
@@ -154,12 +155,13 @@ func unwrapRetryTransport(rt http.RoundTripper) http.RoundTripper {
 	return rt
 }
 
-func fetchManifestBytes(ctx context.Context, ref registry.Reference, client *auth.Client, plainHTTP bool, imageAddress string) ([]byte, error) {
-	repo := &orasRemote.Repository{
-		PlainHTTP: plainHTTP,
-		Reference: ref,
-		Client:    client,
+func fetchManifestBytes(ctx context.Context, ref properties.Reference, client *auth.Client, plainHTTP bool, imageAddress string) ([]byte, error) {
+	repo, err := orasRemote.NewRepository(ref.Registry + "/" + ref.Repository)
+	if err != nil {
+		return nil, err
 	}
+	repo.Registry.PlainHTTP = plainHTTP
+	repo.Registry.Client = client
 	_, b, err := oras.FetchBytes(ctx, repo, imageAddress, oras.DefaultFetchBytesOptions)
 	return b, err
 }
