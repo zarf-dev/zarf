@@ -68,7 +68,7 @@ func (r *Remote) PullPackage(ctx context.Context, destinationDir string, concurr
 	trackedDst.StartReporting(ctx)
 	defer trackedDst.StopReporting()
 
-	err = r.CopyToTarget(ctx, layersToPull, trackedDst, copyOpts)
+	err = r.CopyToTarget(ctx, layersToPull, trackedDst.CopyTarget(), copyOpts)
 	if err != nil {
 		return nil, err
 	}

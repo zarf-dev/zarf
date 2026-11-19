@@ -269,7 +269,7 @@ func copyImage(ctx context.Context, src *oci.Store, remote oras.Target, srcName 
 	trackedRemote := NewTrackedTarget(remote, size, DefaultReport(logger.From(ctx), "image push in progress", srcName))
 	trackedRemote.StartReporting(ctx)
 	defer trackedRemote.StopReporting()
-	_, err = oras.Copy(ctx, src, srcName, trackedRemote, dstName, copyOpts)
+	_, err = oras.Copy(ctx, src, srcName, trackedRemote.CopyTarget(), dstName, copyOpts)
 	if err != nil {
 		return fmt.Errorf("failed to push image %s: %w", srcName, err)
 	}
