@@ -48,6 +48,9 @@ $ zarf package remove oci://ghcr.io/my-org/my-package:1.0.0 --confirm
   -n, --namespace string                        [Alpha] Override the namespace for package removal. Applicable only to packages deployed using the namespace flag.
       --oci-concurrency int                     Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
       --set-values stringToString               Set package values (key.path=value). Booleans and integers are type-inferred; everything else is a string (default [])
+      --source-registry-tls-ca string           Path to a PEM-encoded CA bundle used to verify source Zarf package registries (adds to system trust)
+      --source-registry-tls-cert string         Path to a PEM-encoded client certificate chain used to authenticate to source Zarf package registries
+      --source-registry-tls-key string          Path to the PEM-encoded private key for the source Zarf package registry client certificate
       --trusted-root string                     Path to a Sigstore TrustedRoot JSON. Falls back to the binary-embedded copy when omitted.
       --use-signed-timestamps                   Verify RFC3161 signed timestamps in the bundle. Auto-enabled when the bundle contains TSA timestamp data. Use when signing was done with --tsa-server-url and Rekor was not used.
   -v, --values strings                          Path to values file(s) for removal actions

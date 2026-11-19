@@ -44,6 +44,9 @@ $ zarf package verify zarf-package-demo-amd64-1.0.0.tar.zst
       --insecure-ignore-tlog                    Skip Rekor transparency log inclusion verification. Default true for air-gap. Auto-disabled when keyless identity flags are set (keyless signatures require Rekor inclusion proof to remain verifiable past certificate expiry). (default true)
   -k, --key string                              Public key for signature verification
       --oci-concurrency int                     Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
+      --source-registry-tls-ca string           Path to a PEM-encoded CA bundle used to verify source Zarf package registries (adds to system trust)
+      --source-registry-tls-cert string         Path to a PEM-encoded client certificate chain used to authenticate to source Zarf package registries
+      --source-registry-tls-key string          Path to the PEM-encoded private key for the source Zarf package registry client certificate
       --trusted-root string                     Path to a Sigstore TrustedRoot JSON. Falls back to the binary-embedded copy when omitted.
       --use-signed-timestamps                   Verify RFC3161 signed timestamps in the bundle. Auto-enabled when the bundle contains TSA timestamp data. Use when signing was done with --tsa-server-url and Rekor was not used.
 ```

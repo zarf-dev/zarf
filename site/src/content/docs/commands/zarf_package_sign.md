@@ -47,6 +47,9 @@ $ zarf package sign zarf-package-demo-amd64-1.0.0.tar.zst --signing-key awskms:/
       --certificate-oidc-issuer string          Required OIDC issuer claim in the signing certificate (keyless verify). Example: https://github.com/login/oauth or https://token.actions.githubusercontent.com
       --certificate-oidc-issuer-regexp string   Regex variant of --certificate-oidc-issuer
       --confirm                                 Skip the interactive confirmation prompt before uploading to the Rekor transparency log (equivalent to cosign --yes).
+      --destination-registry-tls-ca string      Path to a PEM-encoded CA bundle used to verify destination Zarf package registries (adds to system trust)
+      --destination-registry-tls-cert string    Path to a PEM-encoded client certificate chain used to authenticate to destination Zarf package registries
+      --destination-registry-tls-key string     Path to the PEM-encoded private key for the destination Zarf package registry client certificate
       --fulcio-auth-flow string                 Fulcio OAuth flow: normal (browser), device (device code), token, client_credentials
       --fulcio-url string                       Fulcio certificate authority URL. Override for private Sigstore deployments. (default "https://fulcio.sigstore.dev")
   -h, --help                                    help for sign
@@ -63,6 +66,9 @@ $ zarf package sign zarf-package-demo-amd64-1.0.0.tar.zst --signing-key awskms:/
       --retries int                             Maximum attempts for retryable Zarf operations, including image, Git, and transient Helm failures (default 3)
       --signing-key string                      Private key for signing packages. Accepts either a local file path or a Cosign-supported key provider (awskms://, gcpkms://, azurekms://, hashivault://)
       --signing-key-pass string                 Password for encrypted private key
+      --source-registry-tls-ca string           Path to a PEM-encoded CA bundle used to verify source Zarf package registries (adds to system trust)
+      --source-registry-tls-cert string         Path to a PEM-encoded client certificate chain used to authenticate to source Zarf package registries
+      --source-registry-tls-key string          Path to the PEM-encoded private key for the source Zarf package registry client certificate
       --tlog-upload                             Upload the signature to the Rekor transparency log. Auto-enabled when --keyless is set (allows for keyless signatures to remain verifiable past the ~10 minute Fulcio certificate validity window).
       --trusted-root string                     Path to a Sigstore TrustedRoot JSON. Falls back to the binary-embedded copy when omitted.
       --tsa-server-url string                   RFC3161 timestamp authority URL (e.g. https://timestamp.sigstore.dev/api/v1/timestamp). When set, a signed timestamp is embedded in the bundle as an alternative or complement to --tlog-upload for proving the signature was made while the Fulcio certificate was valid.

@@ -42,6 +42,7 @@ const (
 )
 
 type initOptions struct {
+	sourceRegistryFlags
 	*architectureOptions
 	setVariables               map[string]string
 	valuesFiles                []string
@@ -145,6 +146,7 @@ func newInitCommand(architecture *architectureOptions) *cobra.Command {
 
 	cmd.Flags().SortFlags = true
 
+	addRegistryTLSFlags(cmd, v, &o.sourceRegistryTLS, "source", "init")
 	return cmd
 }
 
@@ -232,7 +234,7 @@ func (o *initOptions) run(cmd *cobra.Command, args []string) error {
 		Filter:               filter,
 		Architecture:         o.selectedArchitecture(),
 		CachePath:            cachePath,
-		RemoteOptions:        defaultRemoteOptions(),
+		RemoteOptions:        o.sourceRemoteOptions(),
 	}
 	pkgLayout, err := packager.LoadPackage(ctx, packageSource, loadOpt)
 	if err != nil {

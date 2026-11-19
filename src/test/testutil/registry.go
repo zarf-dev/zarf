@@ -5,10 +5,13 @@ package testutil
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"io"
 	"net"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"sync"
@@ -17,12 +20,51 @@ import (
 
 	"github.com/distribution/distribution/v3/configuration"
 	"github.com/distribution/distribution/v3/registry"
+	"github.com/distribution/distribution/v3/registry/handlers"
 	_ "github.com/distribution/distribution/v3/registry/storage/driver/inmemory" // used for docker test registry
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/pki"
+	"github.com/zarf-dev/zarf/src/types"
 )
+
+// SetupInMemoryRegistryMTLS starts an isolated registry requiring a client certificate.
+// It returns the registry address and paths to its client identity and trust bundle.
+func SetupInMemoryRegistryMTLS(ctx context.Context, t *testing.T) (string, types.RegistryTLSOptions) {
+	t.Helper()
+	serverPKI, clientPKI, err := pki.GenerateMTLSCerts(t.Name(), []string{"localhost"}, "localhost", "registry-client")
+	require.NoError(t, err)
+	serverCert, err := tls.X509KeyPair(serverPKI.Cert, serverPKI.Key)
+	require.NoError(t, err)
+	roots := x509.NewCertPool()
+	require.True(t, roots.AppendCertsFromPEM(clientPKI.CA))
+
+	config := &configuration.Configuration{}
+	config.Log.AccessLog.Disabled = true
+	config.Storage = map[string]configuration.Parameters{"inmemory": {}}
+	app := handlers.NewApp(ctx, config)
+	server := httptest.NewUnstartedServer(app)
+	server.TLS = &tls.Config{
+		Certificates: []tls.Certificate{serverCert},
+		ClientCAs:    roots,
+		ClientAuth:   tls.RequireAndVerifyClientCert,
+		MinVersion:   tls.VersionTLS12,
+	}
+	server.StartTLS()
+	t.Cleanup(server.Close)
+
+	dir := t.TempDir()
+	opts := types.RegistryTLSOptions{
+		CAFile:   filepath.Join(dir, "ca.pem"),
+		CertFile: filepath.Join(dir, "client.pem"),
+		KeyFile:  filepath.Join(dir, "client-key.pem"),
+	}
+	require.NoError(t, os.WriteFile(opts.CAFile, clientPKI.CA, 0o600))
+	require.NoError(t, os.WriteFile(opts.CertFile, clientPKI.Cert, 0o600))
+	require.NoError(t, os.WriteFile(opts.KeyFile, clientPKI.Key, 0o600))
+	return server.Listener.Addr().String(), opts
+}
 
 // SetupInMemoryRegistryDynamic starts an in-memory registry on an auto-allocated port.
 func SetupInMemoryRegistryDynamic(ctx context.Context, t *testing.T) string {
