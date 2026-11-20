@@ -67,8 +67,8 @@ func TestPushPackageManifestReadAfterWrite(t *testing.T) {
 	repo := testutil.NewRepo(t, address+"/multi-component:0.0.1")
 	proxy := httputil.NewSingleHostReverseProxy(&url.URL{Scheme: "http", Host: address})
 
-	// Inject the fault at the registry boundary so the real client and its
-	// retry transport can handle it, or publishing can avoid the read entirely.
+	// Return a 404 on the first read of a manifest after it is uploaded by
+	// digest. Publishing uses the local descriptor to update the version index.
 	var unreadable sync.Map
 	proxy.ModifyResponse = func(resp *http.Response) error {
 		if resp.Request.Method == http.MethodPut && resp.StatusCode == http.StatusCreated &&
