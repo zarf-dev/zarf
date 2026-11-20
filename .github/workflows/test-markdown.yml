@@ -1,11 +1,6 @@
 name: Test Markdown Links
 on:
   pull_request:
-    paths:
-      - '**/*.[mM][dD]'
-      - '!vendor/**'
-      - '!adr/**'
-      - '!site/src/content/docs/**' # Exclude all files in the site directory, there is a different workflow for testing site links
 
 permissions:
   contents: read
