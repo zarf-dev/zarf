@@ -19,6 +19,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/oci"
 	"github.com/zarf-dev/zarf/src/pkg/ocischeme"
+	"github.com/zarf-dev/zarf/src/pkg/pki"
 	"github.com/zarf-dev/zarf/src/types"
 	ociDirectory "oras.land/oras-go/v2/content/oci"
 	"oras.land/oras-go/v2/registry/remote/auth"
@@ -108,6 +109,13 @@ type Remote struct {
 // NewRemote returns an ORAS remote repository configured with Zarf's
 // cache, credential, and transport options.
 func NewRemote(ctx context.Context, url string, platform ocispec.Platform, options RemoteClientOptions) (*Remote, error) {
+	if options.RegistryTLS != (types.RegistryTLSOptions{}) {
+		transport, err := pki.RegistryTransport(options.Transport, options.RegistryTLS)
+		if err != nil {
+			return nil, err
+		}
+		options.Transport = transport
+	}
 	modifiers := []oci.Modifier{
 		oci.WithLogger(logger.From(ctx)),
 		oci.WithUserAgent("zarf/" + config.CLIVersion),

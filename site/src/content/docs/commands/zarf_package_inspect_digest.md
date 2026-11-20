@@ -36,8 +36,11 @@ $ zarf package inspect digest my-package
 ### Options
 
 ```
-  -h, --help               help for digest
-  -n, --namespace string   [Alpha] Override the namespace for package inspection. Applicable only to packages deployed using the namespace flag.
+  -h, --help                              help for digest
+  -n, --namespace string                  [Alpha] Override the namespace for package inspection. Applicable only to packages deployed using the namespace flag.
+      --source-registry-tls-ca string     Path to a PEM-encoded CA bundle used to verify source Zarf package registries (adds to system trust)
+      --source-registry-tls-cert string   Path to a PEM-encoded client certificate chain used to authenticate to source Zarf package registries
+      --source-registry-tls-key string    Path to the PEM-encoded private key for the source Zarf package registry client certificate
 ```
 
 ### Options inherited from parent commands

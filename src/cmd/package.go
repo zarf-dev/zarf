@@ -213,6 +213,8 @@ func (f *packageSigningFlags) validateSigningMode() error {
 }
 
 type packageCreateOptions struct {
+	destinationRegistryFlags
+	sourceRegistryFlags
 	*architectureOptions
 	confirm                 bool
 	output                  string
@@ -279,6 +281,9 @@ func newPackageCreateCommand(v *viper.Viper, architecture *architectureOptions) 
 
 	cmd.MarkFlagsMutuallyExclusive("keyless", "signing-key")
 
+	// FIXME: don't really like this way of adding flags, maybe there's a better way
+	addRegistryTLSFlags(cmd, v, &o.sourceRegistryTLS, "source", "package.create")
+	addRegistryTLSFlags(cmd, v, &o.destinationRegistryTLS, "destination", "package.create")
 	return cmd
 }
 
@@ -350,6 +355,7 @@ func (o *packageCreateOptions) run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	opt := packager.CreateOptions{
+		DestinationRegistryTLS:  o.destinationRegistryTLS,
 		Architecture:            o.selectedArchitecture(),
 		Flavor:                  o.flavor,
 		RegistryOverrides:       overrides,
@@ -360,7 +366,7 @@ func (o *packageCreateOptions) run(cmd *cobra.Command, args []string) error {
 		SkipSBOM:                o.skipSBOM,
 		OCIConcurrency:          o.ociConcurrency,
 		DifferentialPackagePath: o.differentialPackagePath,
-		RemoteOptions:           defaultRemoteOptions(),
+		RemoteOptions:           o.sourceRemoteOptions(),
 		CachePath:               cachePath,
 		IsInteractive:           !o.confirm,
 		SkipVersionCheck:        o.skipVersionCheck,
@@ -380,6 +386,7 @@ func (o *packageCreateOptions) run(cmd *cobra.Command, args []string) error {
 }
 
 type packageDeployOptions struct {
+	sourceRegistryFlags
 	*architectureOptions
 	valuesFiles                []string
 	namespaceOverride          string
@@ -436,6 +443,7 @@ func newPackageDeployCommand(v *viper.Viper, architecture *architectureOptions) 
 	cmd.Flags().BoolVar(&o.skipVersionCheck, "skip-version-check", false, "Ignore version requirements when deploying the package")
 	_ = cmd.Flags().MarkHidden("skip-version-check")
 	addVerifyFlags(cmd, v, &o.packageVerifyFlags)
+	addRegistryTLSFlags(cmd, v, &o.sourceRegistryTLS, "source", "package.deploy")
 	return cmd
 }
 
@@ -490,7 +498,7 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 		Filter:               filter,
 		Architecture:         o.selectedArchitecture(),
 		OCIConcurrency:       o.ociConcurrency,
-		RemoteOptions:        defaultRemoteOptions(),
+		RemoteOptions:        o.sourceRemoteOptions(),
 		CachePath:            cachePath,
 		Connected:            o.connected,
 	}
@@ -513,7 +521,7 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 		Timeout:                    o.timeout,
 		Retries:                    o.retries,
 		OCIConcurrency:             o.ociConcurrency,
-		RemoteOptions:              defaultRemoteOptions(),
+		RemoteOptions:              o.sourceRemoteOptions(),
 		IsInteractive:              !o.confirm,
 		SkipValuesSchemaValidation: o.skipValuesSchemaValidation,
 		SkipArchitectureCheck:      o.skipArchitectureCheck,
@@ -667,6 +675,7 @@ func getPackageYAMLHints(pkg api.Package, setVariables map[string]string) map[st
 }
 
 type packageMirrorResourcesOptions struct {
+	sourceRegistryFlags
 	*architectureOptions
 	mirrorImages       bool
 	mirrorRepos        bool
@@ -727,6 +736,7 @@ func newPackageMirrorResourcesCommand(v *viper.Viper, architecture *architecture
 	cmd.Flags().BoolVar(&o.mirrorRepos, "repos", false, "mirror only the git repositories")
 	cmd.MarkFlagsMutuallyExclusive("images", "repos")
 
+	addRegistryTLSFlags(cmd, v, &o.sourceRegistryTLS, "source", "package.mirror_resources")
 	return cmd
 }
 
@@ -768,7 +778,7 @@ func (o *packageMirrorResourcesOptions) run(cmd *cobra.Command, args []string) (
 		Filter:               filter,
 		Architecture:         o.selectedArchitecture(),
 		OCIConcurrency:       o.ociConcurrency,
-		RemoteOptions:        defaultRemoteOptions(),
+		RemoteOptions:        o.sourceRemoteOptions(),
 		CachePath:            cachePath,
 	}
 	pkgLayout, err := packager.LoadPackage(ctx, src, loadOpt)
@@ -881,11 +891,12 @@ func newPackageInspectCommand(v *viper.Viper, architecture *architectureOptions)
 }
 
 type packageInspectDigestOptions struct {
+	sourceRegistryFlags
 	*architectureOptions
 	namespaceOverride string
 }
 
-func newPackageInspectDigestCommand(_ *viper.Viper, architecture *architectureOptions) *cobra.Command {
+func newPackageInspectDigestCommand(v *viper.Viper, architecture *architectureOptions) *cobra.Command {
 	o := &packageInspectDigestOptions{architectureOptions: architecture}
 	cmd := &cobra.Command{
 		Use:     "digest [ PACKAGE_SOURCE ]",
@@ -898,6 +909,7 @@ func newPackageInspectDigestCommand(_ *viper.Viper, architecture *architectureOp
 		},
 	}
 	cmd.Flags().StringVarP(&o.namespaceOverride, "namespace", "n", o.namespaceOverride, lang.CmdPackageInspectFlagNamespace)
+	addRegistryTLSFlags(cmd, v, &o.sourceRegistryTLS, "source", "package.inspect.digest")
 	return cmd
 }
 
@@ -909,7 +921,7 @@ func (o *packageInspectDigestOptions) run(ctx context.Context, args []string) er
 
 	opts := packager.PackageDigestOptions{
 		Architecture:      o.selectedArchitecture(),
-		RemoteOptions:     defaultRemoteOptions(),
+		RemoteOptions:     o.sourceRemoteOptions(),
 		NamespaceOverride: o.namespaceOverride,
 	}
 
@@ -934,6 +946,7 @@ func (o *packageInspectDigestOptions) run(ctx context.Context, args []string) er
 }
 
 type packageInspectValuesFilesOptions struct {
+	sourceRegistryFlags
 	*architectureOptions
 	components                 string
 	kubeVersion                string
@@ -975,6 +988,7 @@ func newPackageInspectValuesFilesCommand(v *viper.Viper, architecture *architect
 	cmd.Flags().StringToStringVar(&o.setValues, "set-values", v.GetStringMapString(VPkgDeploySetValues), lang.CmdPackageDeployFlagSetValues)
 	cmd.Flags().BoolVar(&o.skipValuesSchemaValidation, "skip-values-schema-validation", false, lang.CmdPackageDeployFlagSkipValuesSchema)
 	addVerifyFlags(cmd, v, &o.packageVerifyFlags)
+	addRegistryTLSFlags(cmd, v, &o.sourceRegistryTLS, "source", "package.inspect.values_files")
 	return cmd
 }
 
@@ -1007,7 +1021,7 @@ func (o *packageInspectValuesFilesOptions) run(cmd *cobra.Command, args []string
 		LayerSelection:       &zoci.LayerSelection{IncludeComponents: true},
 		Filter:               filters.BySelectState(o.components),
 		OCIConcurrency:       o.ociConcurrency,
-		RemoteOptions:        defaultRemoteOptions(),
+		RemoteOptions:        o.sourceRemoteOptions(),
 		CachePath:            cachePath,
 	}
 	pkgLayout, err := packager.LoadPackage(ctx, src, loadOpts)
@@ -1024,7 +1038,7 @@ func (o *packageInspectValuesFilesOptions) run(cmd *cobra.Command, args []string
 		KubeVersion:                o.kubeVersion,
 		IsInteractive:              true,
 		SkipValuesSchemaValidation: o.skipValuesSchemaValidation,
-		RemoteOptions:              defaultRemoteOptions(),
+		RemoteOptions:              o.sourceRemoteOptions(),
 	}
 	resources, err := packager.InspectPackageResources(ctx, pkgLayout, resourceOpts)
 	if err != nil {
@@ -1044,6 +1058,7 @@ func (o *packageInspectValuesFilesOptions) run(cmd *cobra.Command, args []string
 }
 
 type packageInspectManifestsOptions struct {
+	sourceRegistryFlags
 	*architectureOptions
 	components                 string
 	kubeVersion                string
@@ -1084,6 +1099,7 @@ func newPackageInspectManifestsCommand(v *viper.Viper, architecture *architectur
 	cmd.Flags().StringToStringVar(&o.setValues, "set-values", v.GetStringMapString(VPkgDeploySetValues), lang.CmdPackageDeployFlagSetValues)
 	cmd.Flags().BoolVar(&o.skipValuesSchemaValidation, "skip-values-schema-validation", false, lang.CmdPackageDeployFlagSkipValuesSchema)
 	addVerifyFlags(cmd, v, &o.packageVerifyFlags)
+	addRegistryTLSFlags(cmd, v, &o.sourceRegistryTLS, "source", "package.inspect.manifests")
 	return cmd
 }
 
@@ -1116,7 +1132,7 @@ func (o *packageInspectManifestsOptions) run(cmd *cobra.Command, args []string) 
 		LayerSelection:       &zoci.LayerSelection{IncludeComponents: true},
 		Filter:               filters.BySelectState(o.components),
 		OCIConcurrency:       o.ociConcurrency,
-		RemoteOptions:        defaultRemoteOptions(),
+		RemoteOptions:        o.sourceRemoteOptions(),
 		CachePath:            cachePath,
 	}
 	pkgLayout, err := packager.LoadPackage(ctx, src, loadOpts)
@@ -1133,7 +1149,7 @@ func (o *packageInspectManifestsOptions) run(cmd *cobra.Command, args []string) 
 		KubeVersion:                o.kubeVersion,
 		IsInteractive:              true,
 		SkipValuesSchemaValidation: o.skipValuesSchemaValidation,
-		RemoteOptions:              defaultRemoteOptions(),
+		RemoteOptions:              o.sourceRemoteOptions(),
 	}
 
 	resources, err := packager.InspectPackageResources(ctx, pkgLayout, resourceOpts)
@@ -1159,6 +1175,7 @@ func (o *packageInspectManifestsOptions) run(cmd *cobra.Command, args []string) 
 
 // packageInspectSBOMOptions holds the command-line options for 'package inspect sbom' sub-command.
 type packageInspectSBOMOptions struct {
+	sourceRegistryFlags
 	*architectureOptions
 	keys           []string
 	outputDir      string
@@ -1190,6 +1207,7 @@ func newPackageInspectSBOMCommand(v *viper.Viper, architecture *architectureOpti
 		"Key selection is supported only for v1beta1 packages.")
 	cmd.Flags().StringVar(&o.outputDir, "output", o.outputDir, lang.CmdPackageCreateFlagSbomOut)
 	addVerifyFlags(cmd, v, &o.packageVerifyFlags)
+	addRegistryTLSFlags(cmd, v, &o.sourceRegistryTLS, "source", "package.inspect.sbom")
 	return cmd
 }
 
@@ -1214,7 +1232,7 @@ func (o *packageInspectSBOMOptions) run(cmd *cobra.Command, args []string) (err 
 		LayerSelection:       &zoci.LayerSelection{SBOMs: &zoci.SBOMSelection{Keys: o.keys}},
 		Filter:               filters.Empty(),
 		OCIConcurrency:       o.ociConcurrency,
-		RemoteOptions:        defaultRemoteOptions(),
+		RemoteOptions:        o.sourceRemoteOptions(),
 		CachePath:            cachePath,
 	}
 	pkgLayout, err := packager.LoadPackage(ctx, src, loadOpts)
@@ -1246,6 +1264,7 @@ func (o *packageInspectSBOMOptions) run(cmd *cobra.Command, args []string) (err 
 }
 
 type packageInspectImagesOptions struct {
+	sourceRegistryFlags
 	*architectureOptions
 	namespaceOverride string
 	ociConcurrency    int
@@ -1271,6 +1290,7 @@ func newPackageInspectImagesCommand(v *viper.Viper, architecture *architectureOp
 	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
 	cmd.Flags().StringVarP(&o.namespaceOverride, "namespace", "n", o.namespaceOverride, lang.CmdPackageInspectFlagNamespace)
 	addVerifyFlags(cmd, v, &o.packageVerifyFlags)
+	addRegistryTLSFlags(cmd, v, &o.sourceRegistryTLS, "source", "package.inspect.images")
 	return cmd
 }
 
@@ -1295,7 +1315,7 @@ func (o *packageInspectImagesOptions) run(cmd *cobra.Command, args []string) err
 		Filter:               filters.Empty(),
 		VerifyBlobOptions:    o.buildVerifyBlobOptions(cmd, v),
 		OCIConcurrency:       o.ociConcurrency,
-		RemoteOptions:        defaultRemoteOptions(),
+		RemoteOptions:        o.sourceRemoteOptions(),
 		CachePath:            cachePath,
 	}
 	pkg, err := packager.GetPackageFromSourceOrCluster(ctx, cluster, src, o.namespaceOverride, loadOpts)
@@ -1320,6 +1340,7 @@ func (o *packageInspectImagesOptions) run(cmd *cobra.Command, args []string) err
 }
 
 type packageInspectDocumentationOptions struct {
+	sourceRegistryFlags
 	*architectureOptions
 	keys           []string
 	outputDir      string
@@ -1348,6 +1369,7 @@ func newPackageInspectDocumentationCommand(v *viper.Viper, architecture *archite
 	cmd.Flags().StringSliceVar(&o.keys, "keys", []string{}, "Comma-separated list of documentation keys to extract (e.g., 'configuration,changelog')")
 	cmd.Flags().StringVar(&o.outputDir, "output", o.outputDir, "Directory to extract documentation to (created under '<package-name>-documentation' subdirectory)")
 	addVerifyFlags(cmd, v, &o.packageVerifyFlags)
+	addRegistryTLSFlags(cmd, v, &o.sourceRegistryTLS, "source", "package.inspect.documentation")
 	return cmd
 }
 
@@ -1369,7 +1391,7 @@ func (o *packageInspectDocumentationOptions) run(cmd *cobra.Command, args []stri
 		Filter:               filters.Empty(),
 		VerifyBlobOptions:    o.buildVerifyBlobOptions(cmd, v),
 		OCIConcurrency:       o.ociConcurrency,
-		RemoteOptions:        defaultRemoteOptions(),
+		RemoteOptions:        o.sourceRemoteOptions(),
 		CachePath:            cachePath,
 		LayerSelection:       &zoci.LayerSelection{Attachments: &zoci.AttachmentSelection{Keys: o.keys}},
 	}
@@ -1387,6 +1409,7 @@ func (o *packageInspectDocumentationOptions) run(cmd *cobra.Command, args []stri
 }
 
 type packageInspectDefinitionOptions struct {
+	sourceRegistryFlags
 	*architectureOptions
 	namespaceOverride string
 	ociConcurrency    int
@@ -1412,6 +1435,7 @@ func newPackageInspectDefinitionCommand(v *viper.Viper, architecture *architectu
 	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
 	cmd.Flags().StringVarP(&o.namespaceOverride, "namespace", "n", o.namespaceOverride, lang.CmdPackageInspectFlagNamespace)
 	addVerifyFlags(cmd, v, &o.packageVerifyFlags)
+	addRegistryTLSFlags(cmd, v, &o.sourceRegistryTLS, "source", "package.inspect.definition")
 	return cmd
 }
 
@@ -1436,7 +1460,7 @@ func (o *packageInspectDefinitionOptions) run(cmd *cobra.Command, args []string)
 		Filter:               filters.Empty(),
 		VerifyBlobOptions:    o.buildVerifyBlobOptions(cmd, v),
 		OCIConcurrency:       o.ociConcurrency,
-		RemoteOptions:        defaultRemoteOptions(),
+		RemoteOptions:        o.sourceRemoteOptions(),
 		CachePath:            cachePath,
 	}
 	pkg, err := packager.GetPackageFromSourceOrCluster(ctx, cluster, src, o.namespaceOverride, loadOpts)
@@ -1602,6 +1626,7 @@ func (o *packageListOptions) getDeployedPackages(ctx context.Context, args []str
 }
 
 type packageRemoveOptions struct {
+	sourceRegistryFlags
 	*architectureOptions
 	namespaceOverride  string
 	confirm            bool
@@ -1637,6 +1662,7 @@ func newPackageRemoveCommand(v *viper.Viper, architecture *architectureOptions) 
 	cmd.Flags().StringSliceVarP(&o.valuesFiles, "values", "v", []string{}, lang.CmdPackageRemoveFlagValuesFiles)
 	cmd.Flags().StringToStringVar(&o.setValues, "set-values", v.GetStringMapString(VPkgRemoveSetValues), lang.CmdPackageDeployFlagSetValues)
 	addVerifyFlags(cmd, v, &o.packageVerifyFlags)
+	addRegistryTLSFlags(cmd, v, &o.sourceRegistryTLS, "source", "package.remove")
 	return cmd
 }
 
@@ -1671,7 +1697,7 @@ func (o *packageRemoveOptions) run(cmd *cobra.Command, args []string) error {
 		Filter:               filter,
 		VerifyBlobOptions:    o.buildVerifyBlobOptions(cmd, v),
 		OCIConcurrency:       o.ociConcurrency,
-		RemoteOptions:        defaultRemoteOptions(),
+		RemoteOptions:        o.sourceRemoteOptions(),
 		CachePath:            cachePath,
 	}
 	pkg, err := packager.GetPackageFromSourceOrCluster(ctx, c, packageSource, o.namespaceOverride, loadOpts)
@@ -1715,6 +1741,8 @@ func (o *packageRemoveOptions) run(cmd *cobra.Command, args []string) error {
 }
 
 type packagePublishOptions struct {
+	destinationRegistryFlags
+	sourceRegistryFlags
 	*architectureOptions
 	flavor               string
 	retries              int
@@ -1746,6 +1774,8 @@ func newPackagePublishCommand(v *viper.Viper, architecture *architectureOptions)
 	_ = cmd.Flags().MarkHidden("skip-version-check")
 	cmd.Flags().BoolVar(&o.withBuildMachineInfo, "with-build-machine-info", v.GetBool(VPkgPublishWithBuildMachineInfo), lang.CmdPackageCreateFlagWithBuildMachineInfo)
 	addVerifyFlags(cmd, v, &o.packageVerifyFlags)
+	addRegistryTLSFlags(cmd, v, &o.sourceRegistryTLS, "source", "package.publish")
+	addRegistryTLSFlags(cmd, v, &o.destinationRegistryTLS, "destination", "package.publish")
 	return cmd
 }
 
@@ -1783,22 +1813,23 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 	// Skeleton package - call PublishSkeleton
 	if isSkeletonPackage {
 		skeletonOpts := packager.PublishSkeletonOptions{
-			Architecture:         o.selectedArchitecture(),
-			OCIConcurrency:       o.ociConcurrency,
-			Retries:              o.retries,
-			RemoteOptions:        defaultRemoteOptions(),
-			CachePath:            cachePath,
-			Flavor:               o.flavor,
-			SkipVersionCheck:     o.skipVersionCheck,
-			WithBuildMachineInfo: o.withBuildMachineInfo,
-			Tag:                  o.tag,
+			DestinationRegistryTLS: o.destinationRegistryTLS,
+			Architecture:           o.selectedArchitecture(),
+			OCIConcurrency:         o.ociConcurrency,
+			Retries:                o.retries,
+			RemoteOptions:          o.sourceRemoteOptions(),
+			CachePath:              cachePath,
+			Flavor:                 o.flavor,
+			SkipVersionCheck:       o.skipVersionCheck,
+			WithBuildMachineInfo:   o.withBuildMachineInfo,
+			Tag:                    o.tag,
 		}
 		pkgRef, err := packager.PublishSkeleton(ctx, packageSource, dstRef, skeletonOpts)
 		if err != nil {
 			return err
 		}
 		// The skeleton is already published, so failing to show the example should not fail the command.
-		if err := printSkeletonImportExample(ctx, pkgRef, skeletonOpts.RemoteOptions); err != nil {
+		if err := printSkeletonImportExample(ctx, pkgRef, o.destinationRemoteOptions()); err != nil {
 			l.Warn("unable to print the skeleton import example", "error", err)
 		}
 		return nil
@@ -1806,10 +1837,11 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 
 	if helpers.IsOCIURL(packageSource) {
 		ociOpts := packager.PublishFromOCIOptions{
-			OCIConcurrency: o.ociConcurrency,
-			Architecture:   o.selectedArchitecture(),
-			RemoteOptions:  defaultRemoteOptions(),
-			Retries:        o.retries,
+			DestinationRegistryTLS: o.destinationRegistryTLS,
+			OCIConcurrency:         o.ociConcurrency,
+			Architecture:           o.selectedArchitecture(),
+			RemoteOptions:          o.sourceRemoteOptions(),
+			Retries:                o.retries,
 		}
 
 		// source registry reference
@@ -1841,7 +1873,7 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 		Filter:               filters.Empty(),
 		Architecture:         o.selectedArchitecture(),
 		OCIConcurrency:       o.ociConcurrency,
-		RemoteOptions:        defaultRemoteOptions(),
+		RemoteOptions:        o.sourceRemoteOptions(),
 		CachePath:            cachePath,
 	}
 	pkgLayout, err := packager.LoadPackage(ctx, packageSource, loadOpt)
@@ -1855,7 +1887,7 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 	publishPackageOpts := packager.PublishPackageOptions{
 		OCIConcurrency: o.ociConcurrency,
 		Retries:        o.retries,
-		RemoteOptions:  defaultRemoteOptions(),
+		RemoteOptions:  o.destinationRemoteOptions(),
 		Tag:            o.tag,
 	}
 
@@ -1903,6 +1935,7 @@ func skeletonImportExample(pkg api.Package, ref registry.Reference) []v1alpha1.Z
 }
 
 type packagePullOptions struct {
+	sourceRegistryFlags
 	*architectureOptions
 	shasum          string
 	outputDirectory string
@@ -1927,6 +1960,7 @@ func newPackagePullCommand(v *viper.Viper, architecture *architectureOptions) *c
 	cmd.Flags().StringVarP(&o.outputDirectory, "output-directory", "o", v.GetString(VPkgPullOutputDir), lang.CmdPackagePullFlagOutputDirectory)
 	addVerifyFlags(cmd, v, &o.packageVerifyFlags)
 
+	addRegistryTLSFlags(cmd, v, &o.sourceRegistryTLS, "source", "package.pull")
 	return cmd
 }
 
@@ -1953,7 +1987,7 @@ func (o *packagePullOptions) run(cmd *cobra.Command, args []string) error {
 		VerifyBlobOptions:    o.buildVerifyBlobOptions(cmd, v),
 		Architecture:         o.selectedArchitecture(),
 		OCIConcurrency:       o.ociConcurrency,
-		RemoteOptions:        defaultRemoteOptions(),
+		RemoteOptions:        o.sourceRemoteOptions(),
 		CachePath:            cachePath,
 	})
 	if err != nil {
@@ -1964,6 +1998,8 @@ func (o *packagePullOptions) run(cmd *cobra.Command, args []string) error {
 }
 
 type packageSignOptions struct {
+	destinationRegistryFlags
+	sourceRegistryFlags
 	*architectureOptions
 	overwrite      bool
 	output         string
@@ -2017,6 +2053,8 @@ func newPackageSignCommand(v *viper.Viper, architecture *architectureOptions) *c
 
 	cmd.MarkFlagsMutuallyExclusive("keyless", "signing-key")
 
+	addRegistryTLSFlags(cmd, v, &o.sourceRegistryTLS, "source", "package.sign")
+	addRegistryTLSFlags(cmd, v, &o.destinationRegistryTLS, "destination", "package.sign")
 	return cmd
 }
 
@@ -2071,7 +2109,7 @@ func (o *packageSignOptions) run(cmd *cobra.Command, args []string) error {
 		Filter:               filters.Empty(),
 		Architecture:         o.selectedArchitecture(),
 		OCIConcurrency:       o.ociConcurrency,
-		RemoteOptions:        defaultRemoteOptions(),
+		RemoteOptions:        o.sourceRemoteOptions(),
 		CachePath:            cachePath,
 		VerificationStrategy: layout.VerifyNever,
 	}
@@ -2124,7 +2162,7 @@ func (o *packageSignOptions) run(cmd *cobra.Command, args []string) error {
 		_, err = packager.PublishPackage(ctx, pkgLayout, dstRef, packager.PublishPackageOptions{
 			OCIConcurrency: o.ociConcurrency,
 			Retries:        o.retries,
-			RemoteOptions:  defaultRemoteOptions(),
+			RemoteOptions:  o.destinationRemoteOptions(),
 			Tag:            publishTag,
 		})
 		return err
@@ -2141,6 +2179,7 @@ func (o *packageSignOptions) run(cmd *cobra.Command, args []string) error {
 }
 
 type packageVerifyOptions struct {
+	sourceRegistryFlags
 	*architectureOptions
 	ociConcurrency int
 	packageVerifyFlags
@@ -2168,6 +2207,7 @@ func newPackageVerifyCommand(v *viper.Viper, architecture *architectureOptions) 
 	}
 	markVerifyFlagsMutuallyExclusive(cmd)
 
+	addRegistryTLSFlags(cmd, v, &o.sourceRegistryTLS, "source", "package.verify")
 	return cmd
 }
 
@@ -2189,7 +2229,7 @@ func (o *packageVerifyOptions) run(cmd *cobra.Command, args []string) error {
 		Filter:               filters.Empty(),
 		Architecture:         o.selectedArchitecture(),
 		OCIConcurrency:       o.ociConcurrency,
-		RemoteOptions:        defaultRemoteOptions(),
+		RemoteOptions:        o.sourceRemoteOptions(),
 		CachePath:            cachePath,
 		LayerSelection:       &zoci.LayerSelection{},
 	}
