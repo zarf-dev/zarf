@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"testing"
+	"time"
 
 	goyaml "github.com/goccy/go-yaml"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
@@ -794,6 +795,25 @@ components:
 	entries, err := os.ReadDir(tempDirectory)
 	require.NoError(t, err)
 	require.Empty(t, entries)
+}
+
+func TestAssemblePackageWithSourceDateEpoch(t *testing.T) {
+	epoch := time.Date(2008, time.April, 4, 16, 28, 43, 0, time.UTC)
+	ctx := testutil.TestContext(t)
+	dir := t.TempDir()
+	writePackageToDisk(t, v1alpha1.ZarfPackage{
+		APIVersion: v1alpha1.APIVersion,
+		Kind:       v1alpha1.ZarfPackageConfig,
+		Metadata:   v1alpha1.ZarfMetadata{Name: "resolved-values"},
+		Components: []v1alpha1.ZarfComponent{{Name: "component"}},
+	}, dir)
+	loaded, err := load.Package(ctx, dir, load.PackageOptions{})
+	require.NoError(t, err)
+	layout, err := AssemblePackage(ctx, loaded, AssembleOptions{
+		SourceDateEpoch: epoch,
+	})
+	require.NoError(t, err)
+	require.Equal(t, epoch.Format(api.BuildTimestampFormat), layout.Definition().Build.Timestamp)
 }
 
 func TestAssemblePackageWritesResolvedValues(t *testing.T) {

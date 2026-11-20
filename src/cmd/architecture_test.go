@@ -31,7 +31,7 @@ func TestArchitectureFlagConfigPrecedence(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			configPath := filepath.Join(t.TempDir(), "zarf-config.toml")
-			require.NoError(t, os.WriteFile(configPath, []byte(fmt.Sprintf("architecture = %q\n", tt.config)), 0o600))
+			require.NoError(t, os.WriteFile(configPath, fmt.Appendf(nil, "architecture = %q\n", tt.config), 0o600))
 			t.Setenv("ZARF_CONFIG", configPath)
 			t.Setenv("ZARF_ARCHITECTURE", tt.env)
 			initViper()

@@ -97,7 +97,7 @@ func TestPublishComponentAndAssembleRepeatedRemoteImportResources(t *testing.T) 
 
 	packageDir := t.TempDir()
 	require.NoError(t, os.Mkdir(filepath.Join(packageDir, "nested"), 0o700))
-	require.NoError(t, os.WriteFile(filepath.Join(packageDir, "nested", "indirect.yaml"), []byte(fmt.Sprintf(`apiVersion: zarf.dev/v1beta1
+	require.NoError(t, os.WriteFile(filepath.Join(packageDir, "nested", "indirect.yaml"), fmt.Appendf(nil, `apiVersion: zarf.dev/v1beta1
 kind: ZarfComponentConfig
 metadata:
   name: indirect
@@ -105,7 +105,7 @@ component:
   import:
     remote:
       - url: oci://%s
-`, published.String())), 0o600))
+`, published.String()), 0o600))
 	packageYAML := fmt.Sprintf(`apiVersion: zarf.dev/v1beta1
 kind: ZarfPackageConfig
 metadata:
@@ -378,7 +378,7 @@ component:
 
 	childDir := filepath.Join(root, "child")
 	require.NoError(t, os.Mkdir(childDir, 0o700))
-	require.NoError(t, os.WriteFile(filepath.Join(childDir, "component.yaml"), []byte(fmt.Sprintf(`apiVersion: zarf.dev/v1beta1
+	require.NoError(t, os.WriteFile(filepath.Join(childDir, "component.yaml"), fmt.Appendf(nil, `apiVersion: zarf.dev/v1beta1
 kind: ZarfComponentConfig
 metadata:
   name: local-import
@@ -387,7 +387,7 @@ component:
   import:
     remote:
       - url: oci://%s
-`, remote.String())), 0o600))
+`, remote.String()), 0o600))
 	componentPath := filepath.Join(root, "component.yaml")
 	require.NoError(t, os.WriteFile(componentPath, []byte(`apiVersion: zarf.dev/v1beta1
 kind: ZarfComponentConfig
@@ -418,7 +418,7 @@ func TestPublishComponentImageArchivesUseOCILayout(t *testing.T) {
 	imageLayout := filepath.Join("..", "images", "testdata", "oras-oci-layout", "images")
 	require.NoError(t, archive.Compress(ctx, []string{imageLayout}, archivePath, archive.CompressOpts{}))
 	componentPath := filepath.Join(t.TempDir(), "component.yaml")
-	componentYAML := []byte(fmt.Sprintf(`apiVersion: zarf.dev/v1beta1
+	componentYAML := fmt.Appendf(nil, `apiVersion: zarf.dev/v1beta1
 kind: ZarfComponentConfig
 metadata:
   name: image-archive-component
@@ -429,7 +429,7 @@ component:
       images:
         - name: ghcr.io/zarf-dev/images/hello-world:latest
           id: hello
-`, archivePath))
+`, archivePath)
 	require.NoError(t, os.WriteFile(componentPath, componentYAML, 0o600))
 
 	published, err := Publish(ctx, componentPath, createRegistry(ctx, t), PublishOptions{RemoteOptions: defaultTestRemoteOptions()})
@@ -625,7 +625,7 @@ func TestPublishComponentSelectsImportsForComponentArchitecture(t *testing.T) {
 	ctx := context.Background()
 	root := t.TempDir()
 	for architecture := range map[string]struct{}{"amd64": {}, "arm64": {}} {
-		componentYAML := []byte(fmt.Sprintf(`apiVersion: zarf.dev/v1beta1
+		componentYAML := fmt.Appendf(nil, `apiVersion: zarf.dev/v1beta1
 kind: ZarfComponentConfig
 metadata:
   name: %s-component
@@ -635,7 +635,7 @@ variant:
 component:
   images:
     - name: example.com/%s:latest
-`, architecture, architecture, architecture))
+`, architecture, architecture, architecture)
 		require.NoError(t, os.WriteFile(filepath.Join(root, architecture+".yaml"), componentYAML, 0o600))
 	}
 	componentPath := filepath.Join(root, "component.yaml")

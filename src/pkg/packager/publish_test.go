@@ -568,7 +568,7 @@ func setDockerConfig(t *testing.T, registryAddresses map[string]bool, username, 
 	for registryAddress, includeCredentials := range registryAddresses {
 		if includeCredentials {
 			auths[registryAddress] = map[string]string{
-				"auth": base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("%s:%s", username, password))),
+				"auth": base64.StdEncoding.EncodeToString(fmt.Appendf(nil, "%s:%s", username, password)),
 			}
 		}
 	}
