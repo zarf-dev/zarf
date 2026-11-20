@@ -883,10 +883,22 @@ func assembleSkeletonComponent(ctx context.Context, component api.Component, res
 }
 
 func recordPackageMetadata(definition *api.Package, flavor string, registryOverrides []images.RegistryOverride, withBuildMachineInfo bool, buildPath, aggregateChecksum string) error {
-	now := time.Now()
+	var tm time.Time
+	if sourceDateEpoch := os.Getenv("SOURCE_DATE_EPOCH"); sourceDateEpoch != "" {
+		epoch, err := strconv.ParseInt(sourceDateEpoch, 10, 64)
+		if err != nil {
+			return fmt.Errorf("invalid SOURCE_DATE_EPOCH: %w", err)
+		}
+		if epoch < 0 {
+			return errors.New("invalid SOURCE_DATE_EPOCH: must be non-negative")
+		}
+		tm = time.Unix(epoch, 0).UTC()
+	} else {
+		tm = time.Now()
+	}
 	buildData := api.BuildData{
 		Architecture:      definition.Metadata.Architecture,
-		Timestamp:         now.Format(api.BuildTimestampFormat),
+		Timestamp:         tm.Format(api.BuildTimestampFormat),
 		Version:           config.CLIVersion,
 		Flavor:            flavor,
 		ProvenanceFiles:   []string{layout.Checksums},
