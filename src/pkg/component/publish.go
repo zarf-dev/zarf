@@ -206,7 +206,7 @@ func pushComponentArtifact(ctx context.Context, store oras.ReadOnlyTarget, sourc
 			defer trackedRemote.StopReporting()
 
 			var copyErr error
-			published, copyErr = oras.Copy(ctx, store, sourceRef, trackedRemote, "", copyOpts)
+			published, copyErr = oras.Copy(ctx, store, sourceRef, trackedRemote.CopyTarget(), "", copyOpts)
 			if copyErr != nil {
 				return copyErr
 			}

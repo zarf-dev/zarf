@@ -16,6 +16,7 @@ import (
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"oras.land/oras-go/v2"
+	"oras.land/oras-go/v2/registry"
 )
 
 // Report defines a function to log progress
@@ -130,8 +131,30 @@ func NewTrackedTarget(target oras.Target, totalBytes int64, reporter Report) *Tr
 	}
 }
 
+// CopyTarget returns a progress-tracked target for oras.Copy, preserving direct
+// reference uploads when the underlying target supports them.
+func (tt *TrackedTarget) CopyTarget() oras.Target {
+	if pusher, ok := tt.Target.(registry.ReferencePusher); ok {
+		return &trackedReferenceTarget{TrackedTarget: tt, pusher: pusher}
+	}
+	return tt
+}
+
 // Push wraps the target push method with an appropriate tracked reader.
 func (tt *TrackedTarget) Push(ctx context.Context, desc ocispec.Descriptor, content io.Reader) error {
+	return tt.Target.Push(ctx, desc, tt.trackReader(content))
+}
+
+type trackedReferenceTarget struct {
+	*TrackedTarget
+	pusher registry.ReferencePusher
+}
+
+func (tt *trackedReferenceTarget) PushReference(ctx context.Context, desc ocispec.Descriptor, content io.Reader, reference string) error {
+	return tt.pusher.PushReference(ctx, desc, tt.trackReader(content), reference)
+}
+
+func (tt *TrackedTarget) trackReader(content io.Reader) io.Reader {
 	tReader := &trackedReader{
 		reader:    content,
 		bytesRead: tt.bytesRead,
@@ -146,5 +169,5 @@ func (tt *TrackedTarget) Push(ctx context.Context, desc ocispec.Descriptor, cont
 		}
 	}
 
-	return tt.Target.Push(ctx, desc, trackedReader)
+	return trackedReader
 }

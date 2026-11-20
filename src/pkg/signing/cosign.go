@@ -322,11 +322,16 @@ func SignManifest(ctx context.Context, manifestRef string, opts SignManifestOpti
 	if err != nil {
 		return fmt.Errorf("parsing OCI manifest reference: %w", err)
 	}
-	descriptor, err := remote.Head(ref, registryOptions.GetRegistryClientOpts(ctx)...)
-	if err != nil {
-		return fmt.Errorf("resolving OCI manifest: %w", err)
+	// Cosign looks up the subject when publishing the referrer. Resolve here
+	// only when needed to pin a mutable reference before signing.
+	if _, pinned := ref.(name.Digest); !pinned {
+		descriptor, err := remote.Head(ref, registryOptions.GetRegistryClientOpts(ctx)...)
+		if err != nil {
+			return fmt.Errorf("resolving OCI manifest: %w", err)
+		}
+		ref = ref.Context().Digest(descriptor.Digest.String())
 	}
-	manifestRef = ref.Context().Digest(descriptor.Digest.String()).String()
+	manifestRef = ref.String()
 
 	l.Debug("signing OCI manifest with cosign referrer", "reference", manifestRef, "key", opts.Key)
 	rootOpts := &options.RootOptions{Timeout: opts.Timeout}
