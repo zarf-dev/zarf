@@ -181,3 +181,7 @@ main-site and docs steps can match; use the shared visitor identity across
 the subdomains and an explicit conversion window. Do not count Netlify
 preview sessions as production journeys. These are proposed analyses, not
 newly created insights.
+
+## Link checks
+
+See [lychee](../.lychee/README.md) for link-check commands and configuration.
