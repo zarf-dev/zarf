@@ -12,12 +12,15 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/otiai10/copy"
 	"github.com/sigstore/sigstore-go/pkg/root"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
@@ -631,6 +634,70 @@ func TestBuildMachineInfo(t *testing.T) {
 				require.NotContains(t, stdOut, "terminal:")
 				require.NotContains(t, stdOut, "user:")
 			}
+		})
+	}
+}
+
+func TestSourceDateEpoch(t *testing.T) {
+	tests := []struct {
+		name            string
+		sourceDateEpoch string
+		err             string
+	}{
+		{
+			name:            "before now",
+			sourceDateEpoch: fmt.Sprint(time.Now().Add(-time.Hour - time.Minute - time.Microsecond).Unix()),
+		},
+		{
+			name:            "after now",
+			sourceDateEpoch: fmt.Sprint(time.Now().Add(time.Hour + time.Minute + time.Microsecond).Unix()),
+		},
+		{
+			name:            "zero",
+			sourceDateEpoch: fmt.Sprint(time.Time{}.Add(-24 * time.Hour).Unix()),
+			err:             "invalid SOURCE_DATE_EPOCH: must be non-negative",
+		},
+		{
+			name:            "invalid",
+			sourceDateEpoch: "1.1",
+			err:             fmt.Sprintf("invalid SOURCE_DATE_EPOCH: %v", func() error { _, err := strconv.ParseInt("1.1", 10, 64); return err }()),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := logger.WithContext(t.Context(), test.GetLogger(t))
+			tmpdir := t.TempDir()
+
+			packagePath := filepath.Join("src", "test", "packages", "00-no-components")
+			packageName := fmt.Sprintf("zarf-package-no-components-%s.tar.zst", e2e.Arch)
+
+			args := []string{"package", "create", packagePath, "-o", tmpdir}
+
+			t.Setenv("SOURCE_DATE_EPOCH", tt.sourceDateEpoch)
+
+			stdOut, stdErr, err := e2e.Zarf(t, args...)
+
+			if tt.err != "" {
+				require.Contains(t, stdErr, tt.err)
+				return
+			}
+
+			require.NoError(t, err, stdOut, stdErr)
+
+			pkgPath := filepath.Join(tmpdir, packageName)
+			pkgLayout, err := layout.LoadFromTar(ctx, pkgPath, layout.PackageLayoutOptions{})
+			require.NoError(t, err)
+
+			stdOut, stdErr, err = e2e.Zarf(t, "package", "inspect", "definition", pkgPath)
+			require.NoError(t, err, stdOut, stdErr)
+
+			expected, err := strconv.ParseInt(tt.sourceDateEpoch, 10, 64)
+			require.NoError(t, err)
+
+			actual, err := time.Parse(api.BuildTimestampFormat, pkgLayout.Definition().Build.Timestamp)
+			require.NoError(t, err)
+
+			require.Equal(t, time.Unix(expected, 0).UTC(), actual.UTC())
 		})
 	}
 }

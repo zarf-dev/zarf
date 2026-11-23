@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"time"
 
 	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
@@ -51,6 +52,7 @@ type CreateOptions struct {
 	IsInteractive bool
 	// SkipVersionCheck skips version requirement validation
 	SkipVersionCheck bool
+	SourceDateEpoch  time.Time
 }
 
 // Create takes a path to a directory containing a ZarfPackageConfig and returns the path to the created package
@@ -117,6 +119,7 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 		CachePath:            opts.CachePath,
 		WithBuildMachineInfo: opts.WithBuildMachineInfo,
 		RemoteOptions:        opts.RemoteOptions,
+		SourceDateEpoch:      opts.SourceDateEpoch,
 	}
 	pkgLayout, err := assemble.AssemblePackage(ctx, loaded, assembleOpt)
 	if err != nil {

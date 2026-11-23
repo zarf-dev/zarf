@@ -168,19 +168,19 @@ func TestChecksumVerifiedSBOMLayersSelectsRequestedKeys(t *testing.T) {
 		ocispec.AnnotationTitle:       unselectedResourcePath,
 		layout.ResourceKindAnnotation: layout.ResourceKindSBOM,
 	}
-	checksums := []byte(fmt.Sprintf("%s %s\n%s %s\n%s %s\n%s %s\n%s %s\n",
+	checksums := fmt.Appendf(nil, "%s %s\n%s %s\n%s %s\n%s %s\n%s %s\n",
 		componentResource.Digest.Encoded(), componentResourcePath,
 		imageResource.Digest.Encoded(), imageResourcePath,
 		imageReferenceResource.Digest.Encoded(), imageReferenceResourcePath,
 		imageReferenceARM64Resource.Digest.Encoded(), imageReferenceARM64ResourcePath,
 		unselectedResource.Digest.Encoded(), unselectedResourcePath,
-	))
+	)
 	aggregateChecksum, err := checksum.GetSHA256Hash(bytes.NewReader(checksums))
 	require.NoError(t, err)
 
 	checksumDesc := content.NewDescriptorFromBytes(layout.ZarfLayerMediaTypeBlob, checksums)
 	checksumDesc.Annotations = map[string]string{ocispec.AnnotationTitle: layout.Checksums}
-	zarfYAML := []byte(fmt.Sprintf(`apiVersion: zarf.dev/v1beta1
+	zarfYAML := fmt.Appendf(nil, `apiVersion: zarf.dev/v1beta1
 kind: ZarfPackageConfig
 metadata:
   name: package
@@ -190,7 +190,7 @@ components:
   - name: api
     images:
       - name: ghcr.io/acme/api:v1.4.2
-`, aggregateChecksum))
+`, aggregateChecksum)
 	zarfYAMLDesc := content.NewDescriptorFromBytes(layout.ZarfLayerMediaTypeBlob, zarfYAML)
 	zarfYAMLDesc.Annotations = map[string]string{ocispec.AnnotationTitle: layout.ZarfYAML}
 	store := memory.New()

@@ -64,6 +64,7 @@ type AssembleOptions struct {
 	CachePath string
 	// WithBuildMachineInfo includes build machine information (hostname and username) in the package metadata.
 	WithBuildMachineInfo bool
+	SourceDateEpoch      time.Time
 	types.RemoteOptions
 }
 
@@ -227,7 +228,7 @@ func AssemblePackage(ctx context.Context, resolvedPackage *load.ResolvedPackage,
 	if err != nil {
 		return nil, err
 	}
-	if err = recordPackageMetadata(&definition, opts.Flavor, opts.RegistryOverrides, opts.WithBuildMachineInfo, buildPath, checksumSha); err != nil {
+	if err = recordPackageMetadata(&definition, opts.Flavor, opts.RegistryOverrides, opts.WithBuildMachineInfo, opts.SourceDateEpoch, buildPath, checksumSha); err != nil {
 		return nil, err
 	}
 
@@ -313,7 +314,7 @@ func AssembleSkeleton(ctx context.Context, resolvedPackage *load.ResolvedPackage
 	if err != nil {
 		return nil, err
 	}
-	if err = recordPackageMetadata(&definition, opts.Flavor, nil, opts.WithBuildMachineInfo, buildPath, checksumSha); err != nil {
+	if err = recordPackageMetadata(&definition, opts.Flavor, nil, opts.WithBuildMachineInfo, time.Now(), buildPath, checksumSha); err != nil {
 		return nil, err
 	}
 
@@ -882,11 +883,10 @@ func assembleSkeletonComponent(ctx context.Context, component api.Component, res
 	return nil
 }
 
-func recordPackageMetadata(definition *api.Package, flavor string, registryOverrides []images.RegistryOverride, withBuildMachineInfo bool, buildPath, aggregateChecksum string) error {
-	now := time.Now()
+func recordPackageMetadata(definition *api.Package, flavor string, registryOverrides []images.RegistryOverride, withBuildMachineInfo bool, sourceDateEpoch time.Time, buildPath, aggregateChecksum string) error {
 	buildData := api.BuildData{
 		Architecture:      definition.Metadata.Architecture,
-		Timestamp:         now.Format(api.BuildTimestampFormat),
+		Timestamp:         sourceDateEpoch.Format(api.BuildTimestampFormat),
 		Version:           config.CLIVersion,
 		Flavor:            flavor,
 		ProvenanceFiles:   []string{layout.Checksums},

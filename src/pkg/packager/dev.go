@@ -120,6 +120,7 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 		SkipSBOM:          true,
 		OCIConcurrency:    opts.OCIConcurrency,
 		CachePath:         opts.CachePath,
+		SourceDateEpoch:   time.Now(),
 	}
 	pkgLayout, err := assemble.AssemblePackage(ctx, loaded, createOpts)
 	if err != nil {

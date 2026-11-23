@@ -15,6 +15,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -226,6 +227,7 @@ type packageCreateOptions struct {
 	ociConcurrency          int
 	skipVersionCheck        bool
 	withBuildMachineInfo    bool
+	sourceDateEpoch         time.Time
 	packageSigningFlags
 }
 
@@ -338,6 +340,18 @@ func (o *packageCreateOptions) run(cmd *cobra.Command, args []string) error {
 		}
 	}
 
+	if sourceDateEpoch := os.Getenv("SOURCE_DATE_EPOCH"); sourceDateEpoch != "" {
+		epoch, err := strconv.ParseInt(sourceDateEpoch, 10, 64)
+		if err != nil {
+			return fmt.Errorf("invalid SOURCE_DATE_EPOCH: %w", err)
+		} else if epoch < 0 {
+			return errors.New("invalid SOURCE_DATE_EPOCH: must be non-negative")
+		}
+		o.sourceDateEpoch = time.Unix(epoch, 0).UTC()
+	} else {
+		o.sourceDateEpoch = time.Now()
+	}
+
 	o.setVariables = helpers.TransformAndMergeMap(v.GetStringMapString(VPkgCreateSet), o.setVariables, strings.ToUpper)
 	overrides, err := parseRegistryOverrides(o.registryOverrides)
 	if err != nil {
@@ -365,6 +379,7 @@ func (o *packageCreateOptions) run(cmd *cobra.Command, args []string) error {
 		IsInteractive:           !o.confirm,
 		SkipVersionCheck:        o.skipVersionCheck,
 		WithBuildMachineInfo:    o.withBuildMachineInfo,
+		SourceDateEpoch:         o.sourceDateEpoch,
 	}
 	pkgPath, err := packager.Create(ctx, basePath, o.output, opt)
 	// NOTE(mkcp): LintErrors are rendered with a table
