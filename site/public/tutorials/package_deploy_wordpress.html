@@ -47,71 +47,77 @@ b.BWHI {background-color: #aaaaaa}
 </head>
 <body>
 <pre>
-<b class="WHI">$ zarf package deploy zarf-package-wordpress-amd64-26.0.0.tar.zst</b><br/>
-<b style="color:#55ffff;">kind</b>:<b style="color:#ff55ff;"> ZarfPackageConfig</b>
-<b style="color:#ff55ff;"></b><b style="color:#55ffff;">metadata</b>:<b style="color:#55ffff;"></b>
-<b style="color:#55ffff;">  name</b>:<b style="color:#ff55ff;"> wordpress</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">description</b>:<b style="color:#ff55ff;"> A Zarf Package that deploys the WordPress blogging and content management platform</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">version</b>:<b style="color:#ff55ff;"> 26.0.0</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">architecture</b>:<b style="color:#ff55ff;"> amd64</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">aggregateChecksum</b>:<b style="color:#ff55ff;"> 8375743b716d39346967c70b1bcaf2480a09417c8aa302e4868dd9793663b1ef</b>
-<b style="color:#ff55ff;"></b><b style="color:#55ffff;">build</b>:<b style="color:#55ffff;"></b>
-<b style="color:#55ffff;">  terminal</b>:<b style="color:#ff55ff;"> guilty-spark</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">user</b>:<b style="color:#ff55ff;"> wayne</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">architecture</b>:<b style="color:#ff55ff;"> amd64</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">timestamp</b>:<b style="color:#ff55ff;"> Sat, 06 May 2023 19:06:43 -0500</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">version</b>:<b style="color:#ff55ff;"> v0.26.2</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">migrations</b>:
-  -<b style="color:#ff55ff;"> scripts-to-actions</b>
-<b style="color:#ff55ff;">  </b>-<b style="color:#ff55ff;"> pluralize-set-variable</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">differential</b>:<b style="color:#ffffff;"> false</b>
-<b style="color:#ffffff;"></b><b style="color:#55ffff;">components</b>:
--<b style="color:#55ffff;"> name</b>:<b style="color:#ff55ff;"> wordpress</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">description</b>:<b style="color:#ff55ff;"> Deploys the Bitnami-packaged WordPress chart into the cluster</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">required</b>:<b style="color:#ffffff;"> true</b>
-<b style="color:#ffffff;">  </b><b style="color:#55ffff;">charts</b>:
-  -<b style="color:#55ffff;"> name</b>:<b style="color:#ff55ff;"> wordpress</b>
-<b style="color:#ff55ff;">    </b><b style="color:#55ffff;">url</b>:<b style="color:#ff55ff;"> oci://registry-1.docker.io/bitnamicharts/wordpress</b>
-<b style="color:#ff55ff;">    </b><b style="color:#55ffff;">version</b>:<b style="color:#ff55ff;"> 26.0.0</b>
-<b style="color:#ff55ff;">    </b><b style="color:#55ffff;">namespace</b>:<b style="color:#ff55ff;"> wordpress</b>
-<b style="color:#ff55ff;">    </b><b style="color:#55ffff;">valuesFiles</b>:
-    -<b style="color:#ff55ff;"> wordpress-values.yaml</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">manifests</b>:
-  -<b style="color:#55ffff;"> name</b>:<b style="color:#ff55ff;"> connect-services</b>
-<b style="color:#ff55ff;">    </b><b style="color:#55ffff;">namespace</b>:<b style="color:#ff55ff;"> wordpress</b>
-<b style="color:#ff55ff;">    </b><b style="color:#55ffff;">files</b>:
-    -<b style="color:#ff55ff;"> connect-services.yaml</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">images</b>:
-  -<b style="color:#ff55ff;"> docker.io/bitnamilegacy/apache-exporter:1.0.10-debian-12-r55</b>
-<b style="color:#ff55ff;">  </b>-<b style="color:#ff55ff;"> docker.io/bitnamilegacy/mariadb:12.0.2-debian-12-r0</b>
-<b style="color:#ff55ff;">  </b>-<b style="color:#ff55ff;"> docker.io/bitnamilegacy/wordpress:6.8.2-debian-12-r4</b>
-<b style="color:#ff55ff;"></b><b style="color:#55ffff;">variables</b>:
--<b style="color:#55ffff;"> name</b>:<b style="color:#ff55ff;"> WORDPRESS_USERNAME</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">description</b>:<b style="color:#ff55ff;"> The username that is used to login to the WordPress admin account</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">default</b>:<b style="color:#ff55ff;"> zarf</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">prompt</b>:<b style="color:#ffffff;"> true</b>
-<b style="color:#ffffff;"></b>-<b style="color:#55ffff;"> name</b>:<b style="color:#ff55ff;"> WORDPRESS_PASSWORD</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">description</b>:<b style="color:#ff55ff;"> The password that is used to login to the WordPress admin account</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">prompt</b>:<b style="color:#ffffff;"> true</b>
-<b style="color:#ffffff;">  </b><b style="color:#55ffff;">sensitive</b>:<b style="color:#ffffff;"> true</b>
-<b style="color:#ffffff;"></b>-<b style="color:#55ffff;"> name</b>:<b style="color:#ff55ff;"> WORDPRESS_EMAIL</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">description</b>:<b style="color:#ff55ff;"> The email that is used for the WordPress admin account</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">default</b>:<b style="color:#ff55ff;"> hello@defenseunicorns.com</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">prompt</b>:<b style="color:#ffffff;"> true</b>
-<b style="color:#ffffff;"></b>-<b style="color:#55ffff;"> name</b>:<b style="color:#ff55ff;"> WORDPRESS_FIRST_NAME</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">description</b>:<b style="color:#ff55ff;"> The first name that is used for the WordPress admin account</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">default</b>:<b style="color:#ff55ff;"> Zarf</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">prompt</b>:<b style="color:#ffffff;"> true</b>
-<b style="color:#ffffff;"></b>-<b style="color:#55ffff;"> name</b>:<b style="color:#ff55ff;"> WORDPRESS_LAST_NAME</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">description</b>:<b style="color:#ff55ff;"> The last name that is used for the WordPress admin account</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">default</b>:<b style="color:#ff55ff;"> The Axolotl</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">prompt</b>:<b style="color:#ffffff;"> true</b>
-<b style="color:#ffffff;"></b>-<b style="color:#55ffff;"> name</b>:<b style="color:#ff55ff;"> WORDPRESS_BLOG_NAME</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">description</b>:<b style="color:#ff55ff;"> The blog name that is used for the WordPress admin account</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">default</b>:<b style="color:#ff55ff;"> The Zarf Blog</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">prompt</b>:<b style="color:#ffffff;"> true</b>
-<b class="BOLD" style="color:#55ff55;">INF </b><b class="BOLD">this package has SBOMs available for review in a temporary directory directory=/home/user/zarf/examples/wordpress/zarf-sbom </b>
-<b class="BOLD" style="color:#55ff55;">? </b><b class="BOLD">Deploy this Zarf package? </b><b class=WHI>(y/N) </b>
+<b class="WHI">$ zarf package deploy zarf-package-wordpress-arm64-26.0.0.tar.zst</b>
+<b class="HIK">2026-11-01 07:14:39</b> <b class="HIY">WRN</b> package signature not verified; continuing <b class="HIC">reason=</b><b class="WHI">package is not signed - verification cannot be performed: no verification material available</b>
+
+<b class="HIC">kind</b>: <b class="HIM">ZarfPackageConfig</b>
+<b class="HIC">metadata</b>:
+  <b class="HIC">name</b>: <b class="HIM">wordpress</b>
+  <b class="HIC">description</b>: <b class="HIM">"\"A Zarf Package that deploys the WordPress blogging and content management platform\"\n"</b>
+  <b class="HIC">version</b>: <b class="HIM">26.0.0</b>
+  <b class="HIC">architecture</b>: <b class="HIM">arm64</b>
+  <b class="HIC">aggregateChecksum</b>: <b class="HIM">68c2110b71b95c9b4f68fcec84d96d3a353e8e08562daa6813a51184b63055ee</b>
+  <b class="HIC">allowNamespaceOverride</b>: <b class="HIW">true</b>
+<b class="HIC">build</b>:
+  <b class="HIC">architecture</b>: <b class="HIM">arm64</b>
+  <b class="HIC">timestamp</b>: <b class="HIM">Sun, 01 Nov 2026 07:12:28 -0600</b>
+  <b class="HIC">version</b>: <b class="HIM">v0.89.0</b>
+  <b class="HIC">migrations</b>:
+  - <b class="HIM">scripts-to-actions</b>
+  - <b class="HIM">pluralize-set-variable</b>
+  <b class="HIC">signed</b>: <b class="HIW">false</b>
+  <b class="HIC">provenanceFiles</b>:
+  - <b class="HIM">checksums.txt</b>
+<b class="HIC">components</b>:
+- <b class="HIC">name</b>: <b class="HIM">wordpress</b>
+  <b class="HIC">description</b>: <b class="HIM">|</b>
+    <b class="HIM">Deploys the Bitnami-packaged WordPress chart into the cluster</b>
+  <b class="HIC">required</b>: <b class="HIW">true</b>
+  <b class="HIC">manifests</b>:
+  - <b class="HIC">name</b>: <b class="HIM">connect-services</b>
+    <b class="HIC">namespace</b>: <b class="HIM">wordpress</b>
+    <b class="HIC">files</b>:
+    - <b class="HIM">connect-services.yaml</b>
+    <b class="HIC">template</b>: <b class="HIW">false</b>
+  <b class="HIC">charts</b>:
+  - <b class="HIC">name</b>: <b class="HIM">wordpress</b>
+    <b class="HIC">version</b>: <b class="HIM">26.0.0</b>
+    <b class="HIC">url</b>: <b class="HIM">oci://registry-1.docker.io/bitnamicharts/wordpress</b>
+    <b class="HIC">namespace</b>: <b class="HIM">wordpress</b>
+    <b class="HIC">valuesFiles</b>:
+    - <b class="HIM">wordpress-values.yaml</b>
+    <b class="HIC">schemaValidation</b>: <b class="HIW">true</b>
+  <b class="HIC">images</b>:
+  - <b class="HIM">docker.io/bitnamilegacy/apache-exporter:1.0.10-debian-12-r55</b>
+  - <b class="HIM">docker.io/bitnamilegacy/mariadb:12.0.2-debian-12-r0</b>
+  - <b class="HIM">docker.io/bitnamilegacy/wordpress:6.8.2-debian-12-r4</b>
+<b class="HIC">variables</b>:
+- <b class="HIC">name</b>: <b class="HIM">WORDPRESS_USERNAME  currently set to 'zarf' (default)</b>
+  <b class="HIC">description</b>: <b class="HIM">The username that is used to login to the WordPress admin account</b>
+  <b class="HIC">default</b>: <b class="HIM">zarf</b>
+  <b class="HIC">prompt</b>: <b class="HIW">true</b>
+- <b class="HIC">name</b>: <b class="HIM">WORDPRESS_PASSWORD  currently set to '**sanitized**'</b>
+  <b class="HIC">sensitive</b>: <b class="HIW">true</b>
+  <b class="HIC">description</b>: <b class="HIM">The password that is used to login to the WordPress admin account</b>
+  <b class="HIC">prompt</b>: <b class="HIW">true</b>
+- <b class="HIC">name</b>: <b class="HIM">WORDPRESS_EMAIL  currently set to 'hello@defenseunic...' (default)</b>
+  <b class="HIC">description</b>: <b class="HIM">The email that is used for the WordPress admin account</b>
+  <b class="HIC">default</b>: <b class="HIM">hello@defenseunicorns.com</b>
+  <b class="HIC">prompt</b>: <b class="HIW">true</b>
+- <b class="HIC">name</b>: <b class="HIM">WORDPRESS_FIRST_NAME  currently set to 'Zarf' (default)</b>
+  <b class="HIC">description</b>: <b class="HIM">The first name that is used for the WordPress admin account</b>
+  <b class="HIC">default</b>: <b class="HIM">Zarf</b>
+  <b class="HIC">prompt</b>: <b class="HIW">true</b>
+- <b class="HIC">name</b>: <b class="HIM">WORDPRESS_LAST_NAME  currently set to 'The Axolotl' (default)</b>
+  <b class="HIC">description</b>: <b class="HIM">The last name that is used to login to the WordPress admin account</b>
+  <b class="HIC">default</b>: <b class="HIM">The Axolotl</b>
+  <b class="HIC">prompt</b>: <b class="HIW">true</b>
+- <b class="HIC">name</b>: <b class="HIM">WORDPRESS_BLOG_NAME  currently set to 'The Zarf Blog' (default)</b>
+  <b class="HIC">description</b>: <b class="HIM">The blog name that is used for the WordPress admin account</b>
+  <b class="HIC">default</b>: <b class="HIM">The Zarf Blog</b>
+  <b class="HIC">prompt</b>: <b class="HIW">true</b>
+<b class="HIK">2026-11-01 07:14:39</b> <b class="HIG">INF</b> this package has SBOMs available for review in a temporary directory <b class="HIC">directory=</b><b class="WHI">/tmp/zarf-sbom</b>
+<b class="HIG">?</b> <b class="HIW">Deploy this Zarf package?</b> <b class="WHI">(y/N)</b>
 </pre>
 </body>
 </html>

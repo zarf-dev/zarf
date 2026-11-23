@@ -47,31 +47,76 @@ b.BWHI {background-color: #aaaaaa}
 </head>
 <body>
 <pre>
-<b class=WHI>$ zarf package remove wordpress</b>
-<b class=YEL>Saving log file to</b>
-<b class=YEL>/var/folders/bk/rz1xx2sd5zn134c0_j1s2n5r0000gp/T/zarf-2023-03-23-10-07-47-1612529511.log</b>
-<b class=YEL></b>Error: required flag(s) "confirm" not set
-Usage:
-  zarf package remove {PACKAGE_NAME|PACKAGE_FILE} [flags]
+<b class="WHI">$ zarf package remove wordpress</b>
+<b class="HIK">2026-11-01 08:11:32</b> <b class="HIG">INF</b> <b class="HIW">loaded package for removal</b> <b class="HIC">name=</b><b class="WHI">wordpress</b>
 
-Aliases:
-  remove, u
-
-Flags:
-      --components string   Comma-separated list of components to uninstall
-      --confirm             REQUIRED. Confirm the removal action to prevent accidental deletions
-  -h, --help                help for remove
-
-Global Flags:
-  -a, --architecture string   Architecture for OCI images
-      --insecure              Allow access to insecure registries and disable other recommended security enforcements. This flag should only be used if you have a specific reason and accept the reduced security posture.
-  -l, --log-level string      Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
-      --no-log-file           Disable log file creation
-      --no-progress           Disable fancy UI progress bars, spinners, logos, etc
-      --tmpdir string         Specify the temporary directory to use for intermediate files
-      --zarf-cache string     Specify the location of the Zarf cache directory (default "~/.zarf-cache")
-
-Error: required flag(s) "confirm" not set
+<b class="HIC">kind</b>: <b class="HIM">ZarfPackageConfig</b>
+<b class="HIC">metadata</b>:
+  <b class="HIC">name</b>: <b class="HIM">wordpress</b>
+  <b class="HIC">description</b>: <b class="HIM">"\"A Zarf Package that deploys the WordPress blogging and content management platform\"\n"</b>
+  <b class="HIC">version</b>: <b class="HIM">26.0.0</b>
+  <b class="HIC">architecture</b>: <b class="HIM">arm64</b>
+  <b class="HIC">aggregateChecksum</b>: <b class="HIM">68c2110b71b95c9b4f68fcec84d96d3a353e8e08562daa6813a51184b63055ee</b>
+  <b class="HIC">allowNamespaceOverride</b>: <b class="HIW">true</b>
+<b class="HIC">build</b>:
+  <b class="HIC">architecture</b>: <b class="HIM">arm64</b>
+  <b class="HIC">timestamp</b>: <b class="HIM">Sun, 01 Nov 2026 07:12:28 -0600</b>
+  <b class="HIC">version</b>: <b class="HIM">v0.89.0</b>
+  <b class="HIC">migrations</b>:
+  - <b class="HIM">scripts-to-actions</b>
+  - <b class="HIM">pluralize-set-variable</b>
+  <b class="HIC">signed</b>: <b class="HIW">false</b>
+  <b class="HIC">provenanceFiles</b>:
+  - <b class="HIM">checksums.txt</b>
+<b class="HIC">components</b>:
+- <b class="HIC">name</b>: <b class="HIM">wordpress</b>
+  <b class="HIC">description</b>: <b class="HIM">|</b>
+    <b class="HIM">Deploys the Bitnami-packaged WordPress chart into the cluster</b>
+  <b class="HIC">required</b>: <b class="HIW">true</b>
+  <b class="HIC">manifests</b>:
+  - <b class="HIC">name</b>: <b class="HIM">connect-services</b>
+    <b class="HIC">namespace</b>: <b class="HIM">wordpress</b>
+    <b class="HIC">files</b>:
+    - <b class="HIM">connect-services.yaml</b>
+    <b class="HIC">template</b>: <b class="HIW">false</b>
+  <b class="HIC">charts</b>:
+  - <b class="HIC">name</b>: <b class="HIM">wordpress</b>
+    <b class="HIC">version</b>: <b class="HIM">26.0.0</b>
+    <b class="HIC">url</b>: <b class="HIM">oci://registry-1.docker.io/bitnamicharts/wordpress</b>
+    <b class="HIC">namespace</b>: <b class="HIM">wordpress</b>
+    <b class="HIC">valuesFiles</b>:
+    - <b class="HIM">wordpress-values.yaml</b>
+    <b class="HIC">schemaValidation</b>: <b class="HIW">true</b>
+  <b class="HIC">images</b>:
+  - <b class="HIM">docker.io/bitnamilegacy/apache-exporter:1.0.10-debian-12-r55</b>
+  - <b class="HIM">docker.io/bitnamilegacy/mariadb:12.0.2-debian-12-r0</b>
+  - <b class="HIM">docker.io/bitnamilegacy/wordpress:6.8.2-debian-12-r4</b>
+<b class="HIC">variables</b>:
+- <b class="HIC">name</b>: <b class="HIM">WORDPRESS_USERNAME</b>
+  <b class="HIC">description</b>: <b class="HIM">The username that is used to login to the WordPress admin account</b>
+  <b class="HIC">default</b>: <b class="HIM">zarf</b>
+  <b class="HIC">prompt</b>: <b class="HIW">true</b>
+- <b class="HIC">name</b>: <b class="HIM">WORDPRESS_PASSWORD</b>
+  <b class="HIC">sensitive</b>: <b class="HIW">true</b>
+  <b class="HIC">description</b>: <b class="HIM">The password that is used to login to the WordPress admin account</b>
+  <b class="HIC">prompt</b>: <b class="HIW">true</b>
+- <b class="HIC">name</b>: <b class="HIM">WORDPRESS_EMAIL</b>
+  <b class="HIC">description</b>: <b class="HIM">The email that is used for the WordPress admin account</b>
+  <b class="HIC">default</b>: <b class="HIM">hello@defenseunicorns.com</b>
+  <b class="HIC">prompt</b>: <b class="HIW">true</b>
+- <b class="HIC">name</b>: <b class="HIM">WORDPRESS_FIRST_NAME</b>
+  <b class="HIC">description</b>: <b class="HIM">The first name that is used for the WordPress admin account</b>
+  <b class="HIC">default</b>: <b class="HIM">Zarf</b>
+  <b class="HIC">prompt</b>: <b class="HIW">true</b>
+- <b class="HIC">name</b>: <b class="HIM">WORDPRESS_LAST_NAME</b>
+  <b class="HIC">description</b>: <b class="HIM">The last name that is used for the WordPress admin account</b>
+  <b class="HIC">default</b>: <b class="HIM">The Axolotl</b>
+  <b class="HIC">prompt</b>: <b class="HIW">true</b>
+- <b class="HIC">name</b>: <b class="HIM">WORDPRESS_BLOG_NAME</b>
+  <b class="HIC">description</b>: <b class="HIM">The blog name that is used for the WordPress admin account</b>
+  <b class="HIC">default</b>: <b class="HIM">The Zarf Blog</b>
+  <b class="HIC">prompt</b>: <b class="HIW">true</b>
+<b class="HIG">?</b> <b class="HIW">Remove this Zarf package?</b> <b class="WHI">(y/N)</b>
 </pre>
 </body>
 </html>
