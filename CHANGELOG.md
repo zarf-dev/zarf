@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.1.0](https://github.com/zarf-dev/zarf/compare/v1.0.1...v1.1.0) (2026-11-23)
+
+
+### Features
+
+* add GitHub Actions workflows for link checking and site validation ([#5609](https://github.com/zarf-dev/zarf/issues/5609)) ([1fe4c95](https://github.com/zarf-dev/zarf/commit/1fe4c95bf4fc96304645bdd7b341444fe042123b))
+* add grype SARIF upload step to nightly CVE scan workflow ([#5630](https://github.com/zarf-dev/zarf/issues/5630)) ([a339814](https://github.com/zarf-dev/zarf/commit/a339814911178e7f68f637587033e586002001a1))
+* add workflow to verify commit signatures on pull requests ([#5632](https://github.com/zarf-dev/zarf/issues/5632)) ([458cd2b](https://github.com/zarf-dev/zarf/commit/458cd2b572f1287b7e212df868e63992a4ee2cd9))
+
+
+### Bug Fixes
+
+* avoid re-tagging package pushes on publish ([#5695](https://github.com/zarf-dev/zarf/issues/5695)) ([001952c](https://github.com/zarf-dev/zarf/commit/001952caafcb72b0ed2acb90765417df7148301a))
+* count node items when sizing registry HPA replicas ([#5641](https://github.com/zarf-dev/zarf/issues/5641)) ([6f444bd](https://github.com/zarf-dev/zarf/commit/6f444bd568a2999856e97d08096d6f5bdb675d8e))
+* paginate registry tag listings ([#5676](https://github.com/zarf-dev/zarf/issues/5676)) ([d9c2a2f](https://github.com/zarf-dev/zarf/commit/d9c2a2fe78dff2c6ab85b92e943001a5d0855121))
+
 ## [1.0.1](https://github.com/zarf-dev/zarf/compare/v1.0.0...v1.0.1) (2026-11-11)
 
 
