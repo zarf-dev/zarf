@@ -461,7 +461,7 @@ func orasSave(ctx context.Context, imageInfo imagePullInfo, index, count int, op
 			trackedDst.StartReporting(ctx)
 			defer trackedDst.StopReporting()
 			var copyErr error
-			desc, copyErr = oras.Copy(ctx, pullSrc, imageInfo.registryOverrideRef, trackedDst, imageInfo.ref, copyOpts)
+			desc, copyErr = oras.Copy(ctx, pullSrc, imageInfo.registryOverrideRef, trackedDst.CopyTarget(), imageInfo.ref, copyOpts)
 			return copyErr
 		},
 		retry.Attempts(uint(config.ZarfDefaultRetries)),

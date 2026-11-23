@@ -4,11 +4,16 @@
 package signing
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
+	"sync/atomic"
 	"testing"
 
 	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/google/go-containerregistry/pkg/registry"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/stretchr/testify/require"
@@ -50,6 +55,42 @@ func TestCosignSignManifestPublishesOCIReferrer(t *testing.T) {
 	manifest, err := referrers.IndexManifest()
 	require.NoError(t, err)
 	require.Len(t, manifest.Manifests, 1)
+}
+
+func TestCosignSignManifestByDigest(t *testing.T) {
+	t.Parallel()
+
+	ctx := t.Context()
+	digest, err := empty.Image.Digest()
+	require.NoError(t, err)
+	const repository = "components/example"
+	subjectPath := "/v2/" + repository + "/manifests/" + digest.String()
+	var subjectHeads atomic.Int32
+	handler := registry.New(registry.WithReferrersSupport(true))
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodHead && r.URL.Path == subjectPath {
+			subjectHeads.Add(1)
+		}
+		handler.ServeHTTP(w, r)
+	}))
+	t.Cleanup(server.Close)
+
+	tag, err := name.NewTag(strings.TrimPrefix(server.URL, "http://")+"/"+repository+":1.0", name.Insecure)
+	require.NoError(t, err)
+	require.NoError(t, remote.Write(tag, empty.Image, remote.WithContext(ctx)))
+	subject := tag.Context().Digest(digest.String())
+	beforeSigning := subjectHeads.Load()
+
+	registryOpts := types.RemoteOptions{PlainHTTP: true}
+	signOpts := DefaultSignManifestOptions()
+	signOpts.Key = "./testdata/cosign.key"
+	signOpts.Password = "test"
+	require.NoError(t, SignManifest(ctx, subject.String(), signOpts, registryOpts))
+	require.LessOrEqual(t, subjectHeads.Load()-beforeSigning, int32(1), "signing by digest should avoid a separate resolution request")
+
+	verifyOpts := DefaultVerifyManifestOptions()
+	verifyOpts.Key = "./testdata/cosign.pub"
+	require.NoError(t, VerifyManifest(ctx, subject.String(), verifyOpts, registryOpts))
 }
 
 // TestCosignSignVerifyRoundTrip exercises CosignSignBlobWithOptions and
