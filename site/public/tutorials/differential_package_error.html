@@ -47,15 +47,12 @@ b.BWHI {background-color: #aaaaaa}
 </head>
 <body>
 <pre>
-<b class="WHI">
-$ zarf package create . --confirm --no-progress --differential ./zarf-package-longhorn-arm64-1.4.0.tar.zst
-</b>
-<b class=YEL>Saving log file to</b>
-<b class=YEL>/var/folders/bk/rz1xx2sd5zn134c0_j1s2n5r0000gp/T/zarf-2023-05-19-09-30-01-3248364459.log</b>
-<b class=YEL></b>
-<b class=YEL>Using build directory .</b>
-<b class=YEL></b><b class=BLK style="background-color:#ff5555"></b><b class=BLK style="background-color:#ff5555">     ERROR: </b> <b style="color:#ff5555;"></b><b style="color:#ff5555;">Failed to create package: unable to create a differential package with the same version as the</b>
-<b class=BLK style="background-color:#ff5555"></b><b class=BLK style="background-color:#ff5555">            </b> <b style="color:#ff5555;"></b><b style="color:#ff5555;">package you are using as a reference; the package version must be incremented</b>
+<b class="WHI">$ zarf package create . \</b>
+<b class="WHI">  --confirm \</b>
+<b class="WHI">  --differential ./zarf-package-longhorn-arm64-1.11.2.tar.zst</b>
+<b class="HIK">2026-11-04 14:08:24</b> <b class="HIY">WRN</b> package signature not verified; continuing <b class="HIC">reason=</b><b class="WHI">package is not signed - verification cannot be performed: no verification material available</b>
+<b class="HIK">2026-11-04 14:08:24</b> <b class="HIG">INF</b> assembling package <b class="HIC">path=</b><b class="WHI">.</b>
+<b class="HIK">2026-11-04 14:08:24</b> <b class="HIR">ERR</b> failed to create package: unable to create differential package. Please ensure the differential package version and reference package version are not the same. The package version must be incremented
 </pre>
 </body>
 </html>

@@ -47,111 +47,42 @@ b.BWHI {background-color: #aaaaaa}
 </head>
 <body>
 <pre>
-<b class=WHI>
-$ cd examples/longhorn
-$ zarf package create . --confirm
-</b>
-<b class=YEL>Saving log file to</b>
-<b class=YEL>/var/folders/bk/rz1xx2sd5zn134c0_j1s2n5r0000gp/T/zarf-2023-05-19-09-17-38-3093453865.log</b>
-<b class=YEL></b>
-<b class=YEL>Using build directory .</b>
-<b class=YEL></b>
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-<b style="color:#55ffff;">kind</b>:<b style="color:#ff55ff;"> ZarfPackageConfig</b>
-<b style="color:#ff55ff;"></b><b style="color:#55ffff;">metadata</b>:<b style="color:#55ffff;"></b>
-<b style="color:#55ffff;">  name</b>:<b style="color:#ff55ff;"> longhorn</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">description</b>:<b style="color:#ff55ff;"> Example package for Longhorn cloud native distributed block storage for Kubernetes</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">version</b>:<b style="color:#ff55ff;"> 1.4.0</b>
-<b style="color:#ff55ff;"></b><b style="color:#55ffff;">components</b>:
--<b style="color:#55ffff;"> name</b>:<b style="color:#ff55ff;"> longhorn-environment-check</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">required</b>:<b style="color:#ffffff;"> true</b>
-<b style="color:#ffffff;">  </b><b style="color:#55ffff;">actions</b>:<b style="color:#55ffff;"></b>
-<b style="color:#55ffff;">    onDeploy</b>:<b style="color:#55ffff;"></b>
-<b style="color:#55ffff;">      after</b>:
-      -<b style="color:#55ffff;"> cmd</b>: |
-<b style="color:#ff55ff;">          export PATH=$PATH:./</b>
-<b style="color:#ff55ff;">          awk '{gsub(/kubectl /, "./zarf tools kubectl ")} 1' ./environment_check.sh &gt; tmp &amp;&amp; mv tmp ./environment_check.sh</b>
-<b style="color:#ff55ff;">          awk '{gsub(/"kubectl" /, "")} 1' ./environment_check.sh &gt; tmp &amp;&amp; mv tmp ./environment_check.sh</b>
-<b style="color:#ff55ff;">          chmod +x ./environment_check.sh</b>
-<b style="color:#ff55ff;">          ./environment_check.sh</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">files</b>:
-  -<b style="color:#55ffff;"> source</b>:<b style="color:#ff55ff;"> https://raw.githubusercontent.com/longhorn/longhorn/v1.4.0/scripts/environment_check.sh</b>
-<b style="color:#ff55ff;">    </b><b style="color:#55ffff;">target</b>:<b style="color:#ff55ff;"> environment_check.sh</b>
-<b style="color:#ff55ff;">    </b><b style="color:#55ffff;">executable</b>:<b style="color:#ffffff;"> true</b>
-<b style="color:#ffffff;">  </b>-<b style="color:#55ffff;"> source</b>:<b style="color:#ff55ff;"> https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64</b>
-<b style="color:#ff55ff;">    </b><b style="color:#55ffff;">target</b>:<b style="color:#ff55ff;"> jq</b>
-<b style="color:#ff55ff;">    </b><b style="color:#55ffff;">executable</b>:<b style="color:#ffffff;"> true</b>
-<b style="color:#ffffff;"></b>-<b style="color:#55ffff;"> name</b>:<b style="color:#ff55ff;"> longhorn</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">description</b>:<b style="color:#ff55ff;"> Deploy Longhorn into a Kubernetes cluster.  https://longhorn.io</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">required</b>:<b style="color:#ffffff;"> true</b>
-<b style="color:#ffffff;">  </b><b style="color:#55ffff;">actions</b>:<b style="color:#55ffff;"></b>
-<b style="color:#55ffff;">    onRemove</b>:<b style="color:#55ffff;"></b>
-<b style="color:#55ffff;">      before</b>:
-      -<b style="color:#55ffff;"> cmd</b>:<b style="color:#ff55ff;"> "./zarf tools kubectl -n longhorn-system patch -p '{\"value\": \"true\"}' --type=merge lhs deleting-confirmation-flag"</b><b style="color:#55ffff;"></b>
-<b style="color:#55ffff;">  charts</b>:
-  -<b style="color:#55ffff;"> name</b>:<b style="color:#ff55ff;"> longhorn</b>
-<b style="color:#ff55ff;">    </b><b style="color:#55ffff;">url</b>:<b style="color:#ff55ff;"> https://charts.longhorn.io</b>
-<b style="color:#ff55ff;">    </b><b style="color:#55ffff;">version</b>:<b style="color:#ff55ff;"> 1.4.0</b>
-<b style="color:#ff55ff;">    </b><b style="color:#55ffff;">namespace</b>:<b style="color:#ff55ff;"> longhorn-system</b>
-<b style="color:#ff55ff;">    </b><b style="color:#55ffff;">valuesFiles</b>:
-    -<b style="color:#ff55ff;"> values.yaml</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">manifests</b>:
-  -<b style="color:#55ffff;"> name</b>:<b style="color:#ff55ff;"> longhorn-connect</b>
-<b style="color:#ff55ff;">    </b><b style="color:#55ffff;">namespace</b>:<b style="color:#ff55ff;"> longhorn-system</b>
-<b style="color:#ff55ff;">    </b><b style="color:#55ffff;">files</b>:
-    -<b style="color:#ff55ff;"> connect.yaml</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">images</b>:
-  -<b style="color:#ff55ff;"> longhornio/csi-attacher:v3.4.0</b>
-<b style="color:#ff55ff;">  </b>-<b style="color:#ff55ff;"> longhornio/csi-provisioner:v2.1.2</b>
-<b style="color:#ff55ff;">  </b>-<b style="color:#ff55ff;"> longhornio/csi-resizer:v1.3.0</b>
-<b style="color:#ff55ff;">  </b>-<b style="color:#ff55ff;"> longhornio/csi-snapshotter:v5.0.1</b>
-<b style="color:#ff55ff;">  </b>-<b style="color:#ff55ff;"> longhornio/csi-node-driver-registrar:v2.5.0</b>
-<b style="color:#ff55ff;">  </b>-<b style="color:#ff55ff;"> longhornio/livenessprobe:v2.8.0</b>
-<b style="color:#ff55ff;">  </b>-<b style="color:#ff55ff;"> longhornio/backing-image-manager:v1.4.0</b>
-<b style="color:#ff55ff;">  </b>-<b style="color:#ff55ff;"> longhornio/longhorn-engine:v1.4.0</b>
-<b style="color:#ff55ff;">  </b>-<b style="color:#ff55ff;"> longhornio/longhorn-instance-manager:v1.4.0</b>
-<b style="color:#ff55ff;">  </b>-<b style="color:#ff55ff;"> longhornio/longhorn-manager:v1.4.0</b>
-<b style="color:#ff55ff;">  </b>-<b style="color:#ff55ff;"> longhornio/longhorn-share-manager:v1.4.0</b>
-<b style="color:#ff55ff;">  </b>-<b style="color:#ff55ff;"> longhornio/longhorn-ui:v1.4.0</b>
-<b style="color:#ff55ff;">  </b>-<b style="color:#ff55ff;"> longhornio/support-bundle-kit:v0.0.17</b>
-<b style="color:#55ff55;"></b><b style="color:#55ff55;">  ✔ </b> <b style="color:#55ff55;"></b><b style="color:#55ff55;">Create Zarf package confirmed</b>
-
-<div style="background-color:#555555">
-<b style="background-color:#555555"></b><b style="background-color:#555555">                                                                                </b>
-<b style="background-color:#555555"></b><b style="background-color:#555555"></b><b style="color:#ffffff;background-color:#555555"></b><b style="color:#ffffff;background-color:#555555">  📦 LONGHORN-ENVIRONMENT-CHECK COMPONENT                                       </b><b style="background-color:#555555"></b><b style="background-color:#555555"></b>
-<b style="background-color:#555555"></b><b style="background-color:#555555"></b><b style="color:#ffffff;background-color:#555555"></b><b style="color:#ffffff;background-color:#555555">                                                                                </b><b style="background-color:#555555"></b><b style="background-color:#555555"></b>
-<b style="background-color:#555555"></b><b style="background-color:#555555">                                                                                </b>
-</div>
-  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Downloading environment_check.sh</b>
-<b style="color:#55ff55;"></b><b style="color:#55ff55;">  ✔ </b> <b style="color:#55ff55;"></b><b style="color:#55ff55;">Downloaded https://raw.githubusercontent.com/longhorn/longhorn/v1.4.0/scripts/environment_check.sh</b>
-  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Downloading jq-linux64</b>
-<b style="color:#55ff55;"></b><b style="color:#55ff55;">  ✔ </b> <b style="color:#55ff55;"></b><b style="color:#55ff55;">Downloaded https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64</b>
-
-<div style="background-color:#555555">
-<b style="background-color:#555555"></b><b style="background-color:#555555">                                                                                </b>
-<b style="background-color:#555555"></b><b style="background-color:#555555"></b><b style="color:#ffffff;background-color:#555555"></b><b style="color:#ffffff;background-color:#555555">  📦 LONGHORN COMPONENT                                                         </b><b style="background-color:#555555"></b><b style="background-color:#555555"></b>
-<b style="background-color:#555555"></b><b style="background-color:#555555"></b><b style="color:#ffffff;background-color:#555555"></b><b style="color:#ffffff;background-color:#555555">                                                                                </b><b style="background-color:#555555"></b><b style="background-color:#555555"></b>
-<b style="background-color:#555555"></b><b style="background-color:#555555">                                                                                </b>
-</div>
-  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Processing helm chart longhorn:1.4.0 from repo https://charts.longhorn.io</b>
-  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Processing helm chart longhorn:1.4.0 from repo https://charts.longhorn.io</b>
-  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Loading 1 K8s manifests</b>
-  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Loading 1 K8s manifests</b>
-
-<div style="background-color:#555555">
-<b style="background-color:#555555"></b><b style="background-color:#555555">                                                                                </b>
-<b style="background-color:#555555"></b><b style="background-color:#555555"></b><b style="color:#ffffff;background-color:#555555"></b><b style="color:#ffffff;background-color:#555555">  📦 COMPONENT IMAGES                                                           </b><b style="background-color:#555555"></b><b style="background-color:#555555"></b>
-<b style="background-color:#555555"></b><b style="background-color:#555555"></b><b style="color:#ffffff;background-color:#555555"></b><b style="color:#ffffff;background-color:#555555">                                                                                </b><b style="background-color:#555555"></b><b style="background-color:#555555"></b>
-<b style="background-color:#555555"></b><b style="background-color:#555555">                                                                                </b>
-</div>
-
-  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Loading metadata for 13 images. This step may take several seconds to complete.</b>
-  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Loading metadata for 13 images. This step may take several seconds to complete.</b>
-  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Pulling Zarf package data (0.00 Byte of 786.66 MBs)</b>
-<b style="color:#55ff55;"></b><b style="color:#55ff55;">  ✔ </b> <b style="color:#55ff55;"></b><b style="color:#55ff55;">Pulling 13 images (786.66 MBs)</b>
-  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Creating SBOMs for 13 images and 1 components with files.</b>
-  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Creating SBOMs for 13 images and 1 components with files.</b>
+<b class="WHI">$ cd examples/longhorn</b>
+<b class="WHI">$ zarf package create . --confirm</b>
+<b class="HIK">2026-11-04 13:58:43</b> <b class="HIG">INF</b> assembling package <b class="HIC">path=</b><b class="WHI">.</b>
+<b class="HIK">2026-11-04 13:58:43</b> <b class="HIG">INF</b> pulling Helm chart from repository <b class="HIC">name=</b><b class="WHI">longhorn</b> <b class="HIC">source=</b><b class="WHI">https://charts.longhorn.io</b> <b class="HIC">chart=</b><b class="WHI">longhorn</b> <b class="HIC">version=</b><b class="WHI">1.11.2</b>
+<b class="HIK">2026-11-04 13:58:44</b> <b class="HIG">INF</b> fetching info for images <b class="HIC">count=</b><b class="WHI">13</b> <b class="HIC">destination=</b><b class="WHI">/tmp/zarf-1816445619/images</b>
+<b class="HIK">2026-11-04 13:58:46</b> <b class="HIG">INF</b> pulling images <b class="HIC">count=</b><b class="WHI">13</b>
+<b class="HIK">2026-11-04 13:58:46</b> <b class="HIG">INF</b> saving image <b class="HIC">name=</b><b class="WHI">docker.io/longhornio/livenessprobe:v2.18.0-20260428</b> <b class="HIC">size=</b><b class="WHI">13.39 MBs</b> <b class="HIC">count=</b><b class="WHI">1/13</b>
+<b class="HIK">2026-11-04 13:58:46</b> <b class="HIG">INF</b> saving image <b class="HIC">name=</b><b class="WHI">docker.io/longhornio/longhorn-manager:v1.11.2</b> <b class="HIC">size=</b><b class="WHI">124.33 MBs</b> <b class="HIC">count=</b><b class="WHI">2/13</b>
+<b class="HIK">2026-11-04 13:58:48</b> <b class="HIG">INF</b> saving image <b class="HIC">name=</b><b class="WHI">docker.io/longhornio/backing-image-manager:v1.11.2</b> <b class="HIC">size=</b><b class="WHI">143.92 MBs</b> <b class="HIC">count=</b><b class="WHI">3/13</b>
+<b class="HIK">2026-11-04 13:58:49</b> <b class="HIG">INF</b> saving image <b class="HIC">name=</b><b class="WHI">docker.io/longhornio/csi-snapshotter:v8.5.0-20260428</b> <b class="HIC">size=</b><b class="WHI">34.80 MBs</b> <b class="HIC">count=</b><b class="WHI">4/13</b>
+<b class="HIK">2026-11-04 13:58:50</b> <b class="HIG">INF</b> saving image <b class="HIC">name=</b><b class="WHI">docker.io/longhornio/csi-provisioner:v5.3.0-20260428</b> <b class="HIC">size=</b><b class="WHI">31.63 MBs</b> <b class="HIC">count=</b><b class="WHI">5/13</b>
+<b class="HIK">2026-11-04 13:58:51</b> <b class="HIG">INF</b> saving image <b class="HIC">name=</b><b class="WHI">docker.io/longhornio/csi-node-driver-registrar:v2.16.0-20260428</b> <b class="HIC">size=</b><b class="WHI">13.29 MBs</b> <b class="HIC">count=</b><b class="WHI">6/13</b>
+<b class="HIK">2026-11-04 13:58:51</b> <b class="HIG">INF</b> saving image <b class="HIC">name=</b><b class="WHI">docker.io/longhornio/csi-resizer:v2.1.0-20260428</b> <b class="HIC">size=</b><b class="WHI">34.76 MBs</b> <b class="HIC">count=</b><b class="WHI">7/13</b>
+<b class="HIK">2026-11-04 13:58:52</b> <b class="HIG">INF</b> saving image <b class="HIC">name=</b><b class="WHI">docker.io/longhornio/csi-attacher:v4.11.0-20260428</b> <b class="HIC">size=</b><b class="WHI">34.81 MBs</b> <b class="HIC">count=</b><b class="WHI">8/13</b>
+<b class="HIK">2026-11-04 13:58:52</b> <b class="HIG">INF</b> saving image <b class="HIC">name=</b><b class="WHI">docker.io/longhornio/longhorn-instance-manager:v1.11.2</b> <b class="HIC">size=</b><b class="WHI">452.64 MBs</b> <b class="HIC">count=</b><b class="WHI">9/13</b>
+<b class="HIK">2026-11-04 13:58:56</b> <b class="HIG">INF</b> saving image <b class="HIC">name=</b><b class="WHI">docker.io/longhornio/longhorn-engine:v1.11.2</b> <b class="HIC">size=</b><b class="WHI">163.62 MBs</b> <b class="HIC">count=</b><b class="WHI">10/13</b>
+<b class="HIK">2026-11-04 13:58:58</b> <b class="HIG">INF</b> saving image <b class="HIC">name=</b><b class="WHI">docker.io/longhornio/longhorn-share-manager:v1.11.2</b> <b class="HIC">size=</b><b class="WHI">120.02 MBs</b> <b class="HIC">count=</b><b class="WHI">11/13</b>
+<b class="HIK">2026-11-04 13:58:59</b> <b class="HIG">INF</b> saving image <b class="HIC">name=</b><b class="WHI">docker.io/longhornio/longhorn-ui:v1.11.2</b> <b class="HIC">size=</b><b class="WHI">81.69 MBs</b> <b class="HIC">count=</b><b class="WHI">12/13</b>
+<b class="HIK">2026-11-04 13:58:59</b> <b class="HIG">INF</b> saving image <b class="HIC">name=</b><b class="WHI">docker.io/longhornio/support-bundle-kit:v0.0.84</b> <b class="HIC">size=</b><b class="WHI">85.18 MBs</b> <b class="HIC">count=</b><b class="WHI">13/13</b>
+<b class="HIK">2026-11-04 13:59:00</b> <b class="HIG">INF</b> done pulling images <b class="HIC">count=</b><b class="WHI">13</b> <b class="HIC">duration=</b><b class="WHI">16.2s</b>
+<b class="HIK">2026-11-04 13:59:00</b> <b class="HIG">INF</b> composed components successfully
+<b class="HIK">2026-11-04 13:59:00</b> <b class="HIG">INF</b> generating SBOM
+<b class="HIK">2026-11-04 13:59:00</b> <b class="HIG">INF</b> creating image SBOM <b class="HIC">reference=</b><b class="WHI">docker.io/longhornio/livenessprobe:v2.18.0-20260428</b> <b class="HIC">count=</b><b class="WHI">1/13</b>
+<b class="HIK">2026-11-04 13:59:01</b> <b class="HIG">INF</b> creating image SBOM <b class="HIC">reference=</b><b class="WHI">docker.io/longhornio/longhorn-manager:v1.11.2</b> <b class="HIC">count=</b><b class="WHI">2/13</b>
+<b class="HIK">2026-11-04 13:59:04</b> <b class="HIG">INF</b> creating image SBOM <b class="HIC">reference=</b><b class="WHI">docker.io/longhornio/backing-image-manager:v1.11.2</b> <b class="HIC">count=</b><b class="WHI">3/13</b>
+<b class="HIK">2026-11-04 13:59:08</b> <b class="HIG">INF</b> creating image SBOM <b class="HIC">reference=</b><b class="WHI">docker.io/longhornio/csi-snapshotter:v8.5.0-20260428</b> <b class="HIC">count=</b><b class="WHI">4/13</b>
+<b class="HIK">2026-11-04 13:59:09</b> <b class="HIG">INF</b> creating image SBOM <b class="HIC">reference=</b><b class="WHI">docker.io/longhornio/csi-provisioner:v5.3.0-20260428</b> <b class="HIC">count=</b><b class="WHI">5/13</b>
+<b class="HIK">2026-11-04 13:59:10</b> <b class="HIG">INF</b> creating image SBOM <b class="HIC">reference=</b><b class="WHI">docker.io/longhornio/csi-node-driver-registrar:v2.16.0-20260428</b> <b class="HIC">count=</b><b class="WHI">6/13</b>
+<b class="HIK">2026-11-04 13:59:10</b> <b class="HIG">INF</b> creating image SBOM <b class="HIC">reference=</b><b class="WHI">docker.io/longhornio/csi-resizer:v2.1.0-20260428</b> <b class="HIC">count=</b><b class="WHI">7/13</b>
+<b class="HIK">2026-11-04 13:59:11</b> <b class="HIG">INF</b> creating image SBOM <b class="HIC">reference=</b><b class="WHI">docker.io/longhornio/csi-attacher:v4.11.0-20260428</b> <b class="HIC">count=</b><b class="WHI">8/13</b>
+<b class="HIK">2026-11-04 13:59:12</b> <b class="HIG">INF</b> creating image SBOM <b class="HIC">reference=</b><b class="WHI">docker.io/longhornio/longhorn-instance-manager:v1.11.2</b> <b class="HIC">count=</b><b class="WHI">9/13</b>
+<b class="HIK">2026-11-04 13:59:23</b> <b class="HIG">INF</b> creating image SBOM <b class="HIC">reference=</b><b class="WHI">docker.io/longhornio/longhorn-engine:v1.11.2</b> <b class="HIC">count=</b><b class="WHI">10/13</b>
+<b class="HIK">2026-11-04 13:59:27</b> <b class="HIG">INF</b> creating image SBOM <b class="HIC">reference=</b><b class="WHI">docker.io/longhornio/longhorn-share-manager:v1.11.2</b> <b class="HIC">count=</b><b class="WHI">11/13</b>
+<b class="HIK">2026-11-04 13:59:29</b> <b class="HIG">INF</b> creating image SBOM <b class="HIC">reference=</b><b class="WHI">docker.io/longhornio/longhorn-ui:v1.11.2</b> <b class="HIC">count=</b><b class="WHI">12/13</b>
+<b class="HIK">2026-11-04 13:59:31</b> <b class="HIG">INF</b> creating image SBOM <b class="HIC">reference=</b><b class="WHI">docker.io/longhornio/support-bundle-kit:v0.0.84</b> <b class="HIC">count=</b><b class="WHI">13/13</b>
+<b class="HIK">2026-11-04 13:59:34</b> <b class="HIG">INF</b> writing package to disk <b class="HIC">path=</b><b class="WHI">zarf-package-longhorn-arm64-1.11.2.tar.zst</b>
 </pre>
 </body>
 </html>

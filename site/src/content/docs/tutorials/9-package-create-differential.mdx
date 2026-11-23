@@ -30,13 +30,13 @@ You'll notice we're not using a cluster in this example.  That's because differe
 
 :::
 
-1. From the `examples/longhorn` folder, Create the Zarf package with the `zarf package create` command.
+1. From the `examples/longhorn` folder, create the Zarf package with the `zarf package create` command.
 
 <iframe src="/tutorials/differential_package_create.html" width="100%" height="600px"></iframe>
 
-2. Modify the `zarf.yaml` file to upgrade all of the 1.4.0 images to version 1.4.2; leave everything else the same.  
+2. Update all `1.11.2` references in both `zarf.yaml` and `values.yaml` to `1.11.3`. This updates the package version, Helm chart version, packaged image list, and Helm image overrides together.
 
-3. Update the version of the package as well in the `.metadata.version` field.
+<iframe src="/tutorials/differential_package_edit.html" width="100%" height="600px"></iframe>
 
 :::caution
 
@@ -46,9 +46,7 @@ Creating differential packages without updating the package version will result 
 
 :::
 
-<iframe src="/tutorials/differential_package_edit.html" width="100%" height="600px"></iframe>
-
-4. Next, use the `zarf package create` command with the `--differential` flag to specify a reference package.  This will build the differential package omitting the images, repositories, and OCI skeleton components that are already present in the specified Zarf package and are pinned to a specific version/shasum.
+3. Next, use the `zarf package create` command with the `--differential` flag to specify a reference package.  This will build the differential package omitting the images, repositories, and OCI skeleton components that are already present in the specified Zarf package and are pinned to a specific version/shasum.
 
 <iframe src="/tutorials/differential_package_create_differential.html" width="100%" height="600px"></iframe>
 
