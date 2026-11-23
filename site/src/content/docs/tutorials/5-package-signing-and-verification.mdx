@@ -86,10 +86,11 @@ zarf package verify zarf-package-wordpress-amd64-26.0.0.tar.zst --key cosign.pub
 Successful verification includes the following output:
 
 ```
-2026-01-15 14:17:13 INF checksum verification status=PASSED
+2026-11-02 13:29:20 INF verifying package source=zarf-package-wordpress-amd64-26.0.0.tar.zst
 Verified OK
-2026-01-15 14:17:16 INF signature verification status=PASSED
-2026-01-15 14:17:16 INF verification complete status=SUCCESS
+2026-11-02 13:29:20 INF checksum verification status=PASSED
+2026-11-02 13:29:20 INF signature verification status=PASSED
+2026-11-02 13:29:20 INF verification complete status=SUCCESS
 ```
 
 Verification checks the signature and package checksums. This confirms the package came from the expected signer and has not been modified.
@@ -107,9 +108,7 @@ The `--verify` flag enforces signature verification. If the signature is invalid
 Before deployment begins, the output includes:
 
 ```
-Verifying package signature...
-✔ Package signature verified successfully
-Deploying package...
+Verified OK
 ```
 
 ## Keyless Signing
