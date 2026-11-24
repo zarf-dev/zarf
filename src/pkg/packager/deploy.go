@@ -851,7 +851,7 @@ func (d *deployer) installCharts(ctx context.Context, pkgLayout *layout.PackageL
 		if err != nil {
 			return installedCharts, fmt.Errorf("failed to load chart data: %w", err)
 		}
-		l.Debug("loaded chart", "metadata", helmChart.Metadata, "chartValues", helmChart.Values)
+		l.Debug("loaded chart", "metadata", helmChart.Metadata)
 
 		connectStrings, installedChartName, err := helm.InstallOrUpgradeChart(ctx, chart, helmChart, values, helmOpts)
 		if err != nil {

@@ -5,8 +5,10 @@
 package template
 
 import (
+	"bytes"
 	"context"
 	"encoding/base64"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"testing"
@@ -16,11 +18,23 @@ import (
 	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/pki"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/value"
 	"github.com/zarf-dev/zarf/src/pkg/variables"
 )
+
+func TestApply_LogsOmitValues(t *testing.T) {
+	t.Parallel()
+	var logs bytes.Buffer
+	ctx := logger.WithContext(t.Context(), slog.New(slog.NewTextHandler(&logs, &slog.HandlerOptions{Level: slog.LevelDebug})))
+	result, err := Apply(ctx, "credential-canary", nil)
+	require.NoError(t, err)
+	require.Equal(t, "credential-canary", result)
+	require.Contains(t, logs.String(), "applying templates")
+	require.NotContains(t, logs.String(), "credential-canary")
+}
 
 func TestNewObjects(t *testing.T) {
 	values := value.Values{

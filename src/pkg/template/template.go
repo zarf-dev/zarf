@@ -182,7 +182,7 @@ func (o Objects) WithState(access StateAccess) (Objects, error) {
 // Apply takes a string, fills in the templates with the given Objects, and returns a new string.
 func Apply(ctx context.Context, s string, objs Objects) (string, error) {
 	l := logger.From(ctx)
-	l.Debug("applying templates", "str", s)
+	l.Debug("applying templates")
 
 	tmpl, err := ttmpl.New("str").
 		Funcs(funcMap()).

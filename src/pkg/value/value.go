@@ -136,9 +136,16 @@ func ParseLocalFile(ctx context.Context, path string) (Values, error) {
 			// Empty file - ensure we return initialized map not nil
 			return make(Values), nil
 		}
+		// Parser messages can contain values even when source excerpts are disabled.
+		// Helm has a related gap: https://github.com/helm/helm/issues/32963.
+		message := "invalid YAML"
+		var yamlErr yaml.Error
+		if errors.As(err, &yamlErr) {
+			message = yaml.FormatErrorWithToken(message, yamlErr.GetToken(), false, false)
+		}
 		return make(Values), &YAMLDecodeError{
 			FilePath: path,
-			Err:      fmt.Errorf("%s", yaml.FormatError(err, true, true)),
+			Err:      errors.New(message),
 		}
 	}
 	return m, nil
