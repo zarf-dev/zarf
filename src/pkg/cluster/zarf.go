@@ -29,7 +29,11 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/state"
 )
 
-const packageCompressionFormatAnnotation = "zarf.dev/compression-format"
+const (
+	packageCompressionFormatAnnotation = "zarf.dev/compression-format"
+	// maxDecompressedPackageStateSize bounds the decompressed state secret payload to prevent unbounded memory allocation.
+	maxDecompressedPackageStateSize = 10 * corev1.MaxSecretSize
+)
 
 // GetDeployedZarfPackages gets metadata information about packages that have been deployed to the cluster.
 // We determine what packages have been deployed to the cluster by looking for specific secrets in the Zarf namespace.
@@ -170,9 +174,14 @@ func decodeDeployedPackage(secret *corev1.Secret, depPkg *state.DeployedPackage)
 		if err != nil {
 			return err
 		}
-		data, err = io.ReadAll(reader)
+		// Read up to maxDecompressedPackageStateSize + 1 bytes to detect limit overflow.
+		limitedReader := io.LimitReader(reader, maxDecompressedPackageStateSize+1)
+		data, err = io.ReadAll(limitedReader)
 		if err = errors.Join(err, reader.Close()); err != nil {
 			return err
+		}
+		if int64(len(data)) > maxDecompressedPackageStateSize {
+			return fmt.Errorf("deployed package state exceeds maximum decompressed size limit of %d bytes", maxDecompressedPackageStateSize)
 		}
 	default:
 		return fmt.Errorf("unsupported deployed package compression format %q", format)
