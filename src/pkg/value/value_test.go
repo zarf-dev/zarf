@@ -5,11 +5,33 @@
 package value
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
+
+func TestParseLocalFile_ErrorOmitsValues(t *testing.T) {
+	t.Parallel()
+	for name, contents := range map[string]string{
+		"source excerpt": "registry:\n  password: credential-canary\nbroken\n",
+		"tagged scalar":  "password: !!bool credential-canary\n",
+		"directive":      "%YAML credential-canary\n---\npassword: secret\n",
+		"alias":          "password: *credential-canary\n",
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			path := filepath.Join(t.TempDir(), "rendered-values.yaml")
+			require.NoError(t, os.WriteFile(path, []byte(contents), 0o600))
+			_, err := ParseLocalFile(t.Context(), path)
+			require.ErrorContains(t, err, "failed to decode YAML from values file "+path+": [")
+			require.ErrorContains(t, err, "] invalid YAML")
+			require.NotContains(t, err.Error(), "credential-canary")
+		})
+	}
+}
 
 func TestParseFiles(t *testing.T) {
 	tests := []struct {

@@ -6,12 +6,22 @@ package test
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 )
+
+func TestValuesParseErrorOmitsContents(t *testing.T) {
+	valuesPath := filepath.Join(t.TempDir(), "rendered-values.yaml")
+	require.NoError(t, os.WriteFile(valuesPath, []byte("registry:\n  password: credential-canary\nbroken\n"), 0o600))
+	stdout, stderr, err := e2e.Zarf(t, "package", "deploy", "unused.tar.zst", "--confirm", "--values", valuesPath, "--log-level=debug")
+	require.Error(t, err)
+	require.Contains(t, stderr, "failed to decode YAML from values file "+valuesPath+": [3:1] invalid YAML")
+	require.NotContains(t, stdout+stderr, "credential-canary")
+}
 
 func TestValues(t *testing.T) {
 	t.Log("E2E: Values")
