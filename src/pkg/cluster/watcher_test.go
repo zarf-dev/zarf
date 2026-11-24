@@ -18,6 +18,8 @@ import (
 	"k8s.io/client-go/discovery/cached/memory"
 	fakediscovery "k8s.io/client-go/discovery/fake"
 	dynamicfake "k8s.io/client-go/dynamic/fake"
+	clientfeatures "k8s.io/client-go/features"
+	clientfeaturestesting "k8s.io/client-go/features/testing"
 	"k8s.io/client-go/restmapper"
 	k8stesting "k8s.io/client-go/testing"
 	"sigs.k8s.io/cli-utils/pkg/kstatus/watcher"
@@ -44,7 +46,7 @@ func (s *slowDiscovery) ServerGroupsWithContext(ctx context.Context) (*metav1.AP
 // Every new kind must resolve; a stale mapper delegate leaves some kinds Unknown.
 func TestInvalidatingWatcherNewCRDKinds(t *testing.T) {
 	// The fake dynamic client does not support streaming list.
-	t.Setenv("KUBE_FEATURE_WatchListClient", "false")
+	clientfeaturestesting.SetFeatureDuringTest(t, clientfeatures.WatchListClient, false)
 	const kinds = 25
 	gv := func(i int) schema.GroupVersion {
 		return schema.GroupVersion{Group: fmt.Sprintf("kind%d.example.com", i), Version: "v1"}

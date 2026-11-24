@@ -162,7 +162,7 @@ type invalidatingWatcher struct {
 func (w *invalidatingWatcher) Watch(ctx context.Context, objs object.ObjMetadataSet, opts watcher.Options) <-chan event.Event {
 	// Reset also invalidates the discovery cache. Invalidating only the cache keeps the
 	// mapper's stale delegate, so concurrent informers can get a NoMatch for a new CRD.
-	w.restMapper.Reset()
+	w.restMapper.ResetWithContext(ctx)
 	return w.StatusWatcher.Watch(ctx, objs, opts)
 }
 
