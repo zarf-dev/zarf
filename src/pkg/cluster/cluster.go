@@ -148,19 +148,21 @@ func WatcherForConfig(cfg *rest.Config) (watcher.StatusWatcher, error) {
 	discoveryCache := memory.NewMemCacheClient(discoveryClient)
 	restMapper := restmapper.NewDeferredDiscoveryRESTMapper(discoveryCache)
 	sw := watcher.NewDefaultStatusWatcher(dynamicClient, restMapper)
-	return &invalidatingWatcher{StatusWatcher: sw, discoveryCache: discoveryCache}, nil
+	return &invalidatingWatcher{StatusWatcher: sw, restMapper: restMapper}, nil
 }
 
-// invalidatingWatcher invalidates the discovery cache before each watch so that
+// invalidatingWatcher resets the REST mapper before each watch so that
 // CRDs registered since the previous watch resolve on the next mapping lookup.
 type invalidatingWatcher struct {
 	watcher.StatusWatcher
-	discoveryCache discovery.CachedDiscoveryInterface
+	restMapper *restmapper.DeferredDiscoveryRESTMapper
 }
 
 // Watch the cluster for changes made to the specified objects.
 func (w *invalidatingWatcher) Watch(ctx context.Context, objs object.ObjMetadataSet, opts watcher.Options) <-chan event.Event {
-	w.discoveryCache.Invalidate()
+	// Reset also invalidates the discovery cache. Invalidating only the cache keeps the
+	// mapper's stale delegate, so concurrent informers can get a NoMatch for a new CRD.
+	w.restMapper.Reset()
 	return w.StatusWatcher.Watch(ctx, objs, opts)
 }
 
