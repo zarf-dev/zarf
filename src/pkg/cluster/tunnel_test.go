@@ -57,6 +57,7 @@ func TestCheckForZarfConnectLabel(t *testing.T) {
 	tests := []struct {
 		name        string
 		svc         corev1.Service
+		pods        []corev1.Pod
 		connectName string
 		expectedErr string
 		expected    TunnelInfo
@@ -107,6 +108,125 @@ func TestCheckForZarfConnectLabel(t *testing.T) {
 				RemotePort:   8080,
 			},
 		},
+		{
+			name: "service with matching named port on pod",
+			svc: corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "app-ns",
+					Name:      "web",
+					Labels: map[string]string{
+						ZarfConnectLabelName: "web-ui",
+					},
+				},
+				Spec: corev1.ServiceSpec{
+					Selector: map[string]string{"app": "web"},
+					Ports: []corev1.ServicePort{
+						{
+							Port:       80,
+							TargetPort: intstr.FromString("http"),
+						},
+					},
+				},
+			},
+			pods: []corev1.Pod{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "app-ns",
+						Name:      "web-ui",
+						Labels:    map[string]string{"app": "web"},
+					},
+					Spec: corev1.PodSpec{
+						Containers: []corev1.Container{
+							{
+								Name: "server",
+								Ports: []corev1.ContainerPort{
+									{
+										Name:          "http",
+										ContainerPort: 8080,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			connectName: "web-ui",
+			expected: TunnelInfo{
+				ResourceType: SvcResource,
+				ResourceName: "web",
+				Namespace:    "app-ns",
+				RemotePort:   8080,
+			},
+		},
+		{
+			name: "service with named port but no pods found",
+			svc: corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "app-ns",
+					Name:      "web",
+					Labels: map[string]string{
+						ZarfConnectLabelName: "web-ui",
+					},
+				},
+				Spec: corev1.ServiceSpec{
+					Selector: map[string]string{"app": "web"},
+					Ports: []corev1.ServicePort{
+						{
+							Port:       80,
+							TargetPort: intstr.FromString("http"),
+						},
+					},
+				},
+			},
+			pods:        []corev1.Pod{},
+			connectName: "web-ui",
+			expectedErr: "no pods found for service app-ns/web",
+		},
+		{
+			name: "service with named port not found on pod",
+			svc: corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "app-ns",
+					Name:      "web",
+					Labels: map[string]string{
+						ZarfConnectLabelName: "web-ui",
+					},
+				},
+				Spec: corev1.ServiceSpec{
+					Selector: map[string]string{"app": "web"},
+					Ports: []corev1.ServicePort{
+						{
+							Port:       80,
+							TargetPort: intstr.FromString("http"),
+						},
+					},
+				},
+			},
+			pods: []corev1.Pod{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "app-ns",
+						Name:      "web-ui",
+						Labels:    map[string]string{"app": "web"},
+					},
+					Spec: corev1.PodSpec{
+						Containers: []corev1.Container{
+							{
+								Name: "server",
+								Ports: []corev1.ContainerPort{
+									{
+										Name:          "admin",
+										ContainerPort: 9090,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			connectName: "web-ui",
+			expectedErr: "target port http not found in pods for service app-ns/web",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -116,6 +236,10 @@ func TestCheckForZarfConnectLabel(t *testing.T) {
 			}
 			_, err := c.Clientset.CoreV1().Services(tt.svc.Namespace).Create(context.Background(), &tt.svc, metav1.CreateOptions{})
 			require.NoError(t, err)
+			for i := range tt.pods {
+				_, err := c.Clientset.CoreV1().Pods(tt.pods[i].Namespace).Create(context.Background(), &tt.pods[i], metav1.CreateOptions{})
+				require.NoError(t, err)
+			}
 
 			ti, err := c.checkForZarfConnectLabel(context.Background(), tt.connectName)
 			if tt.expectedErr != "" {
@@ -192,6 +316,67 @@ func TestFindPodContainerPort(t *testing.T) {
 				},
 			},
 			expectedPort: 8080,
+		},
+		{
+			name: "no pods found for service",
+			svc: corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "app-ns",
+					Name:      "web",
+				},
+				Spec: corev1.ServiceSpec{
+					Selector: map[string]string{"app": "web"},
+					Ports: []corev1.ServicePort{
+						{
+							Port:       80,
+							TargetPort: intstr.FromString("http"),
+						},
+					},
+				},
+			},
+			pods:        []corev1.Pod{},
+			expectedErr: "no pods found for service app-ns/web",
+		},
+		{
+			name: "named port not found on pod",
+			svc: corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "app-ns",
+					Name:      "web",
+				},
+				Spec: corev1.ServiceSpec{
+					Selector: map[string]string{"app": "web"},
+					Ports: []corev1.ServicePort{
+						{
+							Port:       80,
+							TargetPort: intstr.FromString("http"),
+						},
+					},
+				},
+			},
+			pods: []corev1.Pod{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "app-ns",
+						Name:      "web-ui",
+						Labels:    map[string]string{"app": "web"},
+					},
+					Spec: corev1.PodSpec{
+						Containers: []corev1.Container{
+							{
+								Name: "server",
+								Ports: []corev1.ContainerPort{
+									{
+										Name:          "admin",
+										ContainerPort: 9090,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedErr: "target port http not found in pods for service app-ns/web",
 		},
 	}
 	for _, tt := range tests {
