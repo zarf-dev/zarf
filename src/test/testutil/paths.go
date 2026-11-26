@@ -13,6 +13,7 @@ import (
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api/v1beta1"
 )
 
 // ChecksumZarfYAMLContent returns sha256(marshal(pkg)) with pkg.Build zeroed.
@@ -78,5 +79,87 @@ func RequireNoBackslashInPackagePaths(t *testing.T, pkg v1alpha1.ZarfPackage) {
 			}
 		}
 		check(prefix+".actions.onCreate.defaults.dir", comp.Actions.OnCreate.Defaults.Dir)
+	}
+}
+
+// ChecksumZarfYAMLContentV1Beta1 returns sha256(marshal(pkg)) with pkg.Build zeroed.
+// Build carries intrinsically non-reproducible values (timestamp, user,
+// hostname, CLI version) so it is excluded; the result pins everything else
+// and must be stable across build hosts.
+func ChecksumZarfYAMLContentV1Beta1(t *testing.T, pkg v1beta1.Package) string {
+	t.Helper()
+	pkg.Build = v1beta1.BuildData{}
+	b, err := goyaml.Marshal(pkg)
+	require.NoError(t, err)
+	sum := sha256.Sum256(b)
+	return hex.EncodeToString(sum[:])
+}
+
+// RequireNoBackslashInPackagePathsV1Beta1 asserts every path field serialized into a
+// built v1beta1 zarf.yaml uses forward-slash separators, so artifacts are byte-identical
+// across build hosts.
+func RequireNoBackslashInPackagePathsV1Beta1(t *testing.T, pkg v1beta1.Package) {
+	t.Helper()
+
+	check := func(field, value string) {
+		require.Falsef(t, strings.ContainsRune(value, '\\'), "%s contains a backslash: %q", field, value)
+	}
+
+	for i, f := range pkg.Values.Files {
+		check("values.files["+strconv.Itoa(i)+"]", f)
+	}
+	if pkg.Values.Schema != "" {
+		check("values.schema", pkg.Values.Schema)
+	}
+
+	for ci, comp := range pkg.Components {
+		prefix := "components[" + strconv.Itoa(ci) + "]"
+		for fi, f := range comp.Files {
+			check(prefix+".files["+strconv.Itoa(fi)+"].source", f.Source)
+		}
+		for iai, ia := range comp.ImageArchives {
+			check(prefix+".imageArchives["+strconv.Itoa(iai)+"].path", ia.Path)
+		}
+		for chi, ch := range comp.Charts {
+			if ch.Local != nil {
+				check(prefix+".charts["+strconv.Itoa(chi)+"].local.path", ch.Local.Path)
+			}
+			for vi, v := range ch.ValuesFiles {
+				check(prefix+".charts["+strconv.Itoa(chi)+"].valuesFiles["+strconv.Itoa(vi)+"].path", v.Path)
+			}
+		}
+		for mi, m := range comp.Manifests {
+			for fi, f := range m.Files {
+				check(prefix+".manifests["+strconv.Itoa(mi)+"].files["+strconv.Itoa(fi)+"]", f)
+			}
+			for ki, k := range m.Kustomize.Files {
+				check(prefix+".manifests["+strconv.Itoa(mi)+"].kustomize.files["+strconv.Itoa(ki)+"]", k)
+			}
+		}
+		for li, l := range comp.Import.Local {
+			check(prefix+".import.local["+strconv.Itoa(li)+"].path", l.Path)
+		}
+
+		checkActionSet := func(actionSetName string, set v1beta1.ComponentActionSet) {
+			if set.Defaults != nil && set.Defaults.Dir != "" {
+				check(prefix+".actions."+actionSetName+".defaults.dir", set.Defaults.Dir)
+			}
+			actionsByName := map[string][]v1beta1.ComponentAction{
+				"before":    set.Before,
+				"onFailure": set.OnFailure,
+				"onSuccess": set.OnSuccess,
+			}
+			for name, actions := range actionsByName {
+				for ai, action := range actions {
+					if action.Dir != nil {
+						check(prefix+".actions."+actionSetName+"."+name+"["+strconv.Itoa(ai)+"].dir", *action.Dir)
+					}
+				}
+			}
+		}
+
+		checkActionSet("onCreate", comp.Actions.OnCreate)
+		checkActionSet("onDeploy", comp.Actions.OnDeploy)
+		checkActionSet("onRemove", comp.Actions.OnRemove)
 	}
 }
