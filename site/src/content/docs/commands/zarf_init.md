@@ -91,6 +91,9 @@ $ zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-
       --set-values stringToString               Set package values (key.path=value). Booleans and integers are type-inferred; everything else is a string (default [])
       --set-variables stringToString            Specify deployment variables to set on the command line (KEY=value) (default [])
       --skip-values-schema-validation           Skip validation of package values against the values schema.
+      --source-registry-tls-ca string           Path to a PEM-encoded CA bundle used to verify source Zarf package registries (adds to system trust)
+      --source-registry-tls-cert string         Path to a PEM-encoded client certificate chain used to authenticate to source Zarf package registries
+      --source-registry-tls-key string          Path to the PEM-encoded private key for the source Zarf package registry client certificate
       --take-ownership                          Adopts any pre-existing K8s resources into the Helm charts managed by Zarf. ONLY use when you have existing deployments you want Zarf to takeover.
       --timeout duration                        Timeout for health checks and Helm operations such as installs and rollbacks (default 15m0s)
       --trusted-root string                     Path to a Sigstore TrustedRoot JSON. Falls back to the binary-embedded copy when omitted.

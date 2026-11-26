@@ -19,6 +19,9 @@ import (
 )
 
 func TestCheckForExpiredCert1(t *testing.T) {
+	originalNow := now
+	t.Cleanup(func() { now = originalNow })
+
 	tests := []struct {
 		name           string
 		timeAtCreation time.Time

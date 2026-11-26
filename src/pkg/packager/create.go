@@ -45,8 +45,10 @@ type CreateOptions struct {
 	OCIConcurrency          int
 	CachePath               string
 	WithBuildMachineInfo    bool
-	// applicable when output is an OCI registry
+	// RemoteOptions configures source registries.
 	types.RemoteOptions
+	// DestinationRegistryTLS configures the output registry independently of sources.
+	DestinationRegistryTLS types.RegistryTLSOptions
 	// IsInteractive decides if Zarf can interactively prompt users through the CLI
 	IsInteractive bool
 	// SkipVersionCheck skips version requirement validation
@@ -136,8 +138,10 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 		if err != nil {
 			return "", err
 		}
+		destinationOptions := opts.RemoteOptions
+		destinationOptions.RegistryTLS = opts.DestinationRegistryTLS
 		remote, err := zoci.NewRemote(ctx, ref.String(), oci.PlatformForArch(pkg.Build.Architecture), zoci.RemoteClientOptions{
-			RemoteOptions: opts.RemoteOptions,
+			RemoteOptions: destinationOptions,
 		})
 		if err != nil {
 			return "", err

@@ -8,6 +8,16 @@ package types
 type RemoteOptions struct {
 	PlainHTTP             bool
 	InsecureSkipTLSVerify bool
+	// RegistryTLS configures TLS for Zarf package OCI registries.
+	RegistryTLS RegistryTLSOptions
+}
+
+// RegistryTLSOptions supplies trust roots and a client identity for Zarf package registry connections.
+// CAFile is optional; CertFile and KeyFile must be provided together.
+type RegistryTLSOptions struct {
+	CAFile   string
+	CertFile string
+	KeyFile  string
 }
 
 // ZarfCommonOptions tracks the user-defined preferences used across commands.

@@ -39,12 +39,18 @@ $ zarf package publish zarf-package-my-app-amd64-1.0.0.tar.zst oci://my-registry
       --certificate-identity-regexp string      Regex variant of --certificate-identity
       --certificate-oidc-issuer string          Required OIDC issuer claim in the signing certificate (keyless verify). Example: https://github.com/login/oauth or https://token.actions.githubusercontent.com
       --certificate-oidc-issuer-regexp string   Regex variant of --certificate-oidc-issuer
+      --destination-registry-tls-ca string      Path to a PEM-encoded CA bundle used to verify destination Zarf package registries (adds to system trust)
+      --destination-registry-tls-cert string    Path to a PEM-encoded client certificate chain used to authenticate to destination Zarf package registries
+      --destination-registry-tls-key string     Path to the PEM-encoded private key for the destination Zarf package registry client certificate
   -f, --flavor string                           The flavor of components to include in the resulting package. The flavor will be appended to the package tag
   -h, --help                                    help for publish
       --insecure-ignore-tlog                    Skip Rekor transparency log inclusion verification. Default true for air-gap. Auto-disabled when keyless identity flags are set (keyless signatures require Rekor inclusion proof to remain verifiable past certificate expiry). (default true)
   -k, --key string                              Path to public key file for validating signed packages
       --oci-concurrency int                     Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
       --retries int                             Maximum attempts for retryable Zarf operations, including image, Git, and transient Helm failures (default 1)
+      --source-registry-tls-ca string           Path to a PEM-encoded CA bundle used to verify source Zarf package registries (adds to system trust)
+      --source-registry-tls-cert string         Path to a PEM-encoded client certificate chain used to authenticate to source Zarf package registries
+      --source-registry-tls-key string          Path to the PEM-encoded private key for the source Zarf package registry client certificate
   -t, --tag string                              The tag to be used in the OCI reference for the package in the registry
       --trusted-root string                     Path to a Sigstore TrustedRoot JSON. Falls back to the binary-embedded copy when omitted.
       --use-signed-timestamps                   Verify RFC3161 signed timestamps in the bundle. Auto-enabled when the bundle contains TSA timestamp data. Use when signing was done with --tsa-server-url and Rekor was not used.

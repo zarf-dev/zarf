@@ -35,7 +35,11 @@ type PublishFromOCIOptions struct {
 	Architecture string
 	// Retries is the number of times to retry a failed push
 	Retries int
+	// RemoteOptions configures source registries.
 	types.RemoteOptions
+	// DestinationRegistryTLS configures the output registry independently of sources.
+	// FIXME: have to decide if we want anything more from this
+	DestinationRegistryTLS types.RegistryTLSOptions
 }
 
 // PublishFromOCI takes a source and destination registry reference and a PublishFromOCIOpts and copies the package from the source to the destination.
@@ -83,7 +87,9 @@ func PublishFromOCI(ctx context.Context, src registry.Reference, dst registry.Re
 	if err != nil {
 		return fmt.Errorf("could not instantiate source remote: %w", err)
 	}
-	dstRemote, err := zoci.NewRemote(ctx, dst.String(), p, remoteOptions)
+	destinationOptions := opts.RemoteOptions
+	destinationOptions.RegistryTLS = opts.DestinationRegistryTLS
+	dstRemote, err := zoci.NewRemote(ctx, dst.String(), p, zoci.RemoteClientOptions{RemoteOptions: destinationOptions})
 	if err != nil {
 		return fmt.Errorf("could not instantiate destination remote: %w", err)
 	}
@@ -175,7 +181,10 @@ type PublishSkeletonOptions struct {
 	SkipVersionCheck bool
 	// WithBuildMachineInfo controls whether to include build machine information (hostname and username) in the package metadata
 	WithBuildMachineInfo bool
+	// RemoteOptions configures source registries.
 	types.RemoteOptions
+	// DestinationRegistryTLS configures the output registry independently of sources.
+	DestinationRegistryTLS types.RegistryTLSOptions
 	// Tag is an optional tag for the OCI reference separate from the package metadata.version
 	Tag string
 }
@@ -252,7 +261,9 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 	if err != nil {
 		return registry.Reference{}, err
 	}
-	err = pushToRemote(ctx, pkgLayout, pkgRef, opts.OCIConcurrency, opts.Retries, opts.RemoteOptions)
+	destinationOptions := opts.RemoteOptions
+	destinationOptions.RegistryTLS = opts.DestinationRegistryTLS
+	err = pushToRemote(ctx, pkgLayout, pkgRef, opts.OCIConcurrency, opts.Retries, destinationOptions)
 	if err != nil {
 		return registry.Reference{}, err
 	}
