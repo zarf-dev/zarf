@@ -99,6 +99,10 @@ func TestComponentFileRelPath(t *testing.T) {
 		{name: "Windows path", idx: 1, target: `C:\app\file.txt`, want: filepath.Join("1", "file.txt")},
 		{name: "Windows path with forward slashes", idx: 2, target: "C:/app/file.txt", want: filepath.Join("2", "file.txt")},
 		{name: "file name", idx: 3, target: "file.txt", want: filepath.Join("3", "file.txt")},
+		{name: "Windows UNC path", idx: 4, target: `\\server\share\app\config.json`, want: filepath.Join("4", "config.json")},
+		{name: "nested directory with mixed slashes", idx: 5, target: `nested/dir\sub\data.yaml`, want: filepath.Join("5", "data.yaml")},
+		{name: "deep Windows path with drive", idx: 6, target: `D:\Program Files\App\bin\binary.exe`, want: filepath.Join("6", "binary.exe")},
+		{name: "dot-slash prefixed POSIX path", idx: 7, target: "./configs/app.yaml", want: filepath.Join("7", "app.yaml")},
 	}
 
 	for _, tt := range tests {
@@ -123,6 +127,36 @@ func TestUsesGranularResourceLayout(t *testing.T) {
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
 			require.Equal(t, tt.want, UsesGranularResourceLayout(api.Package{APIVersion: tt.apiVersion}))
+		})
+	}
+}
+
+func TestPathWithinDirectoryCrossPlatform(t *testing.T) {
+	t.Parallel()
+
+	dir := filepath.Join("base", "dir")
+	tests := []struct {
+		name     string
+		filename string
+		want     string
+		wantErr  bool
+	}{
+		{name: "normal file", filename: "normal.txt", want: filepath.Join(dir, "normal.txt")},
+		{name: "nested subdirectory file", filename: filepath.Join("sub", "file.txt"), want: filepath.Join(dir, "sub", "file.txt")},
+		{name: "traversal escaping directory", filename: filepath.Join("..", "outside.txt"), wantErr: true},
+		{name: "deep traversal escaping directory", filename: filepath.Join("a", "..", "..", "outside.txt"), wantErr: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := PathWithinDirectory(dir, tt.filename)
+			if tt.wantErr {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "escapes")
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, tt.want, got)
 		})
 	}
 }
