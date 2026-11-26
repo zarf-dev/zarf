@@ -1021,3 +1021,22 @@ func TestSkeletonImportExample(t *testing.T) {
 `
 	require.Equal(t, expected, string(data))
 }
+
+func TestPackagePruneFlags(t *testing.T) {
+	t.Parallel()
+	v := viper.New()
+	arch := &architectureOptions{}
+
+	deployCmd := newPackageDeployCommand(v, arch)
+	pruneFlag := deployCmd.Flags().Lookup("prune")
+	require.NotNil(t, pruneFlag)
+	require.Equal(t, "", pruneFlag.DefValue)
+	require.Equal(t, "all", pruneFlag.NoOptDefVal)
+
+	removeCmd := newPackageRemoveCommand(v, arch)
+	pruneFlagRemove := removeCmd.Flags().Lookup("prune")
+	require.NotNil(t, pruneFlagRemove)
+	require.Equal(t, "", pruneFlagRemove.DefValue)
+	require.Equal(t, "all", pruneFlagRemove.NoOptDefVal)
+}
+
