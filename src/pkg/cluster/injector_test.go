@@ -203,7 +203,7 @@ func TestBuildInjectionPod(t *testing.T) {
 				corev1.ResourceMemory: resource.MustParse("256Mi"),
 			})
 	// An unset IP family defaults to IPv4.
-	pod := buildInjectionPod("injection-node", "docker.io/library/ubuntu:latest", []string{"foo", "bar"}, "shasum", resReq, "test", "")
+	pod := buildInjectionPod("injection-node", "docker.io/library/ubuntu:latest", []string{"foo", "bar"}, "shasum", resReq, "test", "", nil, nil)
 	require.Equal(t, "injector", *pod.Name)
 	require.Equal(t, "test", pod.Labels["zarf.dev/package"])
 	require.Equal(t, []string{"/zarf-init/zarf-injector", "shasum", "0.0.0.0:5000"}, pod.Spec.Containers[0].Command)
@@ -214,8 +214,26 @@ func TestBuildInjectionPod(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, strings.TrimSpace(string(expected)), string(b))
 
-	ipv6Pod := buildInjectionPod("injection-node", "docker.io/library/ubuntu:latest", []string{"foo", "bar"}, "shasum", resReq, "test", state.IPFamilyIPv6)
+	ipv6Pod := buildInjectionPod("injection-node", "docker.io/library/ubuntu:latest", []string{"foo", "bar"}, "shasum", resReq, "test", state.IPFamilyIPv6, nil, nil)
 	require.Equal(t, []string{"/zarf-init/zarf-injector", "shasum", "[::]:5000"}, ipv6Pod.Spec.Containers[0].Command)
+
+	tolerationSeconds := int64(300)
+	customPod := buildInjectionPod("injection-node", "docker.io/library/ubuntu:latest", []string{"foo"}, "shasum", resReq, "test", "", []corev1.Toleration{
+		{
+			Key:               "node-role.kubernetes.io/control-plane",
+			Operator:          corev1.TolerationOpExists,
+			Effect:            corev1.TaintEffectNoSchedule,
+			TolerationSeconds: &tolerationSeconds,
+		},
+	}, map[string]string{
+		"kubernetes.io/arch": "amd64",
+	})
+	require.Equal(t, map[string]string{"kubernetes.io/arch": "amd64"}, customPod.Spec.NodeSelector)
+	require.Len(t, customPod.Spec.Tolerations, 1)
+	require.Equal(t, "node-role.kubernetes.io/control-plane", *customPod.Spec.Tolerations[0].Key)
+	require.Equal(t, corev1.TolerationOperator(corev1.TolerationOpExists), *customPod.Spec.Tolerations[0].Operator)
+	require.Equal(t, corev1.TaintEffect(corev1.TaintEffectNoSchedule), *customPod.Spec.Tolerations[0].Effect)
+	require.Equal(t, int64(300), *customPod.Spec.Tolerations[0].TolerationSeconds)
 }
 
 func setupCluster(t *testing.T, nodes []corev1.Node, pods []corev1.Pod) *Cluster {
@@ -273,7 +291,7 @@ func TestGetInjectorImageAndNode(t *testing.T) {
 		}}
 		c := setupCluster(t, nodes, pods)
 
-		image, node, err := c.getInjectorImageAndNode(ctx, resReq, "amd64")
+		image, node, err := c.getInjectorImageAndNode(ctx, resReq, "amd64", nil, nil)
 		require.NoError(t, err)
 		require.Equal(t, "nginx", image)
 		require.Equal(t, "good", node)
@@ -302,7 +320,7 @@ func TestGetInjectorImageAndNode(t *testing.T) {
 		}}
 		c := setupCluster(t, nodes, pods)
 
-		_, _, err := c.getInjectorImageAndNode(ctx, resReq, "amd64")
+		_, _, err := c.getInjectorImageAndNode(ctx, resReq, "amd64", nil, nil)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "no suitable injector image or node")
 	})
@@ -319,7 +337,7 @@ func TestGetInjectorImageAndNode(t *testing.T) {
 		}}
 		c := setupCluster(t, nodes, nil)
 
-		_, _, err := c.getInjectorImageAndNode(ctx, resReq, "amd64")
+		_, _, err := c.getInjectorImageAndNode(ctx, resReq, "amd64", nil, nil)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "no suitable injector image or node")
 	})
@@ -347,7 +365,7 @@ func TestGetInjectorImageAndNode(t *testing.T) {
 		}}
 		c := setupCluster(t, nodes, pods)
 
-		_, _, err := c.getInjectorImageAndNode(ctx, resReq, "amd64")
+		_, _, err := c.getInjectorImageAndNode(ctx, resReq, "amd64", nil, nil)
 		require.Error(t, err)
 	})
 
@@ -371,7 +389,7 @@ func TestGetInjectorImageAndNode(t *testing.T) {
 		}}
 		c := setupCluster(t, nodes, pods)
 
-		_, _, err := c.getInjectorImageAndNode(ctx, resReq, "amd64")
+		_, _, err := c.getInjectorImageAndNode(ctx, resReq, "amd64", nil, nil)
 		require.Error(t, err)
 	})
 
@@ -407,7 +425,7 @@ func TestGetInjectorImageAndNode(t *testing.T) {
 		}
 		c := setupCluster(t, nodes, pods)
 
-		image, node, err := c.getInjectorImageAndNode(ctx, resReq, "amd64")
+		image, node, err := c.getInjectorImageAndNode(ctx, resReq, "amd64", nil, nil)
 		require.NoError(t, err)
 		require.Equal(t, "public-image:latest", image)
 		require.Equal(t, "good", node)
@@ -457,7 +475,7 @@ func TestGetInjectorImageAndNode(t *testing.T) {
 		}
 		c := setupCluster(t, nodes, pods)
 
-		image, node, err := c.getInjectorImageAndNode(ctx, resReq, "amd64")
+		image, node, err := c.getInjectorImageAndNode(ctx, resReq, "amd64", nil, nil)
 		require.NoError(t, err)
 		require.Equal(t, "public-image:latest", image)
 		require.Equal(t, "node-public-image", node)
@@ -500,7 +518,7 @@ func TestGetInjectorImageAndNode(t *testing.T) {
 			corev1.ResourceMemory: resource.MustParse("200Mi"), // too big
 		})
 
-		_, _, err := c.getInjectorImageAndNode(ctx, resReq, "amd64")
+		_, _, err := c.getInjectorImageAndNode(ctx, resReq, "amd64", nil, nil)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "no suitable injector image or node")
 
@@ -511,9 +529,189 @@ func TestGetInjectorImageAndNode(t *testing.T) {
 			corev1.ResourceMemory: resource.MustParse("50Mi"), // fits in 100Mi left
 		})
 
-		image, node, err := c.getInjectorImageAndNode(ctx, smallReq, "amd64")
+		image, node, err := c.getInjectorImageAndNode(ctx, smallReq, "amd64", nil, nil)
 		require.NoError(t, err)
 		require.Equal(t, "busybox", image)
 		require.Equal(t, "crowded", node)
+	})
+
+	t.Run("tainted node tolerated with Exists operator", func(t *testing.T) {
+		nodes := []corev1.Node{{
+			ObjectMeta: metav1.ObjectMeta{Name: "control-plane"},
+			Spec: corev1.NodeSpec{
+				Taints: []corev1.Taint{{
+					Key:    "node-role.kubernetes.io/control-plane",
+					Effect: corev1.TaintEffectNoSchedule,
+				}},
+			},
+			Status: corev1.NodeStatus{
+				Allocatable: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("1000m"),
+					corev1.ResourceMemory: resource.MustParse("10Gi"),
+				},
+				NodeInfo: corev1.NodeSystemInfo{Architecture: "amd64"},
+			},
+		}}
+		pods := []corev1.Pod{{
+			ObjectMeta: metav1.ObjectMeta{Name: "cp-pod", Namespace: "default"},
+			Spec: corev1.PodSpec{
+				NodeName:   "control-plane",
+				Containers: []corev1.Container{{Image: "coredns:1.10.0"}},
+			},
+			Status: corev1.PodStatus{Phase: corev1.PodRunning},
+		}}
+		c := setupCluster(t, nodes, pods)
+
+		tolerations := []corev1.Toleration{{
+			Key:      "node-role.kubernetes.io/control-plane",
+			Operator: corev1.TolerationOpExists,
+			Effect:   corev1.TaintEffectNoSchedule,
+		}}
+
+		image, node, err := c.getInjectorImageAndNode(ctx, resReq, "amd64", tolerations, nil)
+		require.NoError(t, err)
+		require.Equal(t, "coredns:1.10.0", image)
+		require.Equal(t, "control-plane", node)
+	})
+
+	t.Run("tainted node tolerated with Equal operator", func(t *testing.T) {
+		nodes := []corev1.Node{{
+			ObjectMeta: metav1.ObjectMeta{Name: "dedicated-node"},
+			Spec: corev1.NodeSpec{
+				Taints: []corev1.Taint{{
+					Key:    "dedicated",
+					Value:  "infra",
+					Effect: corev1.TaintEffectNoSchedule,
+				}},
+			},
+			Status: corev1.NodeStatus{
+				Allocatable: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("1000m"),
+					corev1.ResourceMemory: resource.MustParse("10Gi"),
+				},
+				NodeInfo: corev1.NodeSystemInfo{Architecture: "amd64"},
+			},
+		}}
+		pods := []corev1.Pod{{
+			ObjectMeta: metav1.ObjectMeta{Name: "infra-pod", Namespace: "default"},
+			Spec: corev1.PodSpec{
+				NodeName:   "dedicated-node",
+				Containers: []corev1.Container{{Image: "infra-agent:v1"}},
+			},
+			Status: corev1.PodStatus{Phase: corev1.PodRunning},
+		}}
+		c := setupCluster(t, nodes, pods)
+
+		tolerations := []corev1.Toleration{{
+			Key:      "dedicated",
+			Operator: corev1.TolerationOpEqual,
+			Value:    "infra",
+			Effect:   corev1.TaintEffectNoSchedule,
+		}}
+
+		image, node, err := c.getInjectorImageAndNode(ctx, resReq, "amd64", tolerations, nil)
+		require.NoError(t, err)
+		require.Equal(t, "infra-agent:v1", image)
+		require.Equal(t, "dedicated-node", node)
+	})
+
+	t.Run("nodeSelector filtering selects matching node", func(t *testing.T) {
+		nodes := []corev1.Node{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "worker-1",
+					Labels: map[string]string{
+						"topology.kubernetes.io/zone": "zone-a",
+						"node-type":                   "storage",
+					},
+				},
+				Status: corev1.NodeStatus{
+					Allocatable: corev1.ResourceList{
+						corev1.ResourceCPU:    resource.MustParse("1000m"),
+						corev1.ResourceMemory: resource.MustParse("10Gi"),
+					},
+					NodeInfo: corev1.NodeSystemInfo{Architecture: "amd64"},
+				},
+			},
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "worker-2",
+					Labels: map[string]string{
+						"topology.kubernetes.io/zone": "zone-b",
+						"node-type":                   "compute",
+					},
+				},
+				Status: corev1.NodeStatus{
+					Allocatable: corev1.ResourceList{
+						corev1.ResourceCPU:    resource.MustParse("1000m"),
+						corev1.ResourceMemory: resource.MustParse("10Gi"),
+					},
+					NodeInfo: corev1.NodeSystemInfo{Architecture: "amd64"},
+				},
+			},
+		}
+		pods := []corev1.Pod{
+			{
+				ObjectMeta: metav1.ObjectMeta{Name: "pod-1", Namespace: "default"},
+				Spec: corev1.PodSpec{
+					NodeName:   "worker-1",
+					Containers: []corev1.Container{{Image: "storage-image:v1"}},
+				},
+				Status: corev1.PodStatus{Phase: corev1.PodRunning},
+			},
+			{
+				ObjectMeta: metav1.ObjectMeta{Name: "pod-2", Namespace: "default"},
+				Spec: corev1.PodSpec{
+					NodeName:   "worker-2",
+					Containers: []corev1.Container{{Image: "compute-image:v1"}},
+				},
+				Status: corev1.PodStatus{Phase: corev1.PodRunning},
+			},
+		}
+		c := setupCluster(t, nodes, pods)
+
+		nodeSelector := map[string]string{
+			"node-type": "compute",
+		}
+
+		image, node, err := c.getInjectorImageAndNode(ctx, resReq, "amd64", nil, nodeSelector)
+		require.NoError(t, err)
+		require.Equal(t, "compute-image:v1", image)
+		require.Equal(t, "worker-2", node)
+	})
+
+	t.Run("nodeSelector mismatch returns error", func(t *testing.T) {
+		nodes := []corev1.Node{{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "worker-1",
+				Labels: map[string]string{
+					"node-type": "storage",
+				},
+			},
+			Status: corev1.NodeStatus{
+				Allocatable: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("1000m"),
+					corev1.ResourceMemory: resource.MustParse("10Gi"),
+				},
+				NodeInfo: corev1.NodeSystemInfo{Architecture: "amd64"},
+			},
+		}}
+		pods := []corev1.Pod{{
+			ObjectMeta: metav1.ObjectMeta{Name: "pod-1", Namespace: "default"},
+			Spec: corev1.PodSpec{
+				NodeName:   "worker-1",
+				Containers: []corev1.Container{{Image: "storage-image:v1"}},
+			},
+			Status: corev1.PodStatus{Phase: corev1.PodRunning},
+		}}
+		c := setupCluster(t, nodes, pods)
+
+		nodeSelector := map[string]string{
+			"node-type": "gpu",
+		}
+
+		_, _, err := c.getInjectorImageAndNode(ctx, resReq, "amd64", nil, nodeSelector)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "no suitable injector image or node")
 	})
 }

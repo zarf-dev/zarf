@@ -47,6 +47,10 @@ type ZarfInjectorOptions struct {
 	Image string
 	// IPFamily determines the injector listen address; defaults to IPv4 when unset
 	IPFamily state.IPFamily
+	// Tolerations are the tolerations applied to the injector pod to allow scheduling on tainted nodes.
+	Tolerations []corev1.Toleration
+	// NodeSelector defines labels that candidate nodes must match for injector pod scheduling.
+	NodeSelector map[string]string
 }
 
 // StartInjection initializes a Zarf injection into the cluster.
@@ -89,13 +93,13 @@ func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, 
 	injectorNodeName := ""
 	if injectorImage == "" {
 		var err error
-		injectorImage, injectorNodeName, err = c.getInjectorImageAndNode(ctx, resReq, architecture)
+		injectorImage, injectorNodeName, err = c.getInjectorImageAndNode(ctx, resReq, architecture, opts.Tolerations, opts.NodeSelector)
 		if err != nil {
 			return "", 0, err
 		}
 	}
 
-	pod := buildInjectionPod(injectorNodeName, injectorImage, payloadCmNames, shasum, resReq, pkgName, opts.IPFamily)
+	pod := buildInjectionPod(injectorNodeName, injectorImage, payloadCmNames, shasum, resReq, pkgName, opts.IPFamily, opts.Tolerations, opts.NodeSelector)
 	_, err = c.Clientset.CoreV1().Pods(*pod.Namespace).Apply(ctx, pod, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
 	if err != nil {
 		return "", 0, fmt.Errorf("error creating pod in cluster: %w", err)
@@ -267,7 +271,7 @@ func (c *Cluster) createPayloadConfigMaps(ctx context.Context, tmpDir, imagesDir
 }
 
 // getImagesAndNodesForInjection checks for images on schedulable nodes within a cluster.
-func (c *Cluster) getInjectorImageAndNode(ctx context.Context, resReq *v1ac.ResourceRequirementsApplyConfiguration, architecture string) (string, string, error) {
+func (c *Cluster) getInjectorImageAndNode(ctx context.Context, resReq *v1ac.ResourceRequirementsApplyConfiguration, architecture string, tolerations []corev1.Toleration, nodeSelector map[string]string) (string, string, error) {
 	l := logger.From(ctx)
 
 	// List all nodes and running pods once
@@ -300,7 +304,12 @@ func (c *Cluster) getInjectorImageAndNode(ctx context.Context, resReq *v1ac.Reso
 	var fallback *nodeFallback
 
 	for _, node := range nodeList.Items {
-		if hasBlockingTaints(node.Spec.Taints) {
+		if !matchesNodeSelector(node.Labels, nodeSelector) {
+			l.Debug("skipping node: does not match nodeSelector", "node", node.Name)
+			continue
+		}
+
+		if hasBlockingTaints(node.Spec.Taints, tolerations) {
 			l.Debug("skipping node: blocking taints", "node", node.Name)
 			continue
 		}
@@ -396,16 +405,52 @@ func (c *Cluster) getInjectorImageAndNode(ctx context.Context, resReq *v1ac.Reso
 	return "", "", fmt.Errorf("no suitable injector image or node exists")
 }
 
-func hasBlockingTaints(taints []corev1.Taint) bool {
+// matchesNodeSelector verifies if all key/value pairs in selector match nodeLabels.
+func matchesNodeSelector(nodeLabels map[string]string, selector map[string]string) bool {
+	for k, v := range selector {
+		if nodeLabels[k] != v {
+			return false
+		}
+	}
+	return true
+}
+
+// hasBlockingTaints returns true if any taint with NoSchedule or NoExecute effect is not tolerated by tolerations.
+func hasBlockingTaints(taints []corev1.Taint, tolerations []corev1.Toleration) bool {
 	for _, taint := range taints {
-		if taint.Effect == corev1.TaintEffectNoSchedule || taint.Effect == corev1.TaintEffectNoExecute {
+		if taint.Effect != corev1.TaintEffectNoSchedule && taint.Effect != corev1.TaintEffectNoExecute {
+			continue
+		}
+		if !toleratesTaint(tolerations, taint) {
 			return true
 		}
 	}
 	return false
 }
 
-func buildInjectionPod(nodeName, image string, payloadCmNames []string, shasum string, resReq *v1ac.ResourceRequirementsApplyConfiguration, pkgName string, ipFamily state.IPFamily) *v1ac.PodApplyConfiguration {
+// toleratesTaint evaluates whether any of the tolerations match the given taint according to Kubernetes scheduling semantics.
+func toleratesTaint(tolerations []corev1.Toleration, taint corev1.Taint) bool {
+	for _, toleration := range tolerations {
+		if toleration.Effect != "" && toleration.Effect != taint.Effect {
+			continue
+		}
+		if toleration.Operator == corev1.TolerationOpExists {
+			if toleration.Key == "" || toleration.Key == taint.Key {
+				return true
+			}
+			continue
+		}
+		// Default operator is Equal when unset
+		if (toleration.Operator == corev1.TolerationOpEqual || toleration.Operator == "") &&
+			toleration.Key == taint.Key &&
+			toleration.Value == taint.Value {
+			return true
+		}
+	}
+	return false
+}
+
+func buildInjectionPod(nodeName, image string, payloadCmNames []string, shasum string, resReq *v1ac.ResourceRequirementsApplyConfiguration, pkgName string, ipFamily state.IPFamily, tolerations []corev1.Toleration, nodeSelector map[string]string) *v1ac.PodApplyConfiguration {
 	listenHost := "0.0.0.0"
 	if ipFamily == state.IPFamilyIPv6 {
 		listenHost = "[::]"
@@ -451,60 +496,76 @@ func buildInjectionPod(nodeName, image string, payloadCmNames []string, shasum s
 			WithSubPath(filename))
 	}
 
+	podSpec := v1ac.PodSpec().
+		// The injector doesn't handle sigterm to avoid extra dependencies, so we set it to 1
+		WithTerminationGracePeriodSeconds(1).
+		WithAutomountServiceAccountToken(false).
+		WithNodeName(nodeName).
+		WithRestartPolicy(corev1.RestartPolicyNever).
+		WithSecurityContext(
+			v1ac.PodSecurityContext().
+				WithRunAsUser(userID).
+				WithRunAsGroup(groupID).
+				WithFSGroup(fsGroupID).
+				WithSeccompProfile(
+					v1ac.SeccompProfile().
+						WithType(corev1.SeccompProfileTypeRuntimeDefault),
+				),
+		).
+		WithContainers(
+			v1ac.Container().
+				WithName("injector").
+				WithImage(image).
+				WithImagePullPolicy(corev1.PullIfNotPresent).
+				WithWorkingDir("/zarf-init").
+				WithCommand("/zarf-init/zarf-injector", shasum, listenAddr).
+				WithVolumeMounts(volumeMounts...).
+				WithSecurityContext(
+					v1ac.SecurityContext().
+						WithReadOnlyRootFilesystem(true).
+						WithAllowPrivilegeEscalation(false).
+						WithPrivileged(false).
+						WithRunAsNonRoot(true).
+						WithCapabilities(v1ac.Capabilities().WithDrop(corev1.Capability("ALL"))),
+				).
+				WithReadinessProbe(
+					v1ac.Probe().
+						WithPeriodSeconds(2).
+						WithSuccessThreshold(1).
+						WithFailureThreshold(10).
+						WithHTTPGet(
+							v1ac.HTTPGetAction().
+								WithPath("/v2/").
+								WithPort(intstr.FromInt(5000)),
+						),
+				).
+				WithResources(resReq),
+		).
+		WithVolumes(volumes...)
+
+	if len(nodeSelector) > 0 {
+		podSpec.WithNodeSelector(nodeSelector)
+	}
+
+	for _, tol := range tolerations {
+		tolApply := v1ac.Toleration().
+			WithKey(tol.Key).
+			WithOperator(tol.Operator).
+			WithValue(tol.Value).
+			WithEffect(tol.Effect)
+		if tol.TolerationSeconds != nil {
+			tolApply.WithTolerationSeconds(*tol.TolerationSeconds)
+		}
+		podSpec.WithTolerations(tolApply)
+	}
+
 	pod := v1ac.Pod("injector", state.ZarfNamespaceName).
 		WithLabels(map[string]string{
 			"app":        "zarf-injector",
 			AgentLabel:   "ignore",
 			PackageLabel: pkgName,
 		}).
-		WithSpec(
-			v1ac.PodSpec().
-				// The injector doesn't handle sigterm to avoid extra dependencies, so we set it to 1
-				WithTerminationGracePeriodSeconds(1).
-				WithAutomountServiceAccountToken(false).
-				WithNodeName(nodeName).
-				WithRestartPolicy(corev1.RestartPolicyNever).
-				WithSecurityContext(
-					v1ac.PodSecurityContext().
-						WithRunAsUser(userID).
-						WithRunAsGroup(groupID).
-						WithFSGroup(fsGroupID).
-						WithSeccompProfile(
-							v1ac.SeccompProfile().
-								WithType(corev1.SeccompProfileTypeRuntimeDefault),
-						),
-				).
-				WithContainers(
-					v1ac.Container().
-						WithName("injector").
-						WithImage(image).
-						WithImagePullPolicy(corev1.PullIfNotPresent).
-						WithWorkingDir("/zarf-init").
-						WithCommand("/zarf-init/zarf-injector", shasum, listenAddr).
-						WithVolumeMounts(volumeMounts...).
-						WithSecurityContext(
-							v1ac.SecurityContext().
-								WithReadOnlyRootFilesystem(true).
-								WithAllowPrivilegeEscalation(false).
-								WithPrivileged(false).
-								WithRunAsNonRoot(true).
-								WithCapabilities(v1ac.Capabilities().WithDrop(corev1.Capability("ALL"))),
-						).
-						WithReadinessProbe(
-							v1ac.Probe().
-								WithPeriodSeconds(2).
-								WithSuccessThreshold(1).
-								WithFailureThreshold(10).
-								WithHTTPGet(
-									v1ac.HTTPGetAction().
-										WithPath("/v2/").
-										WithPort(intstr.FromInt(5000)),
-								),
-						).
-						WithResources(resReq),
-				).
-				WithVolumes(volumes...),
-		)
+		WithSpec(podSpec)
 
 	return pod
 }
