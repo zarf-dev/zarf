@@ -8,6 +8,7 @@ import (
 	"compress/gzip"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -228,6 +229,9 @@ func TestSymlinkOrderingAttack(t *testing.T) {
 
 func TestSymlinkAliasCannotWriteOutsideRoot(t *testing.T) {
 	t.Parallel()
+	if runtime.GOOS == "windows" {
+		t.Skip("Windows symlink creation requires elevated privileges")
+	}
 
 	archivePath := filepath.Join(t.TempDir(), "alias-attack.tar.gz")
 	makeTarGz(t, archivePath, []tarEntry{
