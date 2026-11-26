@@ -292,6 +292,7 @@ $ zarf package mirror-resources zarf-package-my-app-amd64-1.0.0.tar.zst --repos 
 	CmdPackageDeployFlagValuesFiles           = CmdPackageCreateFlagValuesFiles
 	CmdPackageDeployFlagSkipArchitectureCheck = "Allow application images to deploy to nodes with a different architecture. Requires node emulation support; intended for development and testing, not recommended for production."
 	CmdPackageDeployFlagSkipValuesSchema      = "Skip validation of package values against the values schema."
+	CmdPackageDeployFlagPrune                 = "Specify resources to prune during deployment. Accepts a comma-separated list of scopes ('cluster-resources', 'images'). If set without arguments, all applicable scopes are pruned."
 
 	CmdPackageMirrorFlagComponents = "Comma-separated list of components to mirror.  This list will be respected regardless of a component's 'required' or 'default' status.  Globbing component names with '*' and deselecting components with a leading '-' are also supported."
 	CmdPackageMirrorFlagNoChecksum = "Turns off the addition of a checksum to image tags (as would be used by the Zarf Agent) while mirroring images."
@@ -387,6 +388,7 @@ $ zarf package remove oci://ghcr.io/my-org/my-package:1.0.0 --confirm
 	CmdPackageRemoveFlagComponents  = "Comma-separated list of components to remove.  This list will be respected regardless of a component's 'required' or 'default' status.  Globbing component names with '*' and deselecting components with a leading '-' are also supported."
 	CmdPackageRemoveFlagNamespace   = "[Alpha] Override the namespace for package removal. Applicable only to packages deployed using the namespace flag."
 	CmdPackageRemoveFlagValuesFiles = "Path to values file(s) for removal actions"
+	CmdPackageRemoveFlagPrune       = "Specify resources to prune during removal. Accepts a comma-separated list of scopes ('images'). If set without arguments, all applicable scopes are pruned."
 
 	CmdPackagePublishShort   = "Publishes a Zarf package to a remote registry"
 	CmdPackagePublishExample = `
