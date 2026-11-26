@@ -21,9 +21,11 @@ import (
 	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/internal/healthchecks"
+	"github.com/zarf-dev/zarf/src/internal/packager/postrender"
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/state"
+	tmpl "github.com/zarf-dev/zarf/src/pkg/template"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 )
@@ -34,7 +36,7 @@ func UpdateZarfRegistryValues(ctx context.Context, opts InstallUpgradeOptions) e
 	if err != nil {
 		return fmt.Errorf("error getting init package: %w", err)
 	}
-	initPkg, err := findPackageWithService(pkgs, api.ServiceRegistry)
+	deployedPkg, initPkg, err := findPackageWithService(pkgs, api.ServiceRegistry)
 	if err != nil {
 		return fmt.Errorf("error finding init package with registry service: %w", err)
 	}
@@ -64,6 +66,10 @@ func UpdateZarfRegistryValues(ctx context.Context, opts InstallUpgradeOptions) e
 	chart := api.Chart{
 		Namespace:   "zarf",
 		ReleaseName: "zarf-docker-registry",
+	}
+	opts.PostRenderer, err = deployedPostRenderer(ctx, deployedPkg, *initPkg, api.ServiceRegistry, chart, opts)
+	if err != nil {
+		return err
 	}
 
 	err = UpdateReleaseValues(ctx, chart, registryValues, opts)
@@ -98,7 +104,7 @@ func UpdateZarfAgentValues(ctx context.Context, opts InstallUpgradeOptions) erro
 	if err != nil {
 		return fmt.Errorf("error getting init package: %w", err)
 	}
-	initPkg, err := findPackageWithService(pkgs, api.ServiceAgent)
+	deployedPkg, initPkg, err := findPackageWithService(pkgs, api.ServiceAgent)
 	if err != nil {
 		return fmt.Errorf("error finding init package with agent service: %w", err)
 	}
@@ -188,6 +194,10 @@ func UpdateZarfAgentValues(ctx context.Context, opts InstallUpgradeOptions) erro
 			}
 			opts.VariableConfig.SetApplicationTemplates(applicationTemplates)
 
+			opts.PostRenderer, err = deployedPostRenderer(ctx, deployedPkg, *initPkg, api.ServiceAgent, chart, opts)
+			if err != nil {
+				return err
+			}
 			err = UpdateReleaseValues(ctx, chart, agentValues, opts)
 			if err != nil {
 				return fmt.Errorf("error updating the release values: %w", err)
@@ -237,16 +247,47 @@ func UpdateZarfAgentValues(ctx context.Context, opts InstallUpgradeOptions) erro
 	return nil
 }
 
-func findPackageWithService(pkgs []state.DeployedPackage, service api.ServiceName) (*api.Package, error) {
-	for _, deployedPackage := range pkgs {
+func findPackageWithService(pkgs []state.DeployedPackage, service api.ServiceName) (*state.DeployedPackage, *api.Package, error) {
+	for i, deployedPackage := range pkgs {
 		definition, err := deployedPackage.Definition()
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		for _, component := range definition.Components {
 			if component.Service.Name == service {
-				return &definition, nil
+				return &pkgs[i], &definition, nil
 			}
+		}
+	}
+	return nil, nil, nil
+}
+
+// deployedPostRenderer resolves the post-renderers the deployed package declares for release so that re-rendering the
+// release keeps their changes. pkg is deployed's decoded definition. It returns nil when there are none.
+func deployedPostRenderer(ctx context.Context, deployed *state.DeployedPackage, pkg api.Package, service api.ServiceName, release api.Chart, opts InstallUpgradeOptions) (*postrender.Renderer, error) {
+	for _, component := range pkg.Components {
+		if component.Service.Name != service {
+			continue
+		}
+		for _, chart := range component.Charts {
+			if chart.GetReleaseName() != release.GetReleaseName() || chart.Namespace != release.Namespace {
+				continue
+			}
+			if !postrender.NeedsTemplating(chart) {
+				return postrender.New(ctx, chart, nil)
+			}
+			deployConfig, _ := deployed.GetDeployConfig()
+			objs, err := tmpl.NewObjects(deployConfig.Values).WithPackage(pkg).WithVariableConfig(opts.VariableConfig).
+				WithState(tmpl.StateAccess{State: opts.State, AccessKeys: component.StateAccess})
+			if err != nil {
+				return nil, fmt.Errorf("chart %q: error building template objects: %w", chart.Name, err)
+			}
+			r, err := postrender.New(ctx, chart, objs)
+			if err != nil {
+				// Templates relying on the package's default values fail here because only deploy-time values are recorded.
+				return nil, fmt.Errorf("%w (re-rendering for a credential update only has deploy-time values; package default values are not recorded)", err)
+			}
+			return r, nil
 		}
 	}
 	return nil, nil

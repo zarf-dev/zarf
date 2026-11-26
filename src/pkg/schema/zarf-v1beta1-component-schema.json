@@ -53,6 +53,23 @@
           "$ref": "#/$defs/OCISource",
           "description": "The OCI registry where the chart is stored."
         },
+        "postRenderStrategy": {
+          "default": "nohooks",
+          "description": "Selects which rendered resources postRenderers receive: \"nohooks\" transforms regular resources only and passes Helm hooks through unchanged, \"combined\" transforms hooks and regular resources together, and \"separate\" transforms hooks and regular resources in independent passes. Defaults to \"nohooks\" when omitted. Has no effect without postRenderers.",
+          "enum": [
+            "nohooks",
+            "combined",
+            "separate"
+          ],
+          "type": "string"
+        },
+        "postRenderers": {
+          "description": "Ordered list of transformations applied to the rendered chart manifests at deploy time, before Zarf's own processing; the output of each post-renderer is the input of the next. CRDs in the chart's crds/ directory are never post-rendered. Requires Zarf v1.1.0+ to deploy.",
+          "items": {
+            "$ref": "#/$defs/PostRenderer"
+          },
+          "type": "array"
+        },
         "releaseName": {
           "description": "The name of the Helm release to create (defaults to the Zarf name of the chart).",
           "type": "string"
@@ -824,6 +841,39 @@
       ],
       "type": "object"
     },
+    "KustomizeImage": {
+      "additionalProperties": false,
+      "description": "KustomizeImage overrides the name, tag, or digest of matching container images.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "digest": {
+          "description": "The replacement image digest, in the form sha256:\u003csha\u003e; takes precedence over newTag.",
+          "type": "string"
+        },
+        "name": {
+          "description": "The image name to match, without a tag or digest.",
+          "examples": [
+            "ghcr.io/stefanprodan/podinfo"
+          ],
+          "minLength": 1,
+          "type": "string"
+        },
+        "newName": {
+          "description": "The replacement image name.",
+          "type": "string"
+        },
+        "newTag": {
+          "description": "The replacement image tag.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "type": "object"
+    },
     "KustomizeManifest": {
       "additionalProperties": false,
       "description": "KustomizeManifest defines kustomization settings for a manifest.",
@@ -845,6 +895,94 @@
             "type": "string"
           },
           "type": "array"
+        }
+      },
+      "type": "object"
+    },
+    "KustomizePatch": {
+      "additionalProperties": false,
+      "description": "KustomizePatch is an inline strategic merge or JSON 6902 patch with an optional target selector.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "patch": {
+          "description": "An inline strategic merge patch or JSON 6902 patch.",
+          "minLength": 1,
+          "type": "string"
+        },
+        "target": {
+          "$ref": "#/$defs/KustomizeSelector",
+          "description": "Selects the resources to patch. Required for JSON 6902 patches; strategic merge patches match on their own identity when omitted."
+        }
+      },
+      "required": [
+        "patch"
+      ],
+      "type": "object"
+    },
+    "KustomizePostRenderer": {
+      "additionalProperties": false,
+      "description": "KustomizePostRenderer applies Kustomize patches and image overrides to rendered chart manifests.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "enableTemplating": {
+          "description": "Render Zarf template values in this post-renderer's patches and images at deploy time before Kustomize runs. When false, values are used verbatim.",
+          "type": "boolean"
+        },
+        "images": {
+          "description": "Container image name, tag, and digest overrides to apply to the rendered manifests. Each image must set at least one of newName, newTag, or digest.",
+          "items": {
+            "$ref": "#/$defs/KustomizeImage"
+          },
+          "type": "array"
+        },
+        "patches": {
+          "description": "Inline strategic merge or JSON 6902 patches to apply to the rendered manifests.",
+          "items": {
+            "$ref": "#/$defs/KustomizePatch"
+          },
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
+    "KustomizeSelector": {
+      "additionalProperties": false,
+      "description": "KustomizeSelector selects the resources a Kustomize patch applies to.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "annotationSelector": {
+          "description": "A Kubernetes label selector expression evaluated against the resources' annotations.",
+          "type": "string"
+        },
+        "group": {
+          "description": "The API group of the resources to select.",
+          "type": "string"
+        },
+        "kind": {
+          "description": "The kind of the resources to select.",
+          "type": "string"
+        },
+        "labelSelector": {
+          "description": "A Kubernetes label selector the resources must match.",
+          "type": "string"
+        },
+        "name": {
+          "description": "The name of the resources to select; may be a regular expression.",
+          "type": "string"
+        },
+        "namespace": {
+          "description": "The namespace of the resources to select; may be a regular expression. Rendered chart resources often omit metadata.namespace, which Kustomize treats as \"default\", so this only matches resources with an explicit namespace.",
+          "type": "string"
+        },
+        "version": {
+          "description": "The API version of the resources to select.",
+          "type": "string"
         }
       },
       "type": "object"
@@ -966,6 +1104,23 @@
           "type": "string"
         }
       },
+      "type": "object"
+    },
+    "PostRenderer": {
+      "additionalProperties": false,
+      "description": "PostRenderer is a single post-rendering step applied to rendered chart manifests.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "kustomize": {
+          "$ref": "#/$defs/KustomizePostRenderer",
+          "description": "Applies inline Kustomize patches and image overrides to the rendered chart manifests. Must include at least one patch or image."
+        }
+      },
+      "required": [
+        "kustomize"
+      ],
       "type": "object"
     },
     "Repository": {

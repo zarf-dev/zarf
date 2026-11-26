@@ -1,0 +1,108 @@
+apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: helm-post-renderers
+  description: Exercises Kustomize post-renderers on Helm charts
+values:
+  files:
+    - values.yaml
+components:
+  - name: post-renderers
+    images:
+      # The post-renderers retarget the chart's image to this reference.
+      - name: ghcr.io/zarf-dev/images/alpine:3.21.3
+    charts:
+      # Default strategy (nohooks): the hook Job is left untouched.
+      - name: nohooks-app
+        namespace: post-render-nohooks
+        local:
+          path: chart
+        postRenderers:
+          - kustomize:
+              patches:
+                - target:
+                    group: apps
+                    version: v1
+                    kind: Deployment
+                    name: app
+                  patch: |
+                    apiVersion: apps/v1
+                    kind: Deployment
+                    metadata:
+                      name: app
+                      labels:
+                        post-render.zarf.dev/smp: patched
+                    spec:
+                      template:
+                        spec:
+                          securityContext:
+                            seccompProfile:
+                              type: RuntimeDefault
+                - target:
+                    kind: Deployment
+                    name: app
+                  patch: |
+                    - op: add
+                      path: /spec/template/spec/containers/0/env
+                      value:
+                        - name: PATCHED_BY
+                          value: json6902
+                - target:
+                    kind: Job
+                  patch: |
+                    apiVersion: batch/v1
+                    kind: Job
+                    metadata:
+                      name: any-job
+                      labels:
+                        post-render.zarf.dev/hook: patched
+              images:
+                - name: ghcr.io/zarf-dev/images/alpine
+                  newTag: 3.21.3
+          # Runs on the output of the first post-renderer.
+          - kustomize:
+              enableTemplating: true
+              patches:
+                - target:
+                    kind: Deployment
+                    name: app
+                  patch: |
+                    apiVersion: apps/v1
+                    kind: Deployment
+                    metadata:
+                      name: app
+                      annotations:
+                        post-render.zarf.dev/team: "{{ .Values.team }}"
+      # Separate strategy: hooks get their own pass through the post-renderers.
+      - name: separate-app
+        namespace: post-render-separate
+        local:
+          path: chart
+        valuesFiles:
+          - path: separate-values.yaml
+        postRenderStrategy: separate
+        postRenderers:
+          - kustomize:
+              patches:
+                - target:
+                    kind: Deployment
+                    name: app
+                  patch: |
+                    apiVersion: apps/v1
+                    kind: Deployment
+                    metadata:
+                      name: app
+                      labels:
+                        post-render.zarf.dev/smp: patched
+                - target:
+                    kind: Job
+                  patch: |
+                    apiVersion: batch/v1
+                    kind: Job
+                    metadata:
+                      name: any-job
+                      labels:
+                        post-render.zarf.dev/hook: patched
+              images:
+                - name: ghcr.io/zarf-dev/images/alpine
+                  newTag: 3.21.3

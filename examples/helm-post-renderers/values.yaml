@@ -1,0 +1,5 @@
+# Scheduling for every Velero pod. The chart receives these through `charts[].values`, and the
+# velero-label-namespace hook Job receives them through a templated post-renderer patch.
+scheduling:
+  nodeSelector: {}
+  tolerations: []

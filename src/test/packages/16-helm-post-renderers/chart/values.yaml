@@ -1,0 +1,9 @@
+# The chart default tag does not exist; post-renderers retarget it to a real tag.
+image:
+  repository: ghcr.io/zarf-dev/images/alpine
+  tag: chart-default
+
+hook:
+  image:
+    repository: ghcr.io/zarf-dev/images/alpine
+    tag: 3.21.3

@@ -4,6 +4,7 @@
 package convert
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -1443,6 +1444,36 @@ func TestV1Beta1PkgToV1Alpha1_ChartSources(t *testing.T) {
 			require.Len(t, result.Components[0].Charts, 1)
 			tt.validate(t, result.Components[0].Charts[0])
 		})
+	}
+}
+
+func TestPackageToV1alpha1_dropsChartPostRenderers(t *testing.T) {
+	t.Parallel()
+	chart := api.Chart{
+		Name:               "podinfo",
+		Namespace:          "podinfo",
+		Local:              &api.LocalSource{Path: "chart"},
+		PostRenderStrategy: api.PostRenderStrategyCombined,
+		PostRenderers: []api.PostRenderer{{Kustomize: &api.KustomizePostRenderer{
+			EnableTemplating: true,
+			Patches:          []api.KustomizePatch{{Patch: "kind: Deployment", Target: &api.KustomizeSelector{Kind: "Deployment"}}},
+			Images:           []api.KustomizeImage{{Name: "nginx", NewTag: "1.27"}},
+		}}},
+	}
+	withoutPostRenderers := chart
+	withoutPostRenderers.PostRenderStrategy = ""
+	withoutPostRenderers.PostRenderers = nil
+	pkg := func(c api.Chart) api.Package {
+		return api.Package{APIVersion: v1beta1.APIVersion, Components: []api.Component{{Name: "app", Charts: []api.Chart{c}}}}
+	}
+
+	result := PackageToV1alpha1(pkg(chart))
+	require.Equal(t, PackageToV1alpha1(pkg(withoutPostRenderers)), result)
+
+	encoded, err := json.Marshal(result)
+	require.NoError(t, err)
+	for _, field := range []string{"postRender", "kustomize", "patches", "nginx"} {
+		require.NotContains(t, string(encoded), field)
 	}
 }
 

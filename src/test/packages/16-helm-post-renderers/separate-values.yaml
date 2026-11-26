@@ -1,0 +1,4 @@
+# The hook image only resolves when hooks are post-rendered, so a successful deploy proves they were.
+hook:
+  image:
+    tag: chart-default

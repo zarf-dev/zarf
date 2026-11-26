@@ -15,6 +15,7 @@ import (
 	"github.com/zarf-dev/zarf/src/config"
 	internalv1alpha1 "github.com/zarf-dev/zarf/src/internal/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
+	"github.com/zarf-dev/zarf/src/internal/packager/postrender"
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
 	"github.com/zarf-dev/zarf/src/pkg/feature"
 	"github.com/zarf-dev/zarf/src/pkg/helpers"
@@ -135,13 +136,19 @@ func InspectPackageResources(ctx context.Context, pkgLayout *layout.PackageLayou
 				if err != nil {
 					return nil, err
 				}
+				objs, err := chartTemplateObjects(chart, vals, pkg, variableConfig, tmpl.StateAccess{State: s, AccessKeys: component.StateAccess})
+				if err != nil {
+					return nil, err
+				}
 				if err := templateValuesFiles(ctx, chart, valuesDir, templateValuesFilesOpts{
 					variableConfig: variableConfig,
 					pkg:            pkg,
-					vals:           vals,
-					s:              s,
-					stateAccess:    component.StateAccess,
+					objs:           objs,
 				}); err != nil {
+					return nil, err
+				}
+				postRenderer, err := postrender.New(ctx, chart, objs)
+				if err != nil {
 					return nil, err
 				}
 
@@ -149,7 +156,7 @@ func InspectPackageResources(ctx context.Context, pkgLayout *layout.PackageLayou
 				if err != nil {
 					return nil, fmt.Errorf("failed to load chart data: %w", err)
 				}
-				chartTemplate, err := helm.TemplateChart(ctx, chart, helmChart, values, opts.KubeVersion, variableConfig, opts.IsInteractive, opts.RemoteOptions)
+				chartTemplate, err := helm.TemplateChart(ctx, chart, helmChart, values, opts.KubeVersion, variableConfig, postRenderer, opts.IsInteractive, opts.RemoteOptions)
 				if err != nil {
 					return nil, fmt.Errorf("could not render the Helm template for chart %s: %w", chart.Name, err)
 				}
@@ -194,8 +201,7 @@ func InspectPackageResources(ctx context.Context, pkgLayout *layout.PackageLayou
 					if manifest.EnableTemplating {
 						objs, err := tmpl.NewObjects(vals).
 							WithPackage(pkg).
-							WithVariables(variableConfig.GetSetVariableMap()).
-							WithConstants(variableConfig.GetConstants()).
+							WithVariableConfig(variableConfig).
 							WithState(tmpl.StateAccess{State: s, AccessKeys: component.StateAccess})
 						if err != nil {
 							return nil, fmt.Errorf("error building state template objects: %w", err)
@@ -224,9 +230,8 @@ func InspectPackageResources(ctx context.Context, pkgLayout *layout.PackageLayou
 type templateValuesFilesOpts struct {
 	variableConfig *variables.VariableConfig
 	pkg            api.Package
-	vals           value.Values
-	s              *state.State
-	stateAccess    []api.StateAccessKey
+	// objs must be set when any values file enables templating.
+	objs tmpl.Objects
 }
 
 func hasTemplatedValuesFile(chart api.Chart) bool {
@@ -236,6 +241,19 @@ func hasTemplatedValuesFile(chart api.Chart) bool {
 		}
 	}
 	return false
+}
+
+// chartTemplateObjects builds the template objects shared by chart's templated values files and post-renderers, or
+// returns nil when neither uses them. WithState may invoke bcrypt, so build them once per chart.
+func chartTemplateObjects(chart api.Chart, vals value.Values, pkg api.Package, vc *variables.VariableConfig, access tmpl.StateAccess) (tmpl.Objects, error) {
+	if !hasTemplatedValuesFile(chart) && !postrender.NeedsTemplating(chart) {
+		return nil, nil
+	}
+	objs, err := tmpl.NewObjects(vals).WithPackage(pkg).WithVariableConfig(vc).WithState(access)
+	if err != nil {
+		return nil, fmt.Errorf("error building template objects: %w", err)
+	}
+	return objs, nil
 }
 
 func templateValuesFiles(ctx context.Context, chart api.Chart, valuesDir string, opts templateValuesFilesOpts) error {
@@ -252,16 +270,6 @@ func templateValuesFiles(ctx context.Context, chart api.Chart, valuesDir string,
 		return nil
 	}
 
-	// Build objs once — inputs don't vary per file and WithState may invoke bcrypt.
-	objs, err := tmpl.NewObjects(opts.vals).
-		WithPackage(opts.pkg).
-		WithVariables(opts.variableConfig.GetSetVariableMap()).
-		WithConstants(opts.variableConfig.GetConstants()).
-		WithState(tmpl.StateAccess{State: opts.s, AccessKeys: opts.stateAccess})
-	if err != nil {
-		return fmt.Errorf("error building template objects: %w", err)
-	}
-
 	for i, valuesFile := range chart.ValuesFiles {
 		valueFilePath := filepath.Join(valuesDir, layout.ChartValuesFileName(chart.Name, chart.LegacyVersion, i))
 		if opts.pkg.GetAPIVersion() == v1alpha1.APIVersion {
@@ -270,7 +278,7 @@ func templateValuesFiles(ctx context.Context, chart api.Chart, valuesDir string,
 			}
 		}
 		if valuesFile.EnableTemplating {
-			if err := tmpl.ApplyToFile(ctx, valueFilePath, valueFilePath, objs); err != nil {
+			if err := tmpl.ApplyToFile(ctx, valueFilePath, valueFilePath, opts.objs); err != nil {
 				return fmt.Errorf("error applying Go templates to values file %s: %w", valueFilePath, err)
 			}
 		}
@@ -447,8 +455,7 @@ func getTemplatedManifests(ctx context.Context, manifest api.Manifest, resourceS
 			// Create template objects with values, metadata, build, constants, and variables
 			objs, err := tmpl.NewObjects(vals).
 				WithPackage(pkg).
-				WithVariables(variableConfig.GetSetVariableMap()).
-				WithConstants(variableConfig.GetConstants()).
+				WithVariableConfig(variableConfig).
 				WithState(stateAccess)
 			if err != nil {
 				return fmt.Errorf("error building state template objects: %w", err)
@@ -513,13 +520,19 @@ func getTemplatedChart(ctx context.Context, zarfChart api.Chart, componentName s
 		return Resource{}, common.Values{}, err
 	}
 
+	objs, err := chartTemplateObjects(zarfChart, vals, pkg, variableConfig, tmpl.StateAccess{State: s, AccessKeys: stateAccess})
+	if err != nil {
+		return Resource{}, common.Values{}, err
+	}
 	if err := templateValuesFiles(ctx, zarfChart, valuesFilePath, templateValuesFilesOpts{
 		variableConfig: variableConfig,
 		pkg:            pkg,
-		vals:           vals,
-		s:              s,
-		stateAccess:    stateAccess,
+		objs:           objs,
 	}); err != nil {
+		return Resource{}, common.Values{}, err
+	}
+	postRenderer, err := postrender.New(ctx, zarfChart, objs)
+	if err != nil {
 		return Resource{}, common.Values{}, err
 	}
 
@@ -527,7 +540,7 @@ func getTemplatedChart(ctx context.Context, zarfChart api.Chart, componentName s
 	if err != nil {
 		return Resource{}, common.Values{}, fmt.Errorf("failed to load chart data: %w", err)
 	}
-	chartTemplate, err := helm.TemplateChart(ctx, zarfChart, chart, values, kubeVersion, variableConfig, isInteractive, remoteOptions)
+	chartTemplate, err := helm.TemplateChart(ctx, zarfChart, chart, values, kubeVersion, variableConfig, postRenderer, isInteractive, remoteOptions)
 	if err != nil {
 		return Resource{}, common.Values{}, fmt.Errorf("could not render the Helm template for chart %s: %w", zarfChart.Name, err)
 	}

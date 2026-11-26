@@ -287,7 +287,7 @@ zarf package inspect manifests my-package.tar.zst
 
 ## Templating
 
-Zarf exposes custom go-templating functions and objects. This section details what is available to **manifests**, **files**, and **action `cmd` fields** when templated. Helm charts continue to use Helm's templating system.
+Zarf exposes custom go-templating functions and objects. This section details what is available to **manifests**, **files**, **action `cmd` fields**, and **Helm chart [post-renderers](/ref/components/#post-renderers)** when templated. Helm charts continue to use Helm's templating system.
 
 ### Cluster State (`.State`)
 

@@ -952,7 +952,7 @@ func collectVersionRequirements(pkg api.Package, hasIndex bool) []api.VersionReq
 	var reqs []api.VersionRequirement
 	var hasImageArchives, hasTemplatedValuesFiles, hasVersionlessChart bool
 	var hasVersionedBetaChart, hasDefaultReadinessWait bool
-	var hasBetaDeploySuccessActions bool
+	var hasBetaDeploySuccessActions, hasChartPostRenderers bool
 	isBeta := pkg.GetAPIVersion() == v1beta1.APIVersion
 	for _, comp := range pkg.Components {
 		if !hasImageArchives && len(comp.ImageArchives) > 0 {
@@ -973,6 +973,9 @@ func collectVersionRequirements(pkg api.Package, hasIndex bool) []api.VersionReq
 			if isBeta && (chart.HelmRepository != nil && chart.HelmRepository.Version != "" ||
 				chart.OCI != nil && chart.OCI.Ref != nil && chart.OCI.Ref.Tag != "") {
 				hasVersionedBetaChart = true
+			}
+			if isBeta && len(chart.PostRenderers) > 0 {
+				hasChartPostRenderers = true
 			}
 		}
 		if isBeta {
@@ -1033,6 +1036,12 @@ func collectVersionRequirements(pkg api.Package, hasIndex bool) []api.VersionReq
 		reqs = append(reqs, api.VersionRequirement{
 			Version: "v0.88.0",
 			Reason:  "This package uses v1beta1 deployment success hooks which require v0.88.0+ to run before saving successful state",
+		})
+	}
+	if hasChartPostRenderers {
+		reqs = append(reqs, api.VersionRequirement{
+			Version: "v1.1.0",
+			Reason:  "This package uses Helm chart post-renderers, which require v1.1.0+",
 		})
 	}
 	return reqs
