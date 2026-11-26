@@ -43,7 +43,7 @@ type DevDeployOptions struct {
 	Values value.Values
 	// OptionalComponents to be deployed
 	OptionalComponents string
-	// Timeout for Helm operations
+	// Timeout for the entire package deployment lifecycle
 	Timeout time.Duration
 	// Retries to preform for operations like git and image pushes
 	Retries int

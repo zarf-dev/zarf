@@ -285,7 +285,7 @@ $ zarf package mirror-resources zarf-package-my-app-amd64-1.0.0.tar.zst --repos 
 	CmdPackageDeployFlagSetValues             = "Set package values (key.path=value). Booleans and integers are type-inferred; everything else is a string"
 	CmdPackageDeployFlagComponents            = "Comma-separated list of components to deploy.  Adding this flag will skip the prompts for selected components.  Globbing component names with '*' and deselecting 'default' components with a leading '-' are also supported."
 	CmdPackageDeployFlagShasum                = "Shasum of the package to deploy. Required if deploying a remote https package."
-	CmdPackageDeployFlagTimeout               = "Timeout for health checks and Helm operations such as installs and rollbacks"
+	CmdPackageDeployFlagTimeout               = "Timeout for the package deployment, including health checks and Helm operations"
 	CmdPackageDeployValidateArchitectureErr   = "this package architecture is %s, but the target cluster only has the %s architecture(s). These architectures must be compatible when \"images\" are present"
 	CmdPackageDeployInvalidCLIVersionWarn     = "CLIVersion is set to '%s' which can cause issues with package creation and deployment. To avoid such issues, please set the value to the valid semantic version for this version of Zarf."
 	CmdPackageDeployFlagNamespace             = "[Alpha] Override the namespace for package deployment. Requires the package to have only one distinct namespace defined."

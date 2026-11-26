@@ -6,6 +6,7 @@ package packager
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -814,3 +815,51 @@ func TestDeployLegacyBuiltinsByAPIVersion(t *testing.T) {
 		})
 	}
 }
+
+func TestDeployTimeout(t *testing.T) {
+	t.Parallel()
+	ctx := testutil.TestContext(t)
+	dir := t.TempDir()
+
+	// Component with an action that takes longer than the timeout
+	pkg := api.Package{
+		APIVersion: v1beta1.APIVersion,
+		Kind:       api.ZarfPackageConfig,
+		Metadata:   api.PackageMetadata{Name: "timeout-pkg"},
+		Components: []api.Component{
+			{
+				Name: "slow-action",
+				Actions: api.ComponentActions{
+					OnDeploy: api.ActionSet{
+						Before: []api.Action{
+							{
+								// Sleep long enough to trigger timeout
+								Cmd: "sleep 2 || timeout /t 2",
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	pkgLayout, err := assemble.AssemblePackage(ctx, &load.ResolvedPackage{
+		Definition: pkg,
+		Resources:  load.NewResourceSet(dir),
+	}, assemble.AssembleOptions{SkipSBOM: true})
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, pkgLayout.Cleanup()) })
+
+	// Set a very short timeout (50ms) so the 2s action triggers timeout
+	opts := DeployOptions{
+		Timeout: 50 * time.Millisecond,
+	}
+
+	_, err = Deploy(ctx, pkgLayout, opts)
+	require.Error(t, err)
+	require.True(t, errors.Is(err, context.DeadlineExceeded) ||
+		errors.Is(err, context.Canceled) ||
+		strings.Contains(err.Error(), "context cancelled") ||
+		strings.Contains(err.Error(), "context deadline exceeded"))
+}
+

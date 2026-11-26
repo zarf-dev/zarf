@@ -65,7 +65,7 @@ type DeployOptions struct {
 	TakeOwnership bool
 	// Force Helm to take ownership of conflicting fields during Server-Side Apply operations
 	ForceConflicts bool
-	// Timeout for Helm operations
+	// Timeout for the entire package deployment lifecycle
 	Timeout time.Duration
 	// Retries is the maximum attempts for retryable deployment operations, including transient Helm admission-webhook failures.
 	Retries int
@@ -152,6 +152,14 @@ type DeployResult struct {
 // Component selection and its provenance come from the already-filtered layout.
 func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOptions) (DeployResult, error) {
 	start := time.Now()
+	if opts.Timeout == 0 {
+		opts.Timeout = config.ZarfDefaultTimeout
+	}
+	if opts.Timeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, opts.Timeout)
+		defer cancel()
+	}
 	pkg := pkgLayout.Definition()
 	internalv1alpha1.WarnIfDeprecated(ctx, pkg)
 	if err := opts.Validate(pkg); err != nil {
@@ -192,9 +200,6 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 
 	if opts.Retries == 0 {
 		opts.Retries = config.ZarfDefaultRetries
-	}
-	if opts.Timeout == 0 {
-		opts.Timeout = config.ZarfDefaultTimeout
 	}
 
 	if err := pkgLayout.Filter(filters.ByLocalOS(runtime.GOOS)); err != nil {
@@ -772,10 +777,8 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 	}
 
 	if len(component.HealthChecks) > 0 {
-		healthCheckContext, cancel := context.WithTimeout(ctx, opts.Timeout)
-		defer cancel()
 		l.Info("running health checks")
-		if err := healthchecks.Run(healthCheckContext, d.c.Watcher, component.HealthChecks); err != nil {
+		if err := healthchecks.Run(ctx, d.c.Watcher, component.HealthChecks); err != nil {
 			return charts, fmt.Errorf("health checks failed: %w", err)
 		}
 	}
