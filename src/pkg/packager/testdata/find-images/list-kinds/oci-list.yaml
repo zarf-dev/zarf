@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: OCIRepositoryList
+items:
+  - apiVersion: source.toolkit.fluxcd.io/v1beta2
+    kind: OCIRepository
+    metadata:
+      name: flux-in-list
+    spec:
+      interval: 30s
+      url: oci://ghcr.io/zarf-dev/flux-chart
+      ref:
+        tag: 1.2.3
