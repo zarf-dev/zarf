@@ -90,12 +90,12 @@ func newRegistryCommand() *cobra.Command {
 	cmd.AddCommand(craneCmd.NewCmdCopy(&craneOptions))
 	cmd.AddCommand(newRegistryCatalogCommand(&craneOptions))
 	cmd.AddCommand(newRegistryListCommand())
+	cmd.AddCommand(newRegistryDigestCommand())
 
 	// TODO(soltysh): consider splitting craneOptions to be per command
 	cmd.AddCommand(zarfCraneInternalWrapper(craneCmd.NewCmdPush, &craneOptions, lang.CmdToolsRegistryPushExample, 1))
 	cmd.AddCommand(zarfCraneInternalWrapper(craneCmd.NewCmdPull, &craneOptions, lang.CmdToolsRegistryPullExample, 0))
 	cmd.AddCommand(zarfCraneInternalWrapper(craneCmd.NewCmdDelete, &craneOptions, lang.CmdToolsRegistryDeleteExample, 0))
-	cmd.AddCommand(zarfCraneInternalWrapper(craneCmd.NewCmdDigest, &craneOptions, lang.CmdToolsRegistryDigestExample, 0))
 	cmd.AddCommand(zarfCraneInternalWrapper(craneCmd.NewCmdManifest, &craneOptions, lang.CmdToolsRegistryManifestExample, 0))
 	cmd.AddCommand(craneCmd.NewCmdVersion())
 	cmd.PersistentFlags().BoolVarP(&o.verbose, "verbose", "v", false, lang.CmdToolsRegistryFlagVerbose)
