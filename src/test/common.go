@@ -79,18 +79,30 @@ func (e2e *ZarfE2ETest) GetZarfAtVersion(t *testing.T, version string) string {
 		url = fmt.Sprintf("https://github.com/zarf-dev/zarf/releases/download/%s/zarf_%s_Darwin_amd64", version, version)
 	case runtime.GOOS == "darwin" && runtime.GOARCH == "arm64":
 		url = fmt.Sprintf("https://github.com/zarf-dev/zarf/releases/download/%s/zarf_%s_Darwin_arm64", version, version)
+	case runtime.GOOS == "windows" && runtime.GOARCH == "amd64":
+		url = fmt.Sprintf("https://github.com/zarf-dev/zarf/releases/download/%s/zarf_%s_Windows_amd64.exe", version, version)
+	case runtime.GOOS == "windows" && runtime.GOARCH == "arm64":
+		url = fmt.Sprintf("https://github.com/zarf-dev/zarf/releases/download/%s/zarf_%s_Windows_arm64.exe", version, version)
 	default:
-		t.Fatalf("unsupported platform: %s_%s", runtime.GOOS, runtime.GOARCH)
+		t.Skipf("unsupported platform: %s_%s", runtime.GOOS, runtime.GOARCH)
 	}
 
 	resp, err := http.Get(url)
-	require.NoError(t, err)
+	if err != nil {
+		t.Skipf("unable to download Zarf %s: %s", version, err)
+	}
 	defer func() {
 		require.NoError(t, resp.Body.Close())
 	}()
-	require.Equalf(t, http.StatusOK, resp.StatusCode, "unable to download Zarf %s: %s", version, resp.Status)
+	if resp.StatusCode != http.StatusOK {
+		t.Skipf("unable to download Zarf %s: %s", version, resp.Status)
+	}
 
-	tmpFile, err := os.CreateTemp(t.TempDir(), "zarf-*")
+	pattern := "zarf-*"
+	if runtime.GOOS == "windows" {
+		pattern = "zarf-*.exe"
+	}
+	tmpFile, err := os.CreateTemp(t.TempDir(), pattern)
 	require.NoError(t, err)
 	defer func() {
 		require.NoError(t, tmpFile.Close())
