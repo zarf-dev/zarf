@@ -1021,3 +1021,59 @@ func TestSkeletonImportExample(t *testing.T) {
 `
 	require.Equal(t, expected, string(data))
 }
+
+func TestImageWithDigest(t *testing.T) {
+	t.Parallel()
+
+	const nginxDigest = "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+	const pinnedDigest = "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+	digests := map[string]string{
+		"docker.io/library/nginx:1.27":     nginxDigest,
+		"docker.io/library/busybox:latest": pinnedDigest,
+	}
+
+	tests := []struct {
+		name        string
+		image       string
+		expected    string
+		expectedErr string
+	}{
+		{
+			name:     "tagged image gets packaged digest",
+			image:    "nginx:1.27",
+			expected: "nginx:1.27@" + nginxDigest,
+		},
+		{
+			name:     "fully qualified image gets packaged digest",
+			image:    "docker.io/library/nginx:1.27",
+			expected: "docker.io/library/nginx:1.27@" + nginxDigest,
+		},
+		{
+			name:     "untagged image resolves to latest",
+			image:    "busybox",
+			expected: "busybox@" + pinnedDigest,
+		},
+		{
+			name:     "digest pinned image is unchanged",
+			image:    "ghcr.io/zarf-dev/doom-game@" + pinnedDigest,
+			expected: "ghcr.io/zarf-dev/doom-game@" + pinnedDigest,
+		},
+		{
+			name:        "image missing from index",
+			image:       "ghcr.io/zarf-dev/doom-game:0.0.1",
+			expectedErr: "not found in the package image index",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			image, err := imageWithDigest(tt.image, digests)
+			if tt.expectedErr != "" {
+				require.ErrorContains(t, err, tt.expectedErr)
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, tt.expected, image)
+		})
+	}
+}

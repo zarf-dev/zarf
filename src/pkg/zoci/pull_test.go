@@ -228,6 +228,16 @@ func TestAssembleLayers(t *testing.T) {
 			expectedLen: 7,
 		},
 		{
+			name:        "image index layers",
+			selection:   zoci.LayerSelection{IncludeImageIndex: true},
+			expectedLen: 4,
+		},
+		{
+			name:        "image index with image layers is not duplicated",
+			selection:   zoci.LayerSelection{IncludeImages: true, IncludeImageIndex: true},
+			expectedLen: 7,
+		},
+		{
 			name:        "component layers",
 			selection:   zoci.LayerSelection{IncludeComponents: true},
 			expectedLen: 3,

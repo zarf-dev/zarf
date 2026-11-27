@@ -34,6 +34,8 @@ type LayerSelection struct {
 	IncludeComponents bool
 	// IncludeImages retrieves image layers referenced by components in the requested scope.
 	IncludeImages bool
+	// IncludeImageIndex retrieves the images index.json and oci-layout without any image blobs.
+	IncludeImageIndex bool
 	// SBOMs selects SBOM resources; nil skips SBOM layers.
 	SBOMs *SBOMSelection
 	// Attachments selects attachment resources; nil skips attachment layers.

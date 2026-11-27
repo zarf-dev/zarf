@@ -44,6 +44,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/signing"
 	"github.com/zarf-dev/zarf/src/pkg/state"
+	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"github.com/zarf-dev/zarf/src/types"
@@ -1249,6 +1250,7 @@ type packageInspectImagesOptions struct {
 	*architectureOptions
 	namespaceOverride string
 	ociConcurrency    int
+	showDigests       bool
 	packageVerifyFlags
 }
 
@@ -1270,11 +1272,12 @@ func newPackageInspectImagesCommand(v *viper.Viper, architecture *architectureOp
 
 	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
 	cmd.Flags().StringVarP(&o.namespaceOverride, "namespace", "n", o.namespaceOverride, lang.CmdPackageInspectFlagNamespace)
+	cmd.Flags().BoolVar(&o.showDigests, "digests", false, lang.CmdPackageInspectImagesFlagDigests)
 	addVerifyFlags(cmd, v, &o.packageVerifyFlags)
 	return cmd
 }
 
-func (o *packageInspectImagesOptions) run(cmd *cobra.Command, args []string) error {
+func (o *packageInspectImagesOptions) run(cmd *cobra.Command, args []string) (err error) {
 	ctx := cmd.Context()
 
 	src, err := choosePackage(ctx, args)
@@ -1288,7 +1291,6 @@ func (o *packageInspectImagesOptions) run(cmd *cobra.Command, args []string) err
 	}
 
 	v := getViper()
-	cluster, _ := cluster.New(ctx) //nolint: errcheck // package source may or may not be a cluster
 	loadOpts := packager.LoadOptions{
 		VerificationStrategy: o.verify.toStrategy(),
 		Architecture:         o.selectedArchitecture(),
@@ -1298,9 +1300,33 @@ func (o *packageInspectImagesOptions) run(cmd *cobra.Command, args []string) err
 		RemoteOptions:        defaultRemoteOptions(),
 		CachePath:            cachePath,
 	}
-	pkg, err := packager.GetPackageFromSourceOrCluster(ctx, cluster, src, o.namespaceOverride, loadOpts)
-	if err != nil {
-		return fmt.Errorf("unable to load the package: %w", err)
+
+	var pkg api.Package
+	var digests map[string]string
+	if o.showDigests {
+		// Image digests live in the package's images/index.json, which deployed package records do not keep.
+		if state.DeployedPackageNameRegex(src) {
+			return errors.New("--digests is not supported for packages deployed to a cluster, inspect the package archive or OCI reference instead")
+		}
+		loadOpts.LayerSelection = &zoci.LayerSelection{IncludeImageIndex: true}
+		pkgLayout, err := packager.LoadPackage(ctx, src, loadOpts)
+		if err != nil {
+			return fmt.Errorf("unable to load the package: %w", err)
+		}
+		defer func() {
+			err = errors.Join(err, pkgLayout.Cleanup())
+		}()
+		pkg = pkgLayout.Definition()
+		digests, err = pkgLayout.GetImageDigests()
+		if err != nil {
+			return fmt.Errorf("unable to read image digests: %w", err)
+		}
+	} else {
+		cluster, _ := cluster.New(ctx) //nolint: errcheck // package source may or may not be a cluster
+		pkg, err = packager.GetPackageFromSourceOrCluster(ctx, cluster, src, o.namespaceOverride, loadOpts)
+		if err != nil {
+			return fmt.Errorf("unable to load the package: %w", err)
+		}
 	}
 	internalv1alpha1.WarnIfDeprecated(ctx, pkg)
 
@@ -1314,9 +1340,32 @@ func (o *packageInspectImagesOptions) run(cmd *cobra.Command, args []string) err
 	}
 
 	for _, image := range images {
+		if o.showDigests {
+			image, err = imageWithDigest(image, digests)
+			if err != nil {
+				return err
+			}
+		}
 		fmt.Println("-", image)
 	}
 	return nil
+}
+
+// imageWithDigest appends the packaged digest to an image reference.
+// References that are already pinned by digest are returned unchanged.
+func imageWithDigest(image string, digests map[string]string) (string, error) {
+	refInfo, err := transform.ParseImageRef(image)
+	if err != nil {
+		return "", err
+	}
+	if refInfo.Digest != "" {
+		return image, nil
+	}
+	digest, ok := digests[refInfo.Reference]
+	if !ok {
+		return "", fmt.Errorf("image %q not found in the package image index", image)
+	}
+	return fmt.Sprintf("%s@%s", image, digest), nil
 }
 
 type packageInspectDocumentationOptions struct {

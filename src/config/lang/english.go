@@ -327,6 +327,9 @@ $ zarf package inspect images oci://ghcr.io/my-org/my-package:1.0.0
 
 # List images in a package already deployed to a cluster
 $ zarf package inspect images my-package
+
+# List images with the digests stored in the package (not supported for deployed packages)
+$ zarf package inspect images zarf-package-my-app-amd64-1.0.0.tar.zst --digests
 `
 
 	CmdPackageInspectSBOMExample = `
@@ -367,9 +370,10 @@ $ zarf package inspect documentation zarf-package-my-app-amd64-1.0.0.tar.zst
 $ zarf package inspect documentation oci://ghcr.io/my-org/my-package:1.0.0
 `
 
-	CmdPackageInspectFlagSbomOut    = "Specify an output directory for the SBOMs from the inspected Zarf package"
-	CmdPackageInspectFlagListImages = "List images in the package (prints to stdout)"
-	CmdPackageInspectFlagNamespace  = "[Alpha] Override the namespace for package inspection. Applicable only to packages deployed using the namespace flag."
+	CmdPackageInspectFlagSbomOut       = "Specify an output directory for the SBOMs from the inspected Zarf package"
+	CmdPackageInspectFlagListImages    = "List images in the package (prints to stdout)"
+	CmdPackageInspectImagesFlagDigests = "Show the digest stored in the package for each image (e.g. image:tag@sha256:...). Not supported for packages deployed to a cluster"
+	CmdPackageInspectFlagNamespace     = "[Alpha] Override the namespace for package inspection. Applicable only to packages deployed using the namespace flag."
 
 	CmdPackageRemoveShort   = "Removes a Zarf package that has been deployed already (runs offline)"
 	CmdPackageRemoveLong    = "Removes a Zarf package that has been deployed already (runs offline). Remove reverses the deployment order, the last component is removed first."

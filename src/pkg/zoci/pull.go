@@ -192,6 +192,21 @@ func AssembleLayers(ctx context.Context, root *oci.Manifest, fetcher content.Fet
 		}
 	}
 
+	if selection.IncludeImageIndex {
+		for _, path := range []string{layout.IndexPath, layout.OCILayoutPath} {
+			desc := root.Locate(path)
+			if oci.IsEmptyDescriptor(desc) {
+				continue
+			}
+			alreadySelected := slices.ContainsFunc(layers, func(l ocispec.Descriptor) bool {
+				return l.Digest == desc.Digest
+			})
+			if !alreadySelected {
+				layers = append(layers, desc)
+			}
+		}
+	}
+
 	if selection.SBOMs != nil {
 		if len(selection.SBOMs.Keys) > 0 && !layout.UsesGranularResourceLayout(pkg) {
 			return nil, fmt.Errorf("SBOM selection by key requires package API version v1beta1+")

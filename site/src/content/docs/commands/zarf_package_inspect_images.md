@@ -27,6 +27,9 @@ $ zarf package inspect images oci://ghcr.io/my-org/my-package:1.0.0
 # List images in a package already deployed to a cluster
 $ zarf package inspect images my-package
 
+# List images with the digests stored in the package (not supported for deployed packages)
+$ zarf package inspect images zarf-package-my-app-amd64-1.0.0.tar.zst --digests
+
 ```
 
 ### Options
@@ -36,6 +39,7 @@ $ zarf package inspect images my-package
       --certificate-identity-regexp string      Regex variant of --certificate-identity
       --certificate-oidc-issuer string          Required OIDC issuer claim in the signing certificate (keyless verify). Example: https://github.com/login/oauth or https://token.actions.githubusercontent.com
       --certificate-oidc-issuer-regexp string   Regex variant of --certificate-oidc-issuer
+      --digests                                 Show the digest stored in the package for each image (e.g. image:tag@sha256:...). Not supported for packages deployed to a cluster
   -h, --help                                    help for images
       --insecure-ignore-tlog                    Skip Rekor transparency log inclusion verification. Default true for air-gap. Auto-disabled when keyless identity flags are set (keyless signatures require Rekor inclusion proof to remain verifiable past certificate expiry). (default true)
   -k, --key string                              Path to public key file for validating signed packages
