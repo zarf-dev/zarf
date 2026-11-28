@@ -42,13 +42,12 @@ func Test_includedOrExcluded(t *testing.T) {
 			wantRequestedComponent:  "",
 		},
 		{
-			name:                    "Test when component is excluded and included",
+			name:                    "Test when a later inclusion overrides an exclusion",
 			componentName:           "example",
 			requestedComponentNames: []string{"-example", "example"},
-			wantState:               excluded,
+			wantState:               included,
 			wantRequestedComponent:  "-example",
 		},
-		// interesting case, excluded wins
 		{
 			name:                    "Test when component is included and excluded",
 			componentName:           "example",
@@ -97,10 +96,24 @@ func Test_includedOrExcluded(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			gotState, gotRequestedComponent, err := includedOrExcluded(tc.componentName, tc.requestedComponentNames)
+			matchedRequests := map[string]bool{}
+			gotState, err := includedOrExcluded(tc.componentName, tc.requestedComponentNames, matchedRequests)
 			require.ErrorIs(t, err, tc.expectedErr)
 			require.Equal(t, tc.wantState, gotState)
-			require.Equal(t, tc.wantRequestedComponent, gotRequestedComponent)
+			if tc.wantRequestedComponent != "" {
+				require.True(t, matchedRequests[tc.wantRequestedComponent])
+			}
 		})
 	}
+}
+
+func TestNormalizeComponentSelectors(t *testing.T) {
+	t.Parallel()
+
+	normalized, err := NormalizeComponentSelectors(" B, -A,b,  ")
+	require.NoError(t, err)
+	require.Equal(t, "b,-a,b", normalized)
+
+	_, err = NormalizeComponentSelectors("[")
+	require.ErrorIs(t, err, path.ErrBadPattern)
 }

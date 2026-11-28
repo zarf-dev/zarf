@@ -20,25 +20,17 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/variables"
 
-	"github.com/Masterminds/semver/v3"
 	"github.com/avast/retry-go/v4"
-	plutoversionsfile "github.com/fairwindsops/pluto/v5"
-	plutoapi "github.com/fairwindsops/pluto/v5/pkg/api"
-	goyaml "github.com/goccy/go-yaml"
 	"helm.sh/helm/v4/pkg/action"
 	"helm.sh/helm/v4/pkg/chart/common"
 	chartv2 "helm.sh/helm/v4/pkg/chart/v2"
 	"helm.sh/helm/v4/pkg/kube"
 	"helm.sh/helm/v4/pkg/release"
 	releasecommon "helm.sh/helm/v4/pkg/release/common"
-	releasev1 "helm.sh/helm/v4/pkg/release/v1"
-	releaseutil "helm.sh/helm/v4/pkg/release/v1/util"
 	"helm.sh/helm/v4/pkg/storage/driver"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
-	"sigs.k8s.io/yaml"
 
 	"github.com/zarf-dev/zarf/src/internal/healthchecks"
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
@@ -384,12 +376,6 @@ func installChart(ctx context.Context, zarfChart api.Chart, chart *chartv2.Chart
 
 func upgradeChart(ctx context.Context, zarfChart api.Chart, chart *chartv2.Chart, chartValues common.Values,
 	opts InstallUpgradeOptions, actionConfig *action.Configuration, postRender *renderer, lastRelease release.Releaser) (release.Releaser, error) {
-	// Migrate any deprecated APIs (if applicable)
-	err := migrateDeprecatedAPIs(ctx, opts.Cluster, actionConfig, lastRelease)
-	if err != nil {
-		return nil, fmt.Errorf("unable to check for API deprecations: %w", err)
-	}
-
 	// Setup a new upgrade action
 	client := action.NewUpgrade(actionConfig)
 
@@ -461,113 +447,4 @@ func LoadChartData(zarfChart api.Chart, paths layout.ChartPaths, valuesOverrides
 		return loadedChart, nil, fmt.Errorf("unable to parse chart values: %w", err)
 	}
 	return loadedChart, chartValues, nil
-}
-
-// migrateDeprecatedAPIs searches through all the objects from the latest release and migrates any deprecated APIs to the latest version.
-// If any deprecated fields are found, the release will be updated and saved back to the cluster.
-func migrateDeprecatedAPIs(ctx context.Context, c *cluster.Cluster, actionConfig *action.Configuration, latestReleaser release.Releaser) error {
-	// We can re-evaluate handling this functionality for chart v3 / release v2 when available.
-	// Potentially we stop doing this functionality for future chart APIs, as it could be outside of the intended scope of Zarf.
-	latestRelease, ok := latestReleaser.(*releasev1.Release)
-	if !ok {
-		return nil
-	}
-	// Get the Kubernetes version from the current cluster
-	kubeVersion, err := c.Clientset.Discovery().ServerVersion()
-	if err != nil {
-		return err
-	}
-
-	kubeGitVersion, err := semver.NewVersion(kubeVersion.String())
-	if err != nil {
-		return err
-	}
-
-	// Use helm to re-split the manifest bytes (same call used by helm to pass this data to postRender)
-	_, resources, err := releaseutil.SortManifests(map[string]string{"manifest": latestRelease.Manifest}, nil, releaseutil.InstallOrder)
-
-	if err != nil {
-		return fmt.Errorf("error re-rendering helm output: %w", err)
-	}
-
-	modifiedManifest := ""
-	modified := false
-
-	// Loop over the resources from the lastRelease manifest to check for deprecations
-	for _, resource := range resources {
-		// parse to unstructured to have access to more data than just the name
-		rawData := &unstructured.Unstructured{}
-		if err := yaml.Unmarshal([]byte(resource.Content), rawData); err != nil {
-			return fmt.Errorf("failed to unmarshal manifest: %w", err)
-		}
-
-		rawData, manifestModified, err := handleDeprecations(rawData, *kubeGitVersion)
-		if err != nil {
-			// avoid returning the err here in case pluto uses an invalid semver
-			logger.From(ctx).Error("unable to update deprecated resource", "name", resource.Name, "err", err.Error())
-		}
-		manifestContent, err := yaml.Marshal(rawData)
-		if err != nil {
-			return fmt.Errorf("failed to marshal raw manifest after deprecation check: %w", err)
-		}
-
-		// If this is not a bad object, place it back into the manifest
-		modifiedManifest += fmt.Sprintf("---\n# Source: %s\n%s\n", resource.Name, manifestContent)
-
-		if manifestModified {
-			modified = true
-		}
-	}
-
-	// If the release was modified in the above loop, save it back to the cluster
-	if modified {
-		logger.From(ctx).Warn("detected deprecated APIs for the helm release", "name", latestRelease.Name)
-
-		// Update current release version to be superseded (same as the helm mapkubeapis plugin)
-		latestRelease.Info.Status = releasecommon.StatusSuperseded
-		if err := actionConfig.Releases.Update(latestRelease); err != nil {
-			return err
-		}
-
-		// Use a shallow copy of current release version to update the object with the modification
-		// and then store this new version (same as the helm mapkubeapis plugin)
-		var newRelease = latestRelease
-		newRelease.Manifest = modifiedManifest
-		newRelease.Info.Description = "Kubernetes deprecated API upgrade - DO NOT rollback from this version"
-		newRelease.Info.LastDeployed = actionConfig.Now()
-		newRelease.Version = latestRelease.Version + 1
-		newRelease.Info.Status = releasecommon.StatusDeployed
-		if err := actionConfig.Releases.Create(newRelease); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-// handleDeprecations takes in an unstructured object and the k8s version and returns the latest version of the object and if it was modified.
-func handleDeprecations(rawData *unstructured.Unstructured, kubernetesVersion semver.Version) (*unstructured.Unstructured, bool, error) {
-	deprecatedVersionContent := &plutoapi.VersionFile{}
-	err := goyaml.Unmarshal(plutoversionsfile.Content(), deprecatedVersionContent)
-	if err != nil {
-		return rawData, false, err
-	}
-	for _, deprecation := range deprecatedVersionContent.DeprecatedVersions {
-		if deprecation.Component == "k8s" && deprecation.Kind == rawData.GetKind() && deprecation.Name == rawData.GetAPIVersion() {
-			removedVersion, err := semver.NewVersion(deprecation.RemovedIn)
-			if err != nil {
-				return rawData, false, err
-			}
-
-			if removedVersion.LessThan(&kubernetesVersion) {
-				if deprecation.ReplacementAPI != "" {
-					rawData.SetAPIVersion(deprecation.ReplacementAPI)
-					return rawData, true, nil
-				}
-
-				return nil, true, nil
-			}
-		}
-	}
-	return rawData, false, nil
 }

@@ -51,8 +51,6 @@ func newVersionCommand() *cobra.Command {
 	}
 
 	cmd.Flags().VarP(&o.outputFormat, "output-format", "o", "Output format (yaml|json)")
-	cmd.Flags().VarP(&o.outputFormat, "output", "", "Output format (yaml|json)")
-	cmd.Flags().MarkDeprecated("output", "output is deprecated. Please use --output-format instead")
 
 	return cmd
 }

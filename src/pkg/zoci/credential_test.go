@@ -19,7 +19,7 @@ import (
 	"oras.land/oras-go/v2/registry/remote/auth"
 )
 
-func TestNewRemoteWithOptionsCredentialFunc(t *testing.T) {
+func TestNewRemoteCredentialFunc(t *testing.T) {
 	t.Parallel()
 
 	credential := auth.Credential{Username: "registry-user", Password: "registry-password"}
@@ -50,7 +50,7 @@ func TestNewRemoteWithOptionsCredentialFunc(t *testing.T) {
 	transport, ok := server.Client().Transport.(*http.Transport)
 	require.True(t, ok)
 
-	remote, err := NewRemoteWithOptions(context.Background(), host+"/test:latest", oci.PlatformForArch("amd64"), RemoteClientOptions{
+	remote, err := NewRemote(context.Background(), host+"/test:latest", oci.PlatformForArch("amd64"), RemoteClientOptions{
 		CredentialFunc: auth.StaticCredential(host, credential),
 		Transport:      transport,
 	})

@@ -325,7 +325,7 @@ func TestPublishComponentDoesNotTagOnSigningFailure(t *testing.T) {
 	require.NoError(t, err)
 	componentRef, err := componentReference(destination, config)
 	require.NoError(t, err)
-	remote, err := zoci.NewRemoteWithOptions(ctx, componentRef.String(), ocispec.Platform{}, zoci.RemoteClientOptions{
+	remote, err := zoci.NewRemote(ctx, componentRef.String(), ocispec.Platform{}, zoci.RemoteClientOptions{
 		RemoteOptions: defaultTestRemoteOptions(),
 	})
 	require.NoError(t, err)

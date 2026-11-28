@@ -18,6 +18,7 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/checksum"
 	"github.com/zarf-dev/zarf/src/internal/split"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
+	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/signing"
@@ -29,10 +30,10 @@ import (
 
 // LoadOptions are the options for LoadPackage.
 type LoadOptions struct {
-	Shasum       string
-	Architecture string
-	// Deprecated: Use VerifyBlobOptions instead.
-	PublicKeyPath     string
+	Shasum string
+	// Architecture selects the target architecture for OCI sources.
+	// Empty uses the host architecture. Ignored for local archives.
+	Architecture      string
 	VerifyBlobOptions *signing.VerifyBlobOptions
 	Filter            filters.ComponentFilterStrategy
 	Output            string
@@ -61,15 +62,6 @@ func LoadPackage(ctx context.Context, source string, opts LoadOptions) (_ *layou
 		opts.Filter = filters.Empty()
 	}
 
-	// Resolve deprecated PublicKeyPath into VerifyBlobOptions.
-	// Only applies when VerifyBlobOptions is not already set,
-	// ensuring the new API takes precedence over the deprecated field.
-	if opts.VerifyBlobOptions == nil && opts.PublicKeyPath != "" {
-		defaults := signing.DefaultVerifyBlobOptions()
-		defaults.Key = opts.PublicKeyPath
-		opts.VerifyBlobOptions = &defaults
-	}
-
 	opts.CachePath, err = utils.ResolveCachePath(opts.CachePath)
 	if err != nil {
 		return nil, err
@@ -92,12 +84,13 @@ func LoadPackage(ctx context.Context, source string, opts LoadOptions) (_ *layou
 	tmpPath := filepath.Join(tmpDir, "data.tar.zst")
 	switch srcType {
 	case "oci":
+		arch := helpers.ResolveArch(opts.Architecture)
 		ociOpts := pullOCIOptions{
 			Source:               source,
 			VerifyBlobOptions:    opts.VerifyBlobOptions,
 			VerificationStrategy: opts.VerificationStrategy,
 			Shasum:               opts.Shasum,
-			Architecture:         config.GetArch(opts.Architecture),
+			Architecture:         arch,
 			Filter:               opts.Filter,
 			LayerSelection:       opts.LayerSelection,
 			OCIConcurrency:       opts.OCIConcurrency,
@@ -105,12 +98,10 @@ func LoadPackage(ctx context.Context, source string, opts LoadOptions) (_ *layou
 			Connected:            opts.Connected,
 			CachePath:            opts.CachePath,
 		}
-
 		pkgLayout, err := pullOCI(ctx, ociOpts)
 		if err != nil {
 			return nil, err
 		}
-		// OCI is a special case since it doesn't create a tar unless the tar file is output
 		if opts.Output != "" {
 			_, err := pkgLayout.Archive(ctx, opts.Output, 0)
 			if err != nil {

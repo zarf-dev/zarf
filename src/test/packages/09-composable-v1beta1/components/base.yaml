@@ -1,0 +1,10 @@
+apiVersion: zarf.dev/v1beta1
+kind: ZarfComponentConfig
+metadata:
+  name: base
+component:
+  manifests:
+    - name: config
+      namespace: original
+      files:
+        - config.yaml

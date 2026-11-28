@@ -145,7 +145,7 @@ func Publish(ctx context.Context, componentPath string, destination registry.Ref
 	if err := store.Tag(ctx, manifest, manifest.Digest.String()); err != nil {
 		return registry.Reference{}, fmt.Errorf("unable to stage component artifact: %w", err)
 	}
-	remote, err := zoci.NewRemoteWithOptions(ctx, componentRef.String(), ocispec.Platform{Architecture: component.Variant.Architecture}, zoci.RemoteClientOptions{
+	remote, err := zoci.NewRemote(ctx, componentRef.String(), ocispec.Platform{Architecture: component.Variant.Architecture}, zoci.RemoteClientOptions{
 		RemoteOptions: opts.RemoteOptions,
 	})
 	if err != nil {
@@ -206,7 +206,7 @@ func pushComponentArtifact(ctx context.Context, store oras.ReadOnlyTarget, sourc
 			defer trackedRemote.StopReporting()
 
 			var copyErr error
-			published, copyErr = oras.Copy(ctx, store, sourceRef, trackedRemote, "", copyOpts)
+			published, copyErr = oras.Copy(ctx, store, sourceRef, trackedRemote.CopyTarget(), "", copyOpts)
 			if copyErr != nil {
 				return copyErr
 			}

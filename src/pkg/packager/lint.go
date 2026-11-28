@@ -12,6 +12,7 @@ import (
 	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
+	internalv1alpha1 "github.com/zarf-dev/zarf/src/internal/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
@@ -21,6 +22,8 @@ import (
 
 // LintOptions are the optional parameters to Lint
 type LintOptions struct {
+	// Architecture overrides package metadata; standalone components use their declared variant.
+	Architecture string
 	SetVariables map[string]string
 	Flavor       string
 	CachePath    string
@@ -65,6 +68,7 @@ func Lint(ctx context.Context, packagePath string, opts LintOptions) error {
 	}
 
 	loadOpts := load.DefinitionOptions{
+		Architecture:     opts.Architecture,
 		Flavor:           opts.Flavor,
 		SetVariables:     opts.SetVariables,
 		CachePath:        cachePath,
@@ -76,6 +80,7 @@ func Lint(ctx context.Context, packagePath string, opts LintOptions) error {
 	if err != nil {
 		return err
 	}
+	internalv1alpha1.WarnAuthorIfDeprecated(ctx, definition)
 	findings := []lint.PackageFinding{}
 	switch definition.GetAPIVersion() {
 	case v1alpha1.APIVersion:

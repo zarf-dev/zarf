@@ -35,3 +35,7 @@ dist
 CLAUDE.local.md
 
 src/cmd/testdata/inspect-values-files/chart-remote/zarf.yaml
+
+# Local lychee reports
+/.lychee/results/
+/.lycheecache

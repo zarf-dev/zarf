@@ -206,12 +206,12 @@ func (suite *PublishCopySkeletonSuite) Test_3_Copy() {
 	ctx := testutil.TestContext(t)
 	ctx = logger.WithContext(ctx, test.GetLogger(t))
 
-	src, err := zoci.NewRemoteWithOptions(ctx, ref, oci.PlatformForArch(e2e.Arch), zoci.RemoteClientOptions{
+	src, err := zoci.NewRemote(ctx, ref, oci.PlatformForArch(e2e.Arch), zoci.RemoteClientOptions{
 		RemoteOptions: types.RemoteOptions{PlainHTTP: true},
 	})
 	suite.NoError(err)
 
-	dst, err := zoci.NewRemoteWithOptions(ctx, dstRef, oci.PlatformForArch(e2e.Arch), zoci.RemoteClientOptions{
+	dst, err := zoci.NewRemote(ctx, dstRef, oci.PlatformForArch(e2e.Arch), zoci.RemoteClientOptions{
 		RemoteOptions: types.RemoteOptions{PlainHTTP: true},
 	})
 	suite.NoError(err)

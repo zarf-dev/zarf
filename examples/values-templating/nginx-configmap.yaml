@@ -21,11 +21,6 @@ data:
         <!-- Test two separate values on the same line -->
         <h1>Welcome to the {{ .Values.site.name }}!</h1><h2>Brought to you by {{ .Values.site.organization }}.</h2>
 
-        <!-- Import Variables and Constants into new go-templates, to help with migrating over to the new Values feature
-        and templating syntax -->
-        <pre>Imported variable from .Variables.EXAMPLE_VAR {{ .Variables.EXAMPLE_VAR }}</pre>
-        <pre>Imported constant from .Constants.EXAMPLE_CONST {{ .Constants.EXAMPLE_CONST }}</pre>
-
         <!-- Sprig Function Examples -->
         <h3>Sprig Function Examples</h3>
 
@@ -84,7 +79,7 @@ data:
         <h3>Package values (via .Pkg)</h3>
         <pre>Name: {{ .Pkg.Metadata.Name }}</pre>
         <pre>CLI version during build: {{ .Pkg.Build.Version }}</pre>
-        <pre>Nginx Image: {{ index (.Pkg.GetComponent "values-with-manifest").Images 0 }}</pre>
+        <pre>Nginx Image: {{ ((.Pkg.GetComponent "values-with-manifest").GetImageByID "nginx").Reference }}</pre>
 
         {{ .Values.site.footer }}
       </body>

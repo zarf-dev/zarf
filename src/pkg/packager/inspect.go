@@ -13,6 +13,7 @@ import (
 	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
+	internalv1alpha1 "github.com/zarf-dev/zarf/src/internal/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
 	"github.com/zarf-dev/zarf/src/pkg/feature"
@@ -67,6 +68,7 @@ func InspectPackageResources(ctx context.Context, pkgLayout *layout.PackageLayou
 		return nil, err
 	}
 	pkg := pkgLayout.Definition()
+	internalv1alpha1.WarnIfDeprecated(ctx, pkg)
 
 	if !feature.IsEnabled(feature.Values) && (len(pkg.Values.Files) > 0 || len(opts.Values) > 0) {
 		return nil, fmt.Errorf("package-level values passed in but \"%s\" feature is not enabled."+
@@ -279,6 +281,8 @@ func templateValuesFiles(ctx context.Context, chart api.Chart, valuesDir string,
 
 // InspectDefinitionResourcesOptions are the optional parameters to InspectDefinitionResources
 type InspectDefinitionResourcesOptions struct {
+	// Architecture overrides package metadata; standalone components use their declared variant.
+	Architecture string
 	// EnableKustomizePlugins allows plugins enabled in the package definition to execute arbitrary commands.
 	EnableKustomizePlugins bool
 	CreateSetVariables     map[string]string
@@ -309,6 +313,7 @@ func InspectDefinitionResources(ctx context.Context, packagePath string, opts In
 	}
 	loadOpts := load.PackageOptions{
 		DefinitionOptions: load.DefinitionOptions{
+			Architecture:     opts.Architecture,
 			Flavor:           opts.Flavor,
 			SetVariables:     opts.CreateSetVariables,
 			CachePath:        opts.CachePath,
@@ -325,6 +330,7 @@ func InspectDefinitionResources(ctx context.Context, packagePath string, opts In
 		err = errors.Join(err, loaded.Close())
 	}()
 	pkg := loaded.Definition
+	internalv1alpha1.WarnAuthorIfDeprecated(ctx, pkg)
 	selectedComponents := pkg.Components
 	if opts.Components != "" {
 		filteredPkg, err := filters.Apply(pkg, filters.BySelectState(opts.Components))

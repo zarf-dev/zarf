@@ -18,7 +18,7 @@ func TestVariables(t *testing.T) {
 
 	evilSrc := filepath.Join("src", "test", "packages", "24-evil-variables")
 	evilPath := fmt.Sprintf("zarf-package-evil-variables-%s.tar.zst", e2e.Arch)
-	src := filepath.Join("examples", "variables")
+	src := filepath.Join("src", "test", "packages", "24-variables")
 
 	tfPath := "modified-config.json"
 
@@ -53,13 +53,13 @@ func TestVariables(t *testing.T) {
 	require.Contains(t, stdErr, "", expectedOutString)
 
 	// Test that specifying an invalid variable value results in an error
-	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", path, "--set", "SITE_NAME=#INVALID", "--confirm")
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", path, "--set-variables", "SITE_NAME=#INVALID", "--confirm")
 	require.Error(t, err, stdOut, stdErr)
 	expectedOutString = "variable \"SITE_NAME\" does not match pattern "
 	require.Contains(t, stdErr, "", expectedOutString)
 
 	// Deploy nginx
-	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", path, "--confirm", "--set", "SITE_NAME=Lula Web", "--set", "SECRET=cool-place", "-l", "trace")
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", path, "--confirm", "--set-variables", "SITE_NAME=Lula Web", "--set-variables", "SECRET=cool-place", "-l", "debug")
 	require.NoError(t, err, stdOut, stdErr)
 	// Verify that the variables were shown to the user in the formats we expect
 	require.Contains(t, stdOut, "currently set to 'Defense Unicorns' (default)")
@@ -95,7 +95,7 @@ func TestVariables(t *testing.T) {
 	require.NoError(t, err, "unable to get nginx-extra configmap")
 	require.Equal(t, "extra-value", string(extraOut))
 
-	// Remove the variables example
+	// Remove the variables package
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", path, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 

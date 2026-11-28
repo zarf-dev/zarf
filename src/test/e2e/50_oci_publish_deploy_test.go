@@ -47,12 +47,12 @@ func (suite *PublishDeploySuiteTestSuite) Test_0_Publish() {
 	publicKeyFlag := "--key=src/test/packages/zarf-test.pub"
 
 	chartPackagePath := filepath.Join("examples", "helm-charts")
-	stdOut, stdErr, err := e2e.Zarf(suite.T(), "package", "create", chartPackagePath, "-o", suite.PackagesDir)
+	stdOut, stdErr, err := e2e.Zarf(suite.T(), "package", "create", chartPackagePath, "-o", suite.PackagesDir, privateKeyFlag)
 	suite.NoError(err, stdOut, stdErr)
 	// Publish package.
 	example := filepath.Join(suite.PackagesDir, fmt.Sprintf("zarf-package-helm-charts-%s-0.0.1.tar.zst", e2e.Arch))
 	ref := suite.Reference.String()
-	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "publish", example, "oci://"+ref, "--plain-http", privateKeyFlag)
+	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "publish", example, "oci://"+ref, "--plain-http")
 	suite.NoError(err, stdOut, stdErr)
 	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "verify", "oci://"+ref+"/helm-charts:0.0.1", "--plain-http", publicKeyFlag)
 	suite.NoError(err, stdOut, stdErr)
@@ -68,11 +68,11 @@ func (suite *PublishDeploySuiteTestSuite) Test_0_Publish() {
 
 	// Inline publish flavor.
 	chartPackagePath = filepath.Join("examples", "package-flavors")
-	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "create", chartPackagePath, "-o", "oci://"+ref, "--flavor", "oracle-cookie-crunch", "--plain-http")
+	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "create", chartPackagePath, "-o", "oci://"+ref, "--flavor", "oracle-cookie-crunch", "--plain-http", privateKeyFlag)
 	suite.NoError(err, stdOut, stdErr)
 
 	// Publish from OCI to OCI
-	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "publish", "oci://"+ref+"/package-flavors:1.0.0-oracle-cookie-crunch", "oci://"+ref+"/namespace/", "--plain-http", privateKeyFlag)
+	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "publish", "oci://"+ref+"/package-flavors:1.0.0-oracle-cookie-crunch", "oci://"+ref+"/namespace/", "--plain-http")
 	suite.NoError(err, stdOut, stdErr)
 
 	// Inspect published flavor.

@@ -248,18 +248,18 @@ func init() {
 			Stage:   Beta,
 		},
 		{
-			Name: DockerDaemonDirectPull,
-			Description: "Saves images from the local Docker daemon directly via the engine's OCI image export " +
-				"disabling this feature falls back to pulling with Crane.",
-			Enabled: true,
-			Since:   "v0.80.0",
-			Stage:   GA,
+			Name:        DockerDaemonDirectPull,
+			Description: "Saves daemon source through direct Docker API interactions. Disabling once enabled Crane daemon pulls, but no longer has any effect",
+			Enabled:     true,
+			Since:       "v0.80.0",
+			Stage:       GA,
 		},
 		{
 			Name:        SBOMViewer,
-			Description: "Enables deprecated SBOM viewer HTML generation during package creation.",
+			Description: "Retired: Enabled deprecated SBOM viewer HTML generation during package creation",
 			Enabled:     false,
 			Since:       "v0.86.0",
+			Until:       "v1.0.0",
 			Stage:       Deprecated,
 		},
 		{

@@ -1,0 +1,16 @@
+# DEPRECATED: This package uses the `metadata.yolo` field which is no longer recommended. Use `zarf package deploy --connected` instead.
+kind: ZarfPackageConfig
+metadata:
+  name: yolo
+  yolo: true
+  description: Game example in YOLO (online-only) mode that can be deployed without a Zarf cluster
+
+components:
+  - name: yolo-games
+    required: true
+    manifests:
+      - name: multi-games
+        namespace: zarf-yolo-example
+        files:
+          - manifests/deployment.yaml
+          - manifests/service.yaml

@@ -30,11 +30,36 @@ component:
         ref:
           tag: 12.7.0
       valuesFiles:
+        - path: git-server-base-values.yaml
         - path: git-server-state-values.yaml
           enableTemplating: true
       values:
-        - sourcePath: .gitServer
-          targetPath: .
+        - sourcePath: .gitServer.podSecurityContext.fsGroup
+          targetPath: .podSecurityContext.fsGroup
+        - sourcePath: .gitServer.podSecurityContext.runAsGroup
+          targetPath: .podSecurityContext.runAsGroup
+        - sourcePath: .gitServer.podSecurityContext.runAsUser
+          targetPath: .podSecurityContext.runAsUser
+        - sourcePath: .gitServer.resources
+          targetPath: .resources
+        - sourcePath: .gitServer.persistence.claimName
+          targetPath: .persistence.claimName
+        - sourcePath: .gitServer.persistence.size
+          targetPath: .persistence.size
+        - sourcePath: .gitServer.persistence.storageClass
+          targetPath: .persistence.storageClass
+        - sourcePath: .gitServer.persistence.accessModes
+          targetPath: .persistence.accessModes
+        - sourcePath: .gitServer.replicaCount
+          targetPath: .replicaCount
+        - sourcePath: .gitServer.gitea.config.service.DISABLE_REGISTRATION
+          targetPath: .gitea.config.service.DISABLE_REGISTRATION
+        - sourcePath: .gitServer.affinity
+          targetPath: .affinity
+        - sourcePath: .gitServer.tolerations
+          targetPath: .tolerations
+        - sourcePath: .gitServer.nodeSelector
+          targetPath: .nodeSelector
   actions:
     onDeploy:
       before:

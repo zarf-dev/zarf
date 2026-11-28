@@ -36,16 +36,16 @@ Zarf eliminates the [complexity of airgap software delivery](https://www.itopsti
 - [Publish](https://docs.zarf.dev/commands/zarf_package_publish), [pull](https://docs.zarf.dev/commands/zarf_package_pull), and [deploy](https://docs.zarf.dev/commands/zarf_package_deploy) packages from an [OCI registry](https://opencontainers.org/)
 - Powerful component lifecycle [actions](https://docs.zarf.dev/ref/actions)
 - Deploy a new cluster while fully disconnected with [K3s](https://k3s.io/) or into any existing cluster using a [kube config](https://kubernetes.io/docs/concepts/configuration/organize-cluster-access-kubeconfig/)
-- Built-in Git server with [Gitea](https://gitea.io/en-us/)
+- Built-in Git server with [Gitea](https://about.gitea.com/)
 - Built-in Docker registry
 - Builtin [K9s Dashboard](https://k9scli.io/) for managing a cluster from the terminal
-- [Mutating Webhook](adr/0005-mutating-webhook.md) to automatically update Kubernetes pod's image path and pull secrets as well as [Flux Git Repository](https://fluxcd.io/docs/components/source/gitrepositories/) URLs and secret references
+- [Mutating Webhook](https://docs.zarf.dev/ref/init-package/#zarf-agent) to automatically update Kubernetes pod's image path and pull secrets as well as [Flux Git Repository](https://fluxcd.io/docs/components/source/gitrepositories/) URLs and secret references
 - Builtin [command to find images](https://docs.zarf.dev/commands/zarf_dev_find-images) and resources from a Helm chart
 - Tunneling capability to [connect to Kubernetes resources](https://docs.zarf.dev/commands/zarf_connect) without network routing, DNS, TLS or Ingress configuration required
 
 ## 🛠️ Configurable Features
 
-- Customizable [variables and package templates](https://docs.zarf.dev/ref/values/) with defaults and user prompting
+- Customizable [package values](https://docs.zarf.dev/ref/package-values/) and Go templating
 - [Composable packages](https://docs.zarf.dev/ref/components/#component-imports) to include multiple sub-packages/components
 - Component-level OS/architecture filtering
 
@@ -65,7 +65,7 @@ To discover more about Zarf and explore its features, please visit [docs.zarf.de
 - [packages](https://docs.zarf.dev/ref/packages)
 - [components](https://docs.zarf.dev/ref/components)
 - [actions](https://docs.zarf.dev/ref/actions)
-- [variables](https://docs.zarf.dev/ref/values)
+- [package values](https://docs.zarf.dev/ref/package-values/)
 - [SBOMs](https://docs.zarf.dev/ref/sboms)
 - and more!
 
