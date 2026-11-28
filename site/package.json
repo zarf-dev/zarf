@@ -15,8 +15,7 @@
     "test": "node --test && npm run check",
     "build:versions": "node hack/build-versions.mjs",
     "preview": "astro preview",
-    "astro": "astro",
-    "link-check": "linkinator --recurse dist/ --config linkinator.config.json"
+    "astro": "astro"
   },
   "dependencies": {
     "@astrojs/check": "^0.9.9",
@@ -24,7 +23,8 @@
     "@astrojs/starlight": "^0.41.3",
     "@fontsource/source-code-pro": "^5.0.17",
     "astro": "^7.3.2",
-    "mermaid": "^10.9.8",
+    "posthog-js": "^1.438.21",
+    "mermaid": "^12.2.0",
     "rehype-autolink-headings": "^7.1.0",
     "sharp": "^0.35.5",
     "starlight-sidebar-topics": "^0.7.0",
@@ -32,12 +32,19 @@
     "unist-util-visit": "^5.0.0"
   },
   "devDependencies": {
-    "linkinator": "^7.5.3",
-    "markdownlint-cli2": "^0.23.3",
+    "markdownlint-cli2": "^0.24.0",
     "remark-gemoji": "^8.0.0",
     "yaml": "^2.8.3"
   },
   "engines": {
     "node": ">=22.12.0"
+  },
+  "overrides": {
+    "markdownlint": {
+      "re2js": "2.9.1"
+    },
+    "micromark-extension-math": {
+      "katex": "0.18.10"
+    }
   }
 }

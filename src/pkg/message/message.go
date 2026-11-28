@@ -61,14 +61,9 @@ func HorizontalRule() {
 	pterm.Println(RuleLine)
 }
 
-// Table prints a padded table containing the specified header and data
-func Table(header []string, data [][]string) {
-	TableWithWriter(nil, header, data)
-}
-
-// TableWithWriter prints a padded table containing the specified header and data to the optional writer.
-func TableWithWriter(writer io.Writer, header []string, data [][]string) {
-	pterm.Println()
+// Table prints a padded table containing the specified header and data to writer.
+func Table(writer io.Writer, header []string, data [][]string) {
+	fmt.Fprintln(writer)
 
 	// To avoid side effects make copies of the header and data before adding padding
 	headerCopy := make([]string, len(header))
@@ -90,10 +85,5 @@ func TableWithWriter(writer io.Writer, header []string, data [][]string) {
 		table = append(table, pterm.TableData{row}...)
 	}
 
-	// Use DefaultTable writer if none is provided
-	tPrinter := pterm.DefaultTable
-	if writer != nil {
-		tPrinter.Writer = writer
-	}
-	_ = tPrinter.WithHasHeader().WithData(table).Render() //nolint:errcheck
+	_ = pterm.DefaultTable.WithWriter(writer).WithHasHeader().WithData(table).Render() //nolint:errcheck // Table output is best effort, matching the other message printers.
 }

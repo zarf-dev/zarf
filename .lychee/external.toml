@@ -1,0 +1,8 @@
+scheme = ["http", "https"]
+# Local anchors are checked in the offline passes. External IDs may need JavaScript.
+include_fragments = "none"
+
+# Reuse successful HTTP checks briefly; failures must be retried on every run.
+cache = true
+max_cache_age = "6d"
+cache_exclude_status = ["100..=199", "300..=599"]

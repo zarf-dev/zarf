@@ -7,7 +7,7 @@ metadata:
 spec:
   containers:
     - name: enterprise-linux-container
-      image: "{{ .Values.image }}"
+      image: '{{ ((.Pkg.GetComponent "image").GetImageByID "enterprise-linux").Reference }}'
       command: [ "sh", "-c", "while true; do ls; sleep 1; done"]
       resources:
         requests:

@@ -28,7 +28,7 @@ jobs:
         uses: zarf-dev/setup-zarf@10e539efed02f75ec39eb8823e22a5c795f492ae #v1.0.1
 
       - name: "Login to GHCR"
-        uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
         with:
           registry: ghcr.io
           username: dummy
@@ -43,6 +43,3 @@ jobs:
           # Publish a the signed dos-games package
           zarf package publish ./build/zarf-package-dos-games-amd64-1.3.0.tar.zst oci://ghcr.io/zarf-dev/packages --key=https://zarf.dev/cosign.pub
           zarf package publish ./build/zarf-package-dos-games-arm64-1.3.0.tar.zst oci://ghcr.io/zarf-dev/packages --key=https://zarf.dev/cosign.pub
-
-          # Publish a skeleton of the dos-games package
-          zarf package publish examples/dos-games oci://ghcr.io/zarf-dev/packages

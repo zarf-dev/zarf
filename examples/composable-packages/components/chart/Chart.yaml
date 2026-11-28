@@ -1,0 +1,5 @@
+apiVersion: v2
+name: web-server
+description: A reusable Nginx web server with configurable content and connection name
+version: 1.0.0
+type: application

@@ -332,7 +332,9 @@ func TestUnpackSkipsEquivalentArchiveReferences(t *testing.T) {
 	}
 	alias.Annotations[dockerRefAnnotation] = "hello-world:linux"
 	index.Manifests = append(index.Manifests, alias)
-	require.NoError(t, saveIndexToOCILayout(imageDir, index))
+	data, err := json.Marshal(index)
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(filepath.Join(imageDir, "index.json"), data, 0o600))
 
 	imageArchivePath := filepath.Join(t.TempDir(), "images.tar")
 	require.NoError(t, archive.Compress(ctx, []string{imageDir}, imageArchivePath, archive.CompressOpts{}))

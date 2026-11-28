@@ -110,11 +110,11 @@ func TestFindImages(t *testing.T) {
 	t.Run("zarf prepare find-images", func(t *testing.T) {
 		t.Parallel()
 		// Test `zarf prepare find-images` for a remote asset
-		stdOut, stdErr, err := e2e.Zarf(t, "prepare", "find-images", "examples/helm-charts")
+		stdOut, stdErr, err := e2e.Zarf(t, "prepare", "find-images", "examples/helm-charts", "--skip-cosign")
 		require.NoError(t, err, stdOut, stdErr)
 		require.Contains(t, stdOut, "ghcr.io/stefanprodan/podinfo:6.4.0", "The chart image should be found by Zarf")
 		// Test `zarf prepare find-images` with a chart that uses helm annotations
-		stdOut, stdErr, err = e2e.Zarf(t, "prepare", "find-images", "src/test/packages/00-helm-annotations")
+		stdOut, stdErr, err = e2e.Zarf(t, "prepare", "find-images", "src/test/packages/00-helm-annotations", "--skip-cosign")
 		require.NoError(t, err, stdOut, stdErr)
 		require.Contains(t, stdOut, "registry1.dso.mil/ironbank/opensource/istio/pilot:1.17.2", "The pilot image should be found by Zarf")
 	})
@@ -132,7 +132,7 @@ func TestFindImages(t *testing.T) {
 		require.Contains(t, stdOut, controlImageWithSignature, "The image signature should be found by Zarf")
 
 		// Test `zarf prepare find-images` with `--kube-version` specified and less than than the declared minimum (v1.21.0)
-		stdOut, stdErr, err = e2e.Zarf(t, "prepare", "find-images", "--kube-version=v1.20.0", "src/test/packages/00-kube-version-override")
+		stdOut, stdErr, err = e2e.Zarf(t, "prepare", "find-images", "--kube-version=v1.20.0", "src/test/packages/00-kube-version-override", "--skip-cosign")
 		require.Error(t, err, stdOut, stdErr)
 		require.Contains(t, stdErr, "could not render the Helm template for chart cert-manager", "The kubeVersion declaration should prevent this from templating")
 	})
@@ -163,7 +163,7 @@ func TestFindImages(t *testing.T) {
 		testPackagePath := filepath.Join("examples", "wordpress")
 		sets := []string{"WORDPRESS_USERNAME=zarf", "WORDPRESS_PASSWORD=fake", "WORDPRESS_EMAIL=hello@defenseunicorns.com", "WORDPRESS_FIRST_NAME=zarf", "WORDPRESS_LAST_NAME=zarf", "WORDPRESS_BLOG_NAME=blog"}
 		deploysSet := strings.Join(sets, ",")
-		stdOut, _, err := e2e.Zarf(t, "dev", "find-images", testPackagePath, "--why", "docker.io/bitnamilegacy/apache-exporter:1.0.10-debian-12-r55", "--deploy-set-variables", deploysSet)
+		stdOut, _, err := e2e.Zarf(t, "dev", "find-images", testPackagePath, "--why", "docker.io/bitnamilegacy/apache-exporter:1.0.10-debian-12-r55", "--deploy-set-variables", deploysSet, "--skip-cosign")
 		require.NoError(t, err)
 		require.Contains(t, stdOut, "component: wordpress")
 		require.Contains(t, stdOut, "chart: wordpress")
@@ -174,7 +174,7 @@ func TestFindImages(t *testing.T) {
 		t.Parallel()
 		testPackagePath := filepath.Join("examples", "manifests")
 
-		stdOut, _, err := e2e.Zarf(t, "dev", "find-images", testPackagePath, "--why", "httpd:alpine3.18")
+		stdOut, _, err := e2e.Zarf(t, "dev", "find-images", testPackagePath, "--why", "httpd:alpine3.18", "--skip-cosign")
 		require.NoError(t, err)
 		require.Contains(t, stdOut, "component: httpd-local")
 		require.Contains(t, stdOut, "manifest: simple-httpd-deployment")

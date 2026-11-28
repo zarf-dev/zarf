@@ -14,7 +14,7 @@ As always, this is a living document. Community feedback, proposals, and contrib
 
 The next version of the Zarf schema is a foundational milestone on the path to v1.0.0. This work encompasses meaningful structural improvements alongside the deprecations and removals needed to reach a stable, supportable baseline.
 
-Tracked under [#3433](https://github.com/zarf-dev/zarf/issues/3433) 
+Tracked under [#3433](https://github.com/zarf-dev/zarf/issues/3433)
 
 Key changes include:
 
@@ -26,7 +26,7 @@ These changes are necessary to reduce accumulated technical debt and provide a s
 
 ### Values
 
-Zarf Values and Go templating ([#3946](https://github.com/zarf-dev/zarf/issues/3946)) represent a major shift in how packages are parameterized and configured.  Note that this work replaces the legacy `###ZARF_VAR_*###` variable syntax with a structured, Go-template-based values system. 
+Zarf Values and Go templating ([#3946](https://github.com/zarf-dev/zarf/issues/3946)) represent a major shift in how packages are parameterized and configured.  Note that this work replaces the legacy `###ZARF_VAR_*###` variable syntax with a structured, Go-template-based values system.
 
 **Operator and deployer experience:**
 
@@ -40,12 +40,12 @@ Zarf Values and Go templating ([#3946](https://github.com/zarf-dev/zarf/issues/3
 
 **Schema and composability:**
 
-- **Merge values schema during component import** ([#4877](https://github.com/zarf-dev/zarf/issues/4877)): When a parent package imports a child component, the child’s `values-schema.json` should be merged into the parent’s schema (with the parent winning on conflicts), mirroring how `values.yaml` files are already merged.
+- **Merge values schema during component import** ([#4877](https://github.com/zarf-dev/zarf/issues/4877)): When a parent package imports a child component, the child's `values-schema.json` should be merged into the parent's schema (with the parent winning on conflicts), mirroring how `values.yaml` files are already merged.
 
 **Init package and migration:**
 
 - **Replace variables in the init package with values** ([#4328](https://github.com/zarf-dev/zarf/issues/4328)): Dogfooding the values feature by migrating the Zarf init package away from legacy variable templating. Care will be taken to avoid collisions with Go templates intended for downstream systems.
-- **Expose init configuration as Zarf Values** ([#1725](https://github.com/zarf-dev/zarf/issues/1725)): Converting init-time flags like `--nodeport` and `--storage-class` to standard Zarf values so they can be set via `--set` and through the package deploy path. Backwards compatibility with existing flags will be maintained.
+- **Expose init configuration as Zarf Values** ([#1725](https://github.com/zarf-dev/zarf/issues/1725)): Converting init-time flags like `--nodeport` to standard Zarf values so they can be set via `--set` and through the package deploy path. Backwards compatibility with existing flags will be maintained.
 
 **Documentation:**
 
@@ -89,7 +89,7 @@ Several documentation gaps are being addressed ahead of v1.0.0:
 A set of improvements targeting the experience of operators deploying and managing packages:
 
 - **Agent mutation selection** ([#4419](https://github.com/zarf-dev/zarf/issues/4419)): Giving users more control over which resources the Zarf agent mutates during deployment.
-- **Connected mode** ([#4580](https://github.com/zarf-dev/zarf/issues/4580)): A `--connected` flag for `zarf package deploy` that allows the same package to be deployed in connected environments without mirroring images or repositories. This also paves the way for removing the `yolo` construct from the v1beta1 schema.
+- **Connected mode** ([#4580](https://github.com/zarf-dev/zarf/issues/4580)): A `--connected` flag for `zarf package deploy` that allows the same package to be deployed in connected environments without mirroring images or repositories. The `metadata.yolo` configuration is deprecated in v1alpha1 and removed in v1beta1; use `--connected` instead.
 - **Git fallback** ([#2772](https://github.com/zarf-dev/zarf/issues/2772)): Improve integrations with Go Git libraries so the fallback shell out to host `git` can be removed.
 - **Package state collisions and conflicts** ([#3629](https://github.com/zarf-dev/zarf/issues/3629)): Better detection and handling of conflicting state when multiple packages interact with overlapping resources.
 

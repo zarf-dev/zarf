@@ -1,10 +1,47 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import path from "node:path";
-import { rewriteUrl, fixEscapingRelative, rewriteVersionedAssetImport } from "./remark-link-rewrite.ts";
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { createMarkdownProcessor, unified } from "@astrojs/markdown-remark";
+import { remarkLinkRewrite, rewriteUrl, fixEscapingRelative, rewriteVersionedAssetImport, rewriteArchivedSourceUrl } from "./remark-link-rewrite.ts";
 
-const sections = new Set(["commands", "ref", "tutorials", "getting-started", "faq"]);
+const sections = new Set(["commands", "ref", "tutorials", "getting-started", "faq", "schema"]);
 const prefix = "/v0-76";
+
+test("renders archived navigation links alongside shared tutorial recordings", async () => {
+  const processor = await createMarkdownProcessor({
+    syntaxHighlight: false,
+    remarkPlugins: [[remarkLinkRewrite, { srcDir: "/docs", sections: [...sections] }]],
+  });
+  const { code } = await processor.render(`
+[Tutorial](/tutorials/initializing/)
+
+<a href="/tutorials/initializing/">Tutorial</a>
+<iframe src="/tutorials/k3s_init.html" width="100%"></iframe>
+`, { fileURL: new URL("file:///docs/v1-0/tutorials/initializing.md") });
+
+  assert.ok(code.includes('href="/v1-0/tutorials/initializing/"'));
+  assert.ok(code.includes('<a href="/v1-0/tutorials/initializing/">'));
+  assert.ok(code.includes('src="/tutorials/k3s_init.html"'));
+});
+
+test("compiles archived MDX links alongside shared tutorial recordings", async () => {
+  const processor = unified({
+    remarkPlugins: [[remarkLinkRewrite, { srcDir: "/docs", sections: [...sections] }]],
+  });
+  const renderer = await processor.createMdxRenderer!(
+    { syntaxHighlight: false },
+    { optimize: false },
+  );
+  const { code } = await renderer.process(`
+<a href="/tutorials/initializing/">Tutorial</a>
+<iframe src="/tutorials/k3s_init.html" />
+`, "/docs/v1-0/tutorials/initializing.mdx", {});
+
+  assert.ok(code.includes('href: "/v1-0/tutorials/initializing/"'));
+  assert.ok(code.includes('src: "/tutorials/k3s_init.html"'));
+});
 
 test("prefixes root-absolute links into known sections", () => {
   assert.equal(rewriteUrl("/commands/zarf", prefix, sections), "/v0-76/commands/zarf");
@@ -33,6 +70,75 @@ test("ignores external, protocol-relative, and relative links", () => {
 
 test("does not double-prefix already-versioned links", () => {
   assert.equal(rewriteUrl("/v0-75/commands/zarf", prefix, sections), "/v0-75/commands/zarf");
+});
+
+test("keeps shared public recordings at their root path while versioning documentation", (t) => {
+  const publicDir = mkdtempSync(path.join(tmpdir(), "zarf-public-"));
+  t.after(() => rmSync(publicDir, { recursive: true, force: true }));
+  mkdirSync(path.join(publicDir, "tutorials"));
+  writeFileSync(path.join(publicDir, "tutorials/recording.html"), "recording");
+  assert.equal(rewriteUrl("/tutorials/recording.html?theme=dark#frame", prefix, sections, publicDir),
+    "/tutorials/recording.html?theme=dark#frame");
+  assert.equal(rewriteUrl("/tutorials/", prefix, sections, publicDir), "/v0-76/tutorials/");
+  assert.equal(rewriteUrl("/tutorials/guide", prefix, sections, publicDir), "/v0-76/tutorials/guide");
+});
+
+test("resolves retired references to the matching archived reference pages", () => {
+  assert.equal(rewriteUrl("/faq#what-is-the-zarf-agent", prefix, sections), "/v0-76/ref/init-package/#zarf-agent");
+  assert.equal(rewriteUrl("https://docs.zarf.dev/docs/create-a-zarf-package/zarf-schema#metadata", prefix, sections),
+    "/v0-76/schema/v1alpha1-package/#ZarfMetadata");
+  assert.equal(rewriteUrl("/faq#another-question", prefix, sections), "/v0-76/faq#another-question");
+  assert.equal(rewriteUrl("https://www.icann.org/en/board-activities-and-meetings/materials/approved-resolutions-special-meeting-of-the-icann-board-24-07-2024-en#section2.b", prefix, sections),
+    "https://www.icann.org/en/board-activities-and-meetings/materials/approved-resolutions-special-meeting-of-the-icann-board-29-07-2024-en#section2.a");
+});
+
+test("pins archived package source links to their release tag", () => {
+  assert.equal(rewriteArchivedSourceUrl("https://github.com/zarf-dev/zarf/blob/main/packages/gitea/zarf.yaml", "v0.80.0"),
+    "https://github.com/zarf-dev/zarf/blob/v0.80.0/packages/gitea/zarf.yaml");
+  assert.equal(rewriteArchivedSourceUrl("https://github.com/defenseunicorns/zarf/blob/main/packages/zarf-registry/zarf.yaml#L1", "v0.81.1"),
+    "https://github.com/zarf-dev/zarf/blob/v0.81.1/packages/zarf-registry/zarf.yaml#L1");
+  const otherSource = "https://github.com/zarf-dev/zarf/blob/main/src/main.go";
+  assert.equal(rewriteArchivedSourceUrl(otherSource, "v0.80.0"), otherSource);
+  const packageSource = "https://github.com/zarf-dev/zarf/blob/main/packages/gitea/zarf.yaml";
+  assert.equal(rewriteArchivedSourceUrl(packageSource), packageSource);
+});
+
+test("rewrites archived Markdown, HTML and JSX links without changing Latest pages", (t) => {
+  const root = mkdtempSync(path.join(tmpdir(), "zarf-remark-"));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const publicDir = path.join(root, "public");
+  mkdirSync(path.join(publicDir, "tutorials"), { recursive: true });
+  writeFileSync(path.join(publicDir, "tutorials/recording.html"), "recording");
+  const srcDir = path.join(root, "docs");
+  const transform = remarkLinkRewrite({ srcDir, sections: [...sections], publicDir,
+    versions: [{ slug: "v0-76", ref: "v0.76.4" }] });
+  const tree = () => ({ type: "root", children: [
+    { type: "link", url: "https://docs.zarf.dev/docs/create-a-zarf-package/zarf-schema#metadata", children: [] },
+    { type: "link", url: "/faq#what-is-the-zarf-agent", children: [] },
+    { type: "html", value: '<iframe src="/tutorials/recording.html"></iframe>' },
+    { type: "mdxJsxFlowElement", name: "iframe", attributes: [
+      { type: "mdxJsxAttribute", name: "src", value: "/tutorials/recording.html" },
+    ], children: [] },
+    { type: "link", url: "https://github.com/zarf-dev/zarf/blob/main/packages/gitea/zarf.yaml", children: [] },
+    { type: "link", url: "https://gitea.io/en-us/", children: [] },
+    { type: "html", value: '<a href="https://www.gnu.org/software/make/">make</a>' },
+    { type: "mdxJsxFlowElement", name: "a", attributes: [
+      { type: "mdxJsxAttribute", name: "href", value: "https://facebook.github.io/zstd/" },
+    ], children: [] },
+  ] });
+  const archived = tree();
+  transform(archived as any, { path: path.join(srcDir, "v0-76/page.mdx") } as any);
+  assert.equal(archived.children[0].url, "/v0-76/schema/v1alpha1-package/#ZarfMetadata");
+  assert.equal(archived.children[1].url, "/v0-76/ref/init-package/#zarf-agent");
+  assert.equal(archived.children[2].value, '<iframe src="/tutorials/recording.html"></iframe>');
+  assert.equal(archived.children[3].attributes?.[0].value, "/tutorials/recording.html");
+  assert.equal(archived.children[4].url, "https://github.com/zarf-dev/zarf/blob/v0.76.4/packages/gitea/zarf.yaml");
+  assert.equal(archived.children[5].url, "https://about.gitea.com/");
+  assert.equal(archived.children[6].value, '<a href="https://savannah.gnu.org/projects/make/">make</a>');
+  assert.equal(archived.children[7].attributes?.[0].value, "https://github.com/meta/zstd");
+  const latest = tree();
+  transform(latest as any, { path: path.join(srcDir, "page.mdx") } as any);
+  assert.deepEqual(latest, tree());
 });
 
 // fixEscapingRelative: docs root /docs, version subtree /docs/v0-76

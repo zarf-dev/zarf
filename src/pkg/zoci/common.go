@@ -105,17 +105,12 @@ type Remote struct {
 	*oci.OrasRemote
 }
 
-// NewRemote returns an ORAS remote repository client configured for the given URL.
-//
-// Deprecated: Use NewRemoteWithOptions so Zarf owns transport configuration.
-func NewRemote(ctx context.Context, url string, platform ocispec.Platform, mods ...oci.Modifier) (*Remote, error) {
-	return newRemote(ctx, url, platform, mods...)
-}
-
-// NewRemoteWithOptions returns an ORAS remote repository configured with Zarf's
+// NewRemote returns an ORAS remote repository configured with Zarf's
 // cache, credential, and transport options.
-func NewRemoteWithOptions(ctx context.Context, url string, platform ocispec.Platform, options RemoteClientOptions) (*Remote, error) {
+func NewRemote(ctx context.Context, url string, platform ocispec.Platform, options RemoteClientOptions) (*Remote, error) {
 	modifiers := []oci.Modifier{
+		oci.WithLogger(logger.From(ctx)),
+		oci.WithUserAgent("zarf/" + config.CLIVersion),
 		oci.WithInsecureSkipVerify(options.InsecureSkipTLSVerify),
 	}
 	if options.CredentialFunc != nil {
@@ -132,10 +127,11 @@ func NewRemoteWithOptions(ctx context.Context, url string, platform ocispec.Plat
 		modifiers = append(modifiers, cacheModifier)
 	}
 
-	remote, err := newRemote(ctx, url, platform, modifiers...)
+	orasRemote, err := oci.NewOrasRemote(url, platform, modifiers...)
 	if err != nil {
 		return nil, err
 	}
+	remote := &Remote{orasRemote}
 
 	// negotiate if required after the remote has been instantiated for any canonical updates (docker.io etc)
 	if options.PlainHTTP {
@@ -171,19 +167,6 @@ func transportForProbe(transport *http.Transport, insecureSkipTLSVerify bool) *h
 	return probeTransport
 }
 
-func newRemote(ctx context.Context, url string, platform ocispec.Platform, mods ...oci.Modifier) (*Remote, error) {
-	l := logger.From(ctx)
-	modifiers := append([]oci.Modifier{
-		oci.WithLogger(l),
-		oci.WithUserAgent("zarf/" + config.CLIVersion),
-	}, mods...)
-	remote, err := oci.NewOrasRemote(url, platform, modifiers...)
-	if err != nil {
-		return nil, err
-	}
-	return &Remote{remote}, nil
-}
-
 // GetOCICacheModifier takes in a Zarf cachePath and uses it to return an oci.WithCache modifier
 func GetOCICacheModifier(cachePath string) (oci.Modifier, error) {
 	ociCache, err := ociDirectory.NewStorage(filepath.Join(cachePath, ImageCacheDirectory))
@@ -194,6 +177,8 @@ func GetOCICacheModifier(cachePath string) (oci.Modifier, error) {
 }
 
 // PlatformForSkeleton sets the target architecture for the remote to skeleton
+//
+// Deprecated: Only supported by deprecated v1alpha1 packages.
 func PlatformForSkeleton() ocispec.Platform {
 	return ocispec.Platform{
 		OS:           oci.MultiOS,

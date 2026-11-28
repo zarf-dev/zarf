@@ -13,6 +13,8 @@ import (
 )
 
 // PackageFromV1alpha1 converts a v1alpha1 wire package to the normalized model.
+//
+// Deprecated: Only supported by deprecated v1alpha1 packages.
 func PackageFromV1alpha1(pkg v1alpha1.ZarfPackage) api.Package {
 	return internalv1alpha1.PackageFromV1alpha1(pkg)
 }
@@ -23,6 +25,8 @@ func PackageFromV1beta1(pkg v1beta1.Package) api.Package {
 }
 
 // PackageToV1alpha1 converts the normalized model to the v1alpha1 wire package.
+//
+// Deprecated: Only supported by deprecated v1alpha1 packages.
 func PackageToV1alpha1(pkg api.Package) v1alpha1.ZarfPackage {
 	return internalv1alpha1.PackageToV1alpha1(pkg)
 }
@@ -33,11 +37,15 @@ func PackageToV1beta1(pkg api.Package) v1beta1.Package {
 }
 
 // PackageV1alpha1ToV1beta1 converts a v1alpha1 wire package to v1beta1.
+//
+// Deprecated: Only supported by deprecated v1alpha1 packages.
 func PackageV1alpha1ToV1beta1(pkg v1alpha1.ZarfPackage) v1beta1.Package {
 	return PackageToV1beta1(PackageFromV1alpha1(pkg))
 }
 
 // PackageV1beta1ToV1alpha1 converts a v1beta1 wire package to v1alpha1.
+//
+// Deprecated: Only supported by deprecated v1alpha1 packages.
 func PackageV1beta1ToV1alpha1(pkg v1beta1.Package) v1alpha1.ZarfPackage {
 	return PackageToV1alpha1(PackageFromV1beta1(pkg))
 }

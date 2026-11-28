@@ -18,7 +18,6 @@ import (
 	orasRemote "oras.land/oras-go/v2/registry/remote"
 	"oras.land/oras-go/v2/registry/remote/auth"
 
-	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -71,11 +70,6 @@ func Push(ctx context.Context, imageList []transform.Image, sourceDirectory stri
 		toPush[img.Reference] = struct{}{}
 	}
 	l := logger.From(ctx)
-
-	err := addRefNameAnnotationToImages(sourceDirectory)
-	if err != nil {
-		return err
-	}
 
 	src, err := oci.NewWithContext(ctx, sourceDirectory)
 	if err != nil {
@@ -246,28 +240,6 @@ func Push(ctx context.Context, imageList []transform.Image, sourceDirectory stri
 	return nil
 }
 
-func addRefNameAnnotationToImages(ociLayoutDirectory string) error {
-	idx, err := getIndexFromOCILayout(ociLayoutDirectory)
-	if err != nil {
-		return err
-	}
-	// Crane sets ocispec.AnnotationBaseImageName instead of ocispec.AnnotationRefName
-	// which ORAS uses to find images. We do this to be backwards compatible with packages built with Crane.
-	var correctedManifests []ocispec.Descriptor
-	for _, manifest := range idx.Manifests {
-		if manifest.Annotations[ocispec.AnnotationRefName] == "" && manifest.Annotations[ocispec.AnnotationBaseImageName] != "" {
-			manifest.Annotations[ocispec.AnnotationRefName] = manifest.Annotations[ocispec.AnnotationBaseImageName]
-		}
-		correctedManifests = append(correctedManifests, manifest)
-	}
-	idx.Manifests = correctedManifests
-	err = saveIndexToOCILayout(ociLayoutDirectory, idx)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 func copyImage(ctx context.Context, src *oci.Store, remote oras.Target, srcName string, dstName string, concurrency int) error {
 	fetchOpts := oras.DefaultFetchBytesOptions
 	desc, b, err := oras.FetchBytes(ctx, src, srcName, fetchOpts)
@@ -297,7 +269,7 @@ func copyImage(ctx context.Context, src *oci.Store, remote oras.Target, srcName 
 	trackedRemote := NewTrackedTarget(remote, size, DefaultReport(logger.From(ctx), "image push in progress", srcName))
 	trackedRemote.StartReporting(ctx)
 	defer trackedRemote.StopReporting()
-	_, err = oras.Copy(ctx, src, srcName, trackedRemote, dstName, copyOpts)
+	_, err = oras.Copy(ctx, src, srcName, trackedRemote.CopyTarget(), dstName, copyOpts)
 	if err != nil {
 		return fmt.Errorf("failed to push image %s: %w", srcName, err)
 	}

@@ -6,6 +6,7 @@ package filters
 
 import (
 	"fmt"
+	"path"
 	"strings"
 	"testing"
 
@@ -13,39 +14,7 @@ import (
 	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
-	"github.com/zarf-dev/zarf/src/api/v1beta1"
 )
-
-func TestComponentForDisplay_UsesPackageAPIVersion(t *testing.T) {
-	tests := map[string]struct {
-		definition api.Package
-		wantType   any
-	}{
-		"v1alpha1": {
-			definition: convert.PackageFromV1alpha1(v1alpha1.ZarfPackage{
-				APIVersion: v1alpha1.APIVersion,
-				Components: []v1alpha1.ZarfComponent{{Name: "component"}},
-			}),
-			wantType: v1alpha1.ZarfComponent{},
-		},
-		"v1beta1": {
-			definition: convert.PackageFromV1beta1(v1beta1.Package{
-				APIVersion: v1beta1.APIVersion,
-				Components: []v1beta1.Component{{Name: "component"}},
-			}),
-			wantType: v1beta1.Component{},
-		},
-	}
-
-	for name, tt := range tests {
-		t.Run(name, func(t *testing.T) {
-			component, err := componentForDisplay(tt.definition, tt.definition.Components[0])
-
-			require.NoError(t, err)
-			require.IsType(t, tt.wantType, component)
-		})
-	}
-}
 
 func componentFromQuery(t *testing.T, q string) v1alpha1.ZarfComponent {
 	c := v1alpha1.ZarfComponent{
@@ -236,9 +205,7 @@ func TestDeployFilter_Apply(t *testing.T) {
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			// we do not currently support interactive mode in unit tests
-			isInteractive := false
-			filter := ForDeploy(tt.optionalComponents, isInteractive)
+			filter := ForDeploy(tt.optionalComponents)
 
 			components, err := filter.Apply(convert.PackageFromV1alpha1(tt.pkg))
 			if tt.expectedErr != nil {
@@ -247,6 +214,93 @@ func TestDeployFilter_Apply(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, convert.PackageFromV1alpha1(v1alpha1.ZarfPackage{Components: tt.want}).Components, components)
 			}
+		})
+	}
+}
+
+func TestDeployFilterOverlappingSelectors(t *testing.T) {
+	t.Parallel()
+
+	pkg := api.Package{Components: []api.Component{
+		{Name: "abc", Optional: true},
+		{Name: "axyz", Optional: true},
+		{Name: "default", Optional: true, Default: true},
+		{Name: "required"},
+		{Name: "group-default", Optional: true, Default: true, Group: "choice"},
+		{Name: "group-other", Optional: true, Group: "choice"},
+	}}
+	tests := []struct {
+		name      string
+		selectors string
+		want      []string
+		wantErr   error
+	}{
+		{"exact then glob", "abc,a*", []string{"abc", "axyz", "default", "required", "group-default"}, nil},
+		{"glob then exact", "a*,abc", []string{"abc", "axyz", "default", "required", "group-default"}, nil},
+		{"fully excluded inclusion", "abc,-abc", []string{"default", "required", "group-default"}, nil},
+		{"later exclusion wins", "abc,a*,-abc", []string{"axyz", "default", "required", "group-default"}, nil},
+		{"later inclusion wins", "-abc,a*,abc", []string{"abc", "axyz", "default", "required", "group-default"}, nil},
+		{"repeated inclusion wins", "abc,-a*,abc", []string{"abc", "default", "required", "group-default"}, nil},
+		{"overlapping exclusions", "-a*,-abc", []string{"default", "required", "group-default"}, nil},
+		{"excluded required remains selected", "-required,required", []string{"default", "required", "group-default"}, nil},
+		{"group selection replaces default", "group-other,group-o*", []string{"default", "required", "group-other"}, nil},
+		{"unmatched inclusion", "abc,a*,missing", nil, ErrNotFound},
+		{"unmatched exclusion", "abc,a*,-missing", nil, ErrNotFound},
+		{"multiple group selections", "group-*", nil, ErrMultipleSameGroup},
+		{"empty selector entries", " , ABC, ,", []string{"abc", "default", "required", "group-default"}, nil},
+		{"only separators and whitespace", " , , ", []string{"default", "required", "group-default"}, nil},
+		{"ordered selectors with empty entries", " ABC, , -A*, ABC, ", []string{"abc", "default", "required", "group-default"}, nil},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			components, err := ForDeploy(tt.selectors).Apply(pkg)
+			if tt.wantErr != nil {
+				require.ErrorIs(t, err, tt.wantErr)
+				return
+			}
+			require.NoError(t, err)
+			names := make([]string, 0, len(components))
+			for _, component := range components {
+				names = append(names, component.Name)
+			}
+			require.Equal(t, tt.want, names)
+		})
+	}
+}
+
+func TestDeployFilterExplicitRequiredGroupChoice(t *testing.T) {
+	t.Parallel()
+
+	pkg := api.Package{Components: []api.Component{
+		{Name: "required"},
+		{Name: "group-a", Group: "group"},
+		{Name: "group-b", Group: "group"},
+	}}
+	for i, name := range []string{"group-a", "group-b"} {
+		t.Run(name, func(t *testing.T) {
+			components, err := ForDeploy(name + ",-required").Apply(pkg)
+			require.NoError(t, err)
+			require.Equal(t, []api.Component{pkg.Components[0], pkg.Components[i+1]}, components)
+		})
+	}
+	_, err := ForDeploy("group-a,group-b").Apply(pkg)
+	require.ErrorIs(t, err, ErrMultipleSameGroup)
+}
+
+func TestDeployFilterRejectsInvalidSelectors(t *testing.T) {
+	t.Parallel()
+
+	for _, tt := range []struct {
+		name string
+		pkg  api.Package
+	}{
+		{"empty package", api.Package{}},
+		{"required component", api.Package{Components: []api.Component{{Name: "required"}}}},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := ForDeploy(" , [, ").Apply(tt.pkg)
+			require.ErrorIs(t, err, path.ErrBadPattern)
 		})
 	}
 }
