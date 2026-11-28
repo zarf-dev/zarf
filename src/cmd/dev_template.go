@@ -31,6 +31,7 @@ type devTemplateOptions struct {
 	set            map[string]string
 	setFile        string
 	skipValidation bool
+	recursive      bool
 }
 
 func newDevTemplateCommand(v *viper.Viper) *cobra.Command {
@@ -46,6 +47,7 @@ func newDevTemplateCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().StringToStringVar(&o.set, "set", v.GetStringMapString(VDevTemplateSet), "Set a package template value (key=value)")
 	cmd.Flags().StringVar(&o.setFile, "set-file", v.GetString(VDevTemplateSetFile), "YAML file containing package template values")
 	cmd.Flags().BoolVar(&o.skipValidation, "skip-validation", v.GetBool(VDevTemplateSkipValidation), "Skip schema validation of the rendered definition")
+	cmd.Flags().BoolVar(&o.recursive, "recursive", v.GetBool(VDevTemplateRecursive), "Recursively render templates referenced by local component imports")
 	return cmd
 }
 
@@ -74,13 +76,38 @@ func (o *devTemplateOptions) run(ctx context.Context, args []string) error {
 	// cli is reserved so templates can reliably use [[ .cli.version ]] to create versioned init packages.
 	values["cli"] = new(value.Values{"version": config.CLIVersion})
 
+	return o.render(ctx, source, values, make(map[string]bool))
+}
+
+// render tracks active and completed files to reject cycles and avoid rendering shared imports twice.
+func (o *devTemplateOptions) render(ctx context.Context, source string, values value.Values, visited map[string]bool) error {
+	canonical, err := filepath.Abs(source)
+	if err != nil {
+		return err
+	}
+	canonical, err = filepath.EvalSymlinks(canonical)
+	if err != nil {
+		return fmt.Errorf("resolving package template %q: %w", source, err)
+	}
+	if active, exists := visited[canonical]; exists {
+		if active {
+			return fmt.Errorf("package template %q imported in cycle", source)
+		}
+		return nil
+	}
+	visited[canonical] = true
+
 	contents, err := os.ReadFile(source)
 	if err != nil {
 		return fmt.Errorf("reading package template %q: %w", source, err)
 	}
-	rendered, err := executePackageTemplate(source, contents, values)
-	if err != nil {
-		return err
+	rendered := contents
+	isTemplate := strings.HasSuffix(source, packageTemplateExtension)
+	if isTemplate {
+		rendered, err = executePackageTemplate(source, contents, values)
+		if err != nil {
+			return err
+		}
 	}
 	kind, err := validateTemplateAPIVersion(source, rendered)
 	if err != nil {
@@ -94,10 +121,35 @@ func (o *devTemplateOptions) run(ctx context.Context, args []string) error {
 			return err
 		}
 	}
-	output := generatedTemplatePath(source)
-	if err := os.WriteFile(output, rendered, 0o644); err != nil {
-		return fmt.Errorf("writing generated template %q: %w", output, err)
+	if o.recursive {
+		var definition struct {
+			Components []v1beta1.Component   `yaml:"components"`
+			Component  v1beta1.ComponentSpec `yaml:"component"`
+		}
+		if err := yaml.Unmarshal(rendered, &definition); err != nil {
+			return fmt.Errorf("parsing imports in package template %q: %w", source, err)
+		}
+		imports := definition.Component.Import.Local
+		for _, component := range definition.Components {
+			imports = append(imports, component.Import.Local...)
+		}
+		for _, entry := range imports {
+			path := filepath.Join(filepath.Dir(source), entry.Path)
+			if strings.HasSuffix(path, ".gen.yaml") {
+				path = strings.TrimSuffix(path, ".gen.yaml") + packageTemplateExtension
+			}
+			if err := o.render(ctx, path, values, visited); err != nil {
+				return err
+			}
+		}
 	}
+	if isTemplate {
+		output := generatedTemplatePath(source)
+		if err := os.WriteFile(output, rendered, 0o644); err != nil {
+			return fmt.Errorf("writing generated template %q: %w", output, err)
+		}
+	}
+	visited[canonical] = false
 	return nil
 }
 
